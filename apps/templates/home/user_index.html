@@ -1,0 +1,95 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} User {% endblock title %}
+
+{% block content %}
+
+  <div class="header bg-primary pb-6">
+    <div class="container-fluid">
+      <div class="header-body">
+        <div class="row align-items-center py-4">
+            <div class="col-lg-6 col-7">
+                <h6 class="h2 text-white d-inline-block mb-0">User</h6>
+            </div>
+            <div class="col-lg-6 col-5 text-right">
+              <a href="{% url 'user-add' %}" class="btn btn-icon btn-md btn-neutral {% if 'index' not in crud %} disabled {% endif %}">
+                <span class="btn-inner--icon"><i class="fas fa-plus"></i></span>
+                <span class="btn-inner--text">Tambah</span>
+              </a>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Page content -->
+  <div class="container-fluid mt--6">
+    <div class="row">
+      <div class="col">
+        <div class="card">
+          <!-- Light table -->
+          <div class="table-responsive mb-4 mt-4">
+            <table id="user" class="table align-items-center table-flush py-2">
+              <thead class="thead-light">
+                <tr>
+                    <th scope="col" class="sort" data-sort="id">Id</th>
+                    <th scope="col" class="sort" data-sort="name">Nama User</th>
+                    <th scope="col" class="sort" data-sort="phone">Role</th>
+                    <th scope="col"></th>
+                </tr>
+              </thead>
+              <tbody class="list">
+                {% for item in data %}
+                    <tr>
+                        <td>
+                            <!-- User Id -->
+                            {{ item.0 }}
+                        </td>
+                        <th scope="row">
+                            <a href="{% url 'user-view' item.0 %}">
+                                <div class="media align-items-center">
+                                <!--<a href="#" class="avatar rounded-circle mr-3">-->
+                                <!--   <img alt="Image placeholder" src="/static/assets/img/theme/bootstrap.jpg">-->
+                                <!--</a>-->
+                                  <div class="media-body">
+                                      <!-- Nama User -->
+                                      <span class="name mb-0 text-sm">{{ item.1 }}</span>
+                                  </div>
+                                </div>
+                            </a>
+                        </th>
+                        <td>
+                            <!-- Role -->
+                            {{ item.2 }}
+                        </td>
+                        <td class="text-right">
+                            <a class="btn-icon-only mr-4" href="{% url 'user-view' item.0 %}"
+                               role="button" data-bs-toggle="tooltip" title="Lihat User">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a class="btn-icon-only" href="{% url 'user-delete' item.0 %}"
+                               role="button" data-bs-toggle="tooltip" title="Hapus User">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock content %}
+
+{% block javascripts %}
+
+    <script>
+      $(document).ready( function () {
+        $('#user').DataTable();
+      } );
+    </script>
+
+{% endblock javascripts %}
