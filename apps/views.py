@@ -13,6 +13,7 @@ from authentication.decorators import role_required
 def home(request):
     context = {
         'segment': 'index',
+        'role': request.user.role,
     }
     return render(request, 'home/index.html', context)
 
@@ -74,7 +75,7 @@ def user_update(request, _id):
             form.save()
             return HttpResponseRedirect(reverse('user-index'))
     else:
-        form = FormUser(instance=users)
+        form = FormUserUpdate(instance=users)
 
     message = form.errors
     context = {
@@ -118,6 +119,31 @@ def change_password(request):
         'role': request.user.role,
     }
     return render(request, 'home/user_change_password.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles=['Admin'])
+def set_password(request, _id):
+    users = User.objects.get(id=_id)
+    if request.POST:
+        form = FormSetPassword(data=request.POST, user=users)
+        if form.is_valid():
+            form.save()
+            update_session_auth_hash(request, form.user)
+            return HttpResponseRedirect(reverse('user-index'))
+    else:
+        form = FormSetPassword(user=users)
+
+    message = form.errors
+    context = {
+        'form': form,
+        'data': users,
+        'segment': 'user',
+        'crud': 'update',
+        'message': message,
+        'role': request.user.role,
+    }
+    return render(request, 'home/user_set_password.html', context)
 
 
 @login_required(login_url='/login/')

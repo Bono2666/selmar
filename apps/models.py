@@ -8,6 +8,8 @@ class Hero(models.Model):
 
 
 class User(AbstractUser):
+    is_active = models.BooleanField(default=True)
+
     class Role(models.TextChoices):
         ADMIN = "Admin", 'Admin'
         CS = "Customer Service", 'Customer Service'

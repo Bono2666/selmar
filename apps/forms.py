@@ -1,7 +1,7 @@
 from django import forms
 from django.forms import ModelForm
 from apps.models import *
-from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
+from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm, UserCreationForm
 
 
 class FormHero(ModelForm):
@@ -41,7 +41,11 @@ class FormUser(UserCreationForm):
 class FormUserUpdate(ModelForm):
     class Meta:
         model = User
-        exclude = ['username', 'password', 'date_joined']
+        exclude = ['username', 'password', 'date_joined', 'is_active', 'is_staff', 'is_superuser']
+
+        widgets = {
+            'role': forms.Select({'class': 'form-control'}),
+        }
 
 
 class FormChangePassword(PasswordChangeForm):
@@ -49,5 +53,13 @@ class FormChangePassword(PasswordChangeForm):
         super(FormChangePassword, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['old_password'].widget = forms.PasswordInput({'class': 'form-control'})
+        self.fields['new_password1'].widget = forms.PasswordInput({'class': 'form-control'})
+        self.fields['new_password2'].widget = forms.PasswordInput({'class': 'form-control'})
+
+
+class FormSetPassword(SetPasswordForm):
+    def __init__(self, *args, **kwargs):
+        super(FormSetPassword, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
         self.fields['new_password1'].widget = forms.PasswordInput({'class': 'form-control'})
         self.fields['new_password2'].widget = forms.PasswordInput({'class': 'form-control'})

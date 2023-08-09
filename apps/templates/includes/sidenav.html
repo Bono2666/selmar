@@ -1,139 +1,144 @@
+{% load static %}
 <nav class="sidenav navbar navbar-vertical  fixed-left  navbar-expand-xs navbar-light bg-white" id="sidenav-main">
-  <div class="scrollbar-inner">
-    <!-- Brand -->
-    <div class="sidenav-header  align-items-center">
-      <a class="navbar-brand" href="/">
-        <img src="/apps/static/img/brand/color.png" class="navbar-brand-img" alt="EmpatBulan - Logo.">
-      </a>
+    <div class="scrollbar-inner">
+        <!-- Brand -->
+        <div class="sidenav-header  align-items-center">
+            <a class="navbar-brand" href="/">
+                <img src="{% static 'img/brand/color.png' %}" class="navbar-brand-img" alt="Sahabat Aqiqah - Logo.">
+            </a>
+        </div>
+        <div class="navbar-inner">
+            <!-- Collapse -->
+            <div class="collapse navbar-collapse" id="sidenav-collapse-main">
+                <!-- Nav items -->
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'index' in segment %} active {% endif %}" href="{% url 'home' %}">
+                            <i class="ni ni-tv-2 text-primary"></i>
+                            <span class="nav-link-text mt-2">Dashboard</span>
+                        </a>
+                    </li>
+                </ul>
+                <!-- Divider -->
+                <hr class="my-3">
+                <!-- Heading -->
+                <h6 class="navbar-heading p-0 text-muted">
+                    <span class="docs-normal">Transaksi</span>
+                </h6>
+                <!-- Navigation -->
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'order' in segment %} active {% endif %}" href="">
+                            <i class="ni ni-single-copy-04 text-primary"></i>
+                            <span class="nav-link-text mt-2">Order Pesanan</span>
+                        </a>
+                    </li>
+                    {% if 'Customer Service' not in role %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'po-dapur' in segment %} active {% endif %}" href="">
+                            <i class="fas fa-file text-primary"></i>
+                            <span class="nav-link-text mt-1">PO Dapur</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'form' in segment %} active {% endif %}" href="">
+                            <i class="ni ni-align-left-2 text-primary"></i>
+                            <span class="nav-link-text mt-2">Form Pemesanan</span>
+                        </a>
+                    </li>
+                </ul>
+                <!-- Divider -->
+                <hr class="my-3">
+                <!-- Heading -->
+                <h6 class="navbar-heading p-0 text-muted">
+                    <span class="docs-normal">Keuangan</span>
+                </h6>
+                <!-- Navigation -->
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'uang-masuk' in segment %} active {% endif %}"
+                           href="">
+                            <i class="fas fa-wallet text-primary"></i>
+                            <span class="nav-link-text mt-1">Uang Masuk</span>
+                        </a>
+                    </li>
+                </ul>
+                {% if 'Admin' in role %}
+                <!-- Divider -->
+                <hr class="my-3">
+                <!-- Heading -->
+                <h6 class="navbar-heading p-0 text-muted">
+                    <span class="docs-normal">Laporan</span>
+                </h6>
+                <!-- Navigation -->
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'report' in segment %} active {% endif %}"
+                           href="">
+                            <i class="ni ni-sound-wave text-primary"></i>
+                            <span class="nav-link-text mt-2">Laporan Bulanan</span>
+                        </a>
+                    </li>
+                </ul>
+                <!-- Divider -->
+                <hr class="my-3">
+                <!-- Heading -->
+                <h6 class="navbar-heading p-0 text-muted">
+                    <span class="docs-normal">Data Master</span>
+                </h6>
+                <!-- Navigation -->
+                <ul class="navbar-nav mb-md-5">
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'customer' in segment %} active {% endif %}"
+                           href="">
+                            <i class="fas fa-user text-primary"></i>
+                            <span class="nav-link-text mt-1">Customer</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'cabang' in segment %} active {% endif %}"
+                           href="">
+                            <i class="fas fa-store text-primary"></i>
+                            <span class="nav-link-text mt-1">Cabang</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'setup' in segment %} active {% endif %}"
+                           href="">
+                            <i class="fas fa-cog text-primary"></i>
+                            <span class="nav-link-text mt-1">Setup</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'paket' in segment %} active {% endif %}"
+                           href="">
+                            <i class="fas fa-box-open text-primary"></i>
+                            <span class="nav-link-text mt-1">Paket</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'menu' in segment %} active {% endif %}"
+                           href="">
+                            <i class="fas fa-utensils text-primary"></i>
+                            <span class="nav-link-text mt-1">Menu</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'user' in segment %} active {% endif %}"
+                           href="{% url 'user-index' %}">
+                            <i class="fas fa-user-circle text-primary"></i>
+                            <span class="nav-link-text">User</span>
+                        </a>
+                    </li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
     </div>
-    <div class="navbar-inner">
-      <!-- Collapse -->
-      <div class="collapse navbar-collapse" id="sidenav-collapse-main">
-        <!-- Nav items -->
-        <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link {% if 'index' in segment %} active {% endif %}" href="{% url 'home' %}">
-              <i class="ni ni-tv-2 text-primary"></i>
-              <span class="nav-link-text mt-2">Dashboard</span>
-            </a>
-          </li>
-        </ul>
-        <!-- Divider -->
-        <hr class="my-3">
-        <!-- Heading -->
-        <h6 class="navbar-heading p-0 text-muted">
-          <span class="docs-normal">Transaksi</span>
-        </h6>
-        <!-- Navigation -->
-        <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link {% if 'order' in segment %} active {% endif %}" href="">
-              <i class="ni ni-single-copy-04 text-primary"></i>
-              <span class="nav-link-text mt-2">Order Pesanan</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link {% if 'po-dapur' in segment %} active {% endif %}" href="">
-              <i class="fas fa-file text-primary"></i>
-              <span class="nav-link-text mt-1">PO Dapur</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link {% if 'form' in segment %} active {% endif %}" href="">
-              <i class="ni ni-align-left-2 text-primary"></i>
-              <span class="nav-link-text mt-2">Form Pemesanan</span>
-            </a>
-          </li>
-        </ul>
-        <!-- Divider -->
-        <hr class="my-3">
-        <!-- Heading -->
-        <h6 class="navbar-heading p-0 text-muted">
-          <span class="docs-normal">Keuangan</span>
-        </h6>
-        <!-- Navigation -->
-        <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link {% if 'uang-masuk' in segment %} active {% endif %}"
-               href="">
-              <i class="fas fa-wallet text-primary"></i>
-              <span class="nav-link-text mt-1">Uang Masuk</span>
-            </a>
-          </li>
-        </ul>
-        <!-- Divider -->
-        <hr class="my-3">
-        <!-- Heading -->
-        <h6 class="navbar-heading p-0 text-muted">
-          <span class="docs-normal">Laporan</span>
-        </h6>
-        <!-- Navigation -->
-        <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link {% if 'report' in segment %} active {% endif %}"
-               href="">
-              <i class="ni ni-sound-wave text-primary"></i>
-              <span class="nav-link-text mt-2">Laporan Bulanan</span>
-            </a>
-          </li>
-        </ul>
-        <!-- Divider -->
-        <hr class="my-3">
-        <!-- Heading -->
-        <h6 class="navbar-heading p-0 text-muted">
-            <span class="docs-normal">Data Master</span>
-        </h6>
-        <!-- Navigation -->
-        <ul class="navbar-nav mb-md-5">
-          <li class="nav-item">
-            <a class="nav-link {% if 'customer' in segment %} active {% endif %}"
-               href="">
-              <i class="fas fa-user text-primary"></i>
-              <span class="nav-link-text mt-1">Customer</span>
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link {% if 'cabang' in segment %} active {% endif %}"
-               href="">
-              <i class="fas fa-store text-primary"></i>
-              <span class="nav-link-text mt-1">Cabang</span>
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link {% if 'setup' in segment %} active {% endif %}"
-               href="">
-              <i class="fas fa-cog text-primary"></i>
-              <span class="nav-link-text mt-1">Setup</span>
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link {% if 'paket' in segment %} active {% endif %}"
-               href="">
-              <i class="fas fa-box-open text-primary"></i>
-              <span class="nav-link-text mt-1">Paket</span>
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link {% if 'menu' in segment %} active {% endif %}"
-               href="">
-              <i class="fas fa-utensils text-primary"></i>
-              <span class="nav-link-text mt-1">Menu</span>
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link {% if 'user' in segment %} active {% endif %}"
-               href="{% url 'user-index' %}">
-              <i class="fas fa-user-circle text-primary"></i>
-              <span class="nav-link-text">User</span>
-            </a>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </div>
 </nav>
