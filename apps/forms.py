@@ -1,7 +1,7 @@
 from django import forms
 from django.forms import ModelForm
 from apps.models import *
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 
 
 class FormHero(ModelForm):
@@ -42,3 +42,12 @@ class FormUserUpdate(ModelForm):
     class Meta:
         model = User
         exclude = ['username', 'password', 'date_joined']
+
+
+class FormChangePassword(PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super(FormChangePassword, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['old_password'].widget = forms.PasswordInput({'class': 'form-control'})
+        self.fields['new_password1'].widget = forms.PasswordInput({'class': 'form-control'})
+        self.fields['new_password2'].widget = forms.PasswordInput({'class': 'form-control'})

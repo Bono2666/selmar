@@ -1,3 +1,4 @@
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.http import HttpResponseRedirect
@@ -89,11 +90,34 @@ def user_update(request, _id):
 
 # Delete User
 @login_required(login_url='/login/')
+@role_required(allowed_roles=['Admin'])
 def user_delete(request, _id):
     users = User.objects.get(id=_id)
 
     users.delete()
     return HttpResponseRedirect(reverse('user-index'))
+
+
+@login_required(login_url='/login/')
+def change_password(request):
+    if request.POST:
+        form = FormChangePassword(data=request.POST, user=request.user)
+        if form.is_valid():
+            form.save()
+            update_session_auth_hash(request, form.user)
+            return HttpResponseRedirect(reverse('home'))
+    else:
+        form = FormChangePassword(user=request.user)
+
+    message = form.errors
+    context = {
+        'form': form,
+        'data': request.user,
+        'crud': 'update',
+        'message': message,
+        'role': request.user.role,
+    }
+    return render(request, 'home/user_change_password.html', context)
 
 
 @login_required(login_url='/login/')
