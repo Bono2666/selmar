@@ -23,3 +23,7 @@ def login_view(request):
             msg = 'Kesalahan validasi'
 
     return render(request, "accounts/login.html", {"form": form, "msg": msg})
+
+
+def forbidden_view(request):
+    return render(request, "home/forbidden.html")

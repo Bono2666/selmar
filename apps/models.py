@@ -1,3 +1,4 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
@@ -6,18 +7,11 @@ class Hero(models.Model):
     title = models.CharField(max_length=50)
 
 
-class AuthUser(models.Model):
-    password = models.CharField(max_length=128)
-    last_login = models.DateTimeField(blank=True, null=True)
-    is_superuser = models.IntegerField()
-    username = models.CharField(unique=True, max_length=150)
-    first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150)
-    email = models.CharField(max_length=254)
-    is_staff = models.IntegerField()
-    is_active = models.IntegerField()
-    date_joined = models.DateTimeField()
+class User(AbstractUser):
+    class Role(models.TextChoices):
+        ADMIN = "Admin", 'Admin'
+        CS = "Customer Service", 'Customer Service'
+        SUPERVISOR = "Supervisor", 'Supervisor'
 
-    class Meta:
-        managed = False
-        db_table = 'auth_user'
+    base_role = Role.CS
+    role = models.CharField(max_length=20, choices=Role.choices, default=base_role)

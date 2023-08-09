@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from apps.forms import *
 from apps.models import *
+from authentication.decorators import role_required
 
 
 @login_required(login_url='/login/')
@@ -16,17 +17,17 @@ def home(request):
 
 
 @login_required(login_url='/login/')
+@role_required(allowed_roles=['Admin'])
 def user_index(request):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT auth_user.id, username, name FROM auth_user INNER JOIN auth_user_groups "
-                       "ON auth_user.id = auth_user_groups.user_id INNER JOIN auth_group "
-                       "ON auth_user_groups.group_id = auth_group.id")
+        cursor.execute("SELECT apps_user.id, username, role FROM apps_user")
         users = cursor.fetchall()
 
     context = {
         'data': users,
         'segment': 'user',
         'crud': 'index',
+        'role': request.user.role,
     }
 
     return render(request, 'home/user_index.html', context)
@@ -61,7 +62,7 @@ def user_add(request):
 # Update User
 @login_required(login_url='/login/')
 def user_update(request, _id):
-    users = AuthUser.objects.get(id=_id)
+    users = User.objects.get(id=_id)
     if request.POST:
         form = FormUser(request.POST, request.FILES, instance=users)
         if form.is_valid():
@@ -91,7 +92,7 @@ def user_update(request, _id):
 # Delete User
 @login_required(login_url='/login/')
 def user_delete(request, _id):
-    users = AuthUser.objects.get(id=_id)
+    users = User.objects.get(id=_id)
 
     users.delete()
     return HttpResponseRedirect(reverse('user-index'))
