@@ -34,6 +34,7 @@ def user_index(request):
 
 
 @login_required(login_url='/login/')
+@role_required(allowed_roles=['Admin'])
 def user_add(request):
     if request.POST:
         form = FormUser(request.POST, request.FILES)
@@ -47,6 +48,7 @@ def user_add(request):
                 'segment': 'user',
                 'crud': 'add',
                 'message': message,
+                'role': request.user.role,
             }
             return render(request, 'home/user_add.html', context)
     else:
@@ -55,38 +57,34 @@ def user_add(request):
             'form': form,
             'segment': 'user',
             'crud': 'add',
+            'role': request.user.role,
         }
         return render(request, 'home/user_add.html', context)
 
 
 # Update User
 @login_required(login_url='/login/')
+@role_required(allowed_roles=['Admin'])
 def user_update(request, _id):
     users = User.objects.get(id=_id)
     if request.POST:
-        form = FormUser(request.POST, request.FILES, instance=users)
+        form = FormUserUpdate(request.POST, request.FILES, instance=users)
         if form.is_valid():
             form.save()
             return HttpResponseRedirect(reverse('user-index'))
-        else:
-            message = form.errors
-            context = {
-                'form': form,
-                'data': users,
-                'segment': 'user',
-                'crud': 'update',
-                'message': message,
-            }
-            return render(request, 'home/user_view.html', context)
     else:
         form = FormUser(instance=users)
-        context = {
-            'form': form,
-            'data': users,
-            'segment': 'user',
-            'crud': 'update',
-        }
-        return render(request, 'home/user_view.html', context)
+
+    message = form.errors
+    context = {
+        'form': form,
+        'data': users,
+        'segment': 'user',
+        'crud': 'update',
+        'message': message,
+        'role': request.user.role,
+    }
+    return render(request, 'home/user_view.html', context)
 
 
 # Delete User

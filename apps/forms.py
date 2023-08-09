@@ -2,7 +2,6 @@ from django import forms
 from django.forms import ModelForm
 from apps.models import *
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User
 
 
 class FormHero(ModelForm):
@@ -26,15 +25,20 @@ class FormUser(UserCreationForm):
     def __init__(self, *args, **kwargs):
         super(FormUser, self).__init__(*args, **kwargs)
         self.label_suffix = ''
-
         self.fields['username'].widget = forms.TextInput({'class': 'form-control'})
         self.fields['password1'].widget = forms.PasswordInput({'class': 'form-control'})
         self.fields['password2'].widget = forms.PasswordInput({'class': 'form-control'})
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'password1', 'password2', 'groups']
+        fields = ['username', 'password1', 'password2', 'role']
 
         widgets = {
-            'groups': forms.SelectMultiple({'class': 'form-control'}),
+            'role': forms.Select({'class': 'form-control'}),
         }
+
+
+class FormUserUpdate(ModelForm):
+    class Meta:
+        model = User
+        exclude = ['username', 'password', 'date_joined']

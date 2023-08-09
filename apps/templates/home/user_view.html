@@ -24,7 +24,7 @@
                     <div class="card-header">
                         <div class="row align-items-center">
                             <div class="col-7">
-                                <h3 class="mb-0">ID Member: {{ data.id }}</h3>
+                                <h3 class="mb-0">User: {{ data.username }}</h3>
                             </div>
                             <div class="col-5 text-right">
                                 <a href="{% if 'add' not in crud %}{% url 'user-delete' data.id %}{% endif %}"
@@ -44,28 +44,8 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-control-label">Nama User</label>
-                                        {{ form.username }}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
                                         <label class="form-control-label">Role</label>
-                                        {{ form.groups }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-control-label">Password</label>
-                                        {{ form.password1 }}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-control-label">Konfirmasi Password</label>
-                                        {{ form.password2 }}
+                                        {{ form.role }}
                                     </div>
                                 </div>
                             </div>
