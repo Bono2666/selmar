@@ -1,5 +1,0 @@
-<div class="col-4 text-right">
-    <a href="{% if 'add' not in crud %}{% url 'hero-delete' data.id %}{% endif %}" class="btn btn-sm btn-danger {% if 'add' in crud %} disabled {% endif %}">Hapus</a>
-    <button type="submit" class="btn btn-sm btn-primary">Simpan</button>
-    <a href="{% url 'hero-index' %}" class="btn btn-sm btn-default">Kembali</a>
-</div>

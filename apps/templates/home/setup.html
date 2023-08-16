@@ -1,0 +1,195 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Setup {% endblock title %}
+
+{% block content %}
+
+{% load filename %}
+
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Setup</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col-xl-12 order-xl-1">
+            <form action="{% url 'setup' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col-7">
+                                <h3 class="mb-0">Setup Lembaga</h3>
+                            </div>
+                            <div class="col-5 text-right">
+                                <button type="submit" class="btn btn-md btn-primary">Simpan</button>
+                                <a href="{% url 'home' %}" class="btn btn-md btn-default">Kembali</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="pl-lg-0">
+                            {% if message %}
+                            <div class="alert alert-danger">
+                                {{ message }}
+                            </div>
+                            {% endif %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Logo</label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-control-label">{{ data.logo|filename }}</label>
+                                        {{ form.logo }}
+                                    </div>
+                                </div>
+                                {% if data.logo.url != '' %}
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <img src="{{ data.logo.url }}" class="img-fluid" alt="Logo Lembaga">
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Alamat Lengkap</label>
+                                        {{ form.alamat }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Kota</label>
+                                        {{ form.kota }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Kecamatan</label>
+                                        {{ form.kecamatan }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">No. Telepon</label>
+                                        {{ form.telp }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Slogan</label>
+                                        {{ form.slogan }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Website</label>
+                                        {{ form.website }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Note Invoice</label>
+                                        {{ form.note }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Tanda Tangan</label>
+                                    </div>
+                                    <div class="form-group">
+                                        {% if data.signature.url != '' %}
+                                        <label class="form-control-label">{{ data.signature|filename }}</label>
+                                        {% endif %}
+                                        {{ form.signature }}
+                                    </div>
+                                </div>
+                                {% if data.signature.url != '' %}
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label class="form-control-label">&nbsp;</label>
+                                        <img src="{{ data.signature.url }}" class="img-fluid" alt="Tanda Tangan">
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Nama Penandatangan</label>
+                                        {{ form.signature_name }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Jabatan</label>
+                                        {{ form.signature_title }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Waktu Pengiriman Dapur</label>
+                                        {{ form.waktu_pengiriman }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Waktu Masakan Siap</label>
+                                        {{ form.waktu_masakan_siap }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Pertanyaan 1</label>
+                                        {{ form.question_1 }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Pertanyaan 2</label>
+                                        {{ form.question_2 }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Pertanyaan 3</label>
+                                        {{ form.question_3 }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+
+{% endblock javascripts %}

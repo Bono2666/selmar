@@ -147,6 +147,30 @@ def set_password(request, _id):
 
 
 @login_required(login_url='/login/')
+@role_required(allowed_roles=['Admin'])
+def setup(request):
+    data = Setup.objects.get(id=1)
+    if request.POST:
+        form = FormSetup(request.POST, request.FILES, instance=data)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('home'))
+    else:
+        form = FormSetup(instance=data)
+
+    message = form.errors
+    context = {
+        'form': form,
+        'data': data,
+        'segment': 'setup',
+        'crud': 'update',
+        'message': message,
+        'role': request.user.role,
+    }
+    return render(request, 'home/setup.html', context)
+
+
+@login_required(login_url='/login/')
 def icon(request):
     return render(request, 'home/icons.html')
 

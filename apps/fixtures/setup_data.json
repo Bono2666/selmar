@@ -1,0 +1,9 @@
+[
+    {
+        "model": "apps.Setup",
+        "pk": 1,
+        "fields": {
+            "alamat": ""
+        }
+    }
+]
