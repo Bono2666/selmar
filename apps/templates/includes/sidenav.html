@@ -99,15 +99,31 @@
 
                     <li class="nav-item">
                         <a class="nav-link {% if 'cabang' in segment %} active {% endif %}"
-                           href="">
+                           href="{% url 'cab-index' %}">
                             <i class="fas fa-store text-primary"></i>
                             <span class="nav-link-text mt-1">Cabang</span>
                         </a>
                     </li>
 
                     <li class="nav-item">
+                        <a class="nav-link {% if 'kategori-item' in segment %} active {% endif %}"
+                           href="{% url 'kat-item-index' %}">
+                            <i class="fas fa-table text-primary"></i>
+                            <span class="nav-link-text mt-1">Kategori Item</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
                         <a class="nav-link {% if 'paket' in segment %} active {% endif %}"
                            href="">
+                            <i class="fas fa-tags text-primary"></i>
+                            <span class="nav-link-text mt-1">Item</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'paket' in segment %} active {% endif %}"
+                           href="{% url 'paket-index' %}">
                             <i class="fas fa-box-open text-primary"></i>
                             <span class="nav-link-text mt-1">Paket</span>
                         </a>

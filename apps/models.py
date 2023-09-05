@@ -39,3 +39,26 @@ class Setup(models.Model):
     question_1 = models.CharField(max_length=100)
     question_2 = models.CharField(max_length=100)
     question_3 = models.CharField(max_length=100)
+
+
+class Cabang(models.Model):
+    nama = models.CharField(max_length=50)
+    alamat = models.CharField(max_length=150)
+    kota = models.CharField(max_length=50)
+    kecamatan = models.CharField(max_length=50)
+    telp = PhoneNumberField(unique=False)
+    manager = models.CharField(max_length=50)
+    rekening_1 = models.CharField(max_length=50)
+    atas_nama_1 = models.CharField(max_length=50)
+    bank_1 = models.CharField(max_length=50)
+    rekening_2 = models.CharField(max_length=50)
+    atas_nama_2 = models.CharField(max_length=50)
+    bank_2 = models.CharField(max_length=50)
+
+
+class Paket(models.Model):
+    nama = models.CharField(max_length=50)
+
+
+class KategoriItem(models.Model):
+    nama = models.CharField(max_length=50)

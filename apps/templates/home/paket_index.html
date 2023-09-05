@@ -1,0 +1,105 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Paket {% endblock title %}
+
+{% block content %}
+
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Paket</h6>
+                </div>
+                <div class="col-lg-6 col-5 text-right">
+                    <a href="{% url 'paket-add' %}"
+                       class="btn btn-icon btn-md btn-neutral {% if 'index' not in crud %} disabled {% endif %}">
+                        <span class="btn-inner--icon"><i class="fas fa-plus"></i></span>
+                        <span class="btn-inner--text">Tambah</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Page content -->
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <!-- Light table -->
+                <div class="table-responsive mb-4 mt-4">
+                    <table id="myTable" class="table align-items-center table-flush py-2">
+                        <thead class="thead-light">
+                        <tr>
+                            <th scope="col" class="sort" data-sort="id">Id</th>
+                            <th scope="col" class="sort" data-sort="name">Nama Paket</th>
+                            <th scope="col"></th>
+                        </tr>
+                        </thead>
+                        <tbody class="list">
+                        {% for item in data %}
+                        <tr>
+                            <td>
+                                <!-- Id Paket -->
+                                {{ item.0 }}
+                            </td>
+                            <th scope="row">
+                                <a href="{% url 'paket-view' item.0 %}">
+                                    <div class="media align-items-center">
+                                        <div class="media-body">
+                                            <!-- Nama Paket -->
+                                            <span class="name mb-0 text-sm">{{ item.1 }}</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </th>
+                            <td class="text-right">
+                                <a class="btn-icon-only mr-4" href="{% url 'paket-view' item.0 %}"
+                                   role="button" data-bs-toggle="tooltip" title="Lihat Paket">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button class="btn-icon-only bg-transparent border-0" data-bs-toggle="modal" data-bs-target="#confirm-{{ item.0 }}">
+                                    <i class="fas fa-trash"></i>
+                            </td>
+
+                            <div class="modal fade" id="confirm-{{ item.0 }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                                aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="ModalLabel">Konfirmasi</h5>
+                                        </div>
+                                        <div class="modal-body">
+                                            Anda yakin ingin menghapus paket <strong>{{ item.1 }}</strong>?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Batal</button>
+                                            <a href="{% url 'paket-delete' item.0 %}" role="button" class="btn bg-gradient-primary text-white">Hapus
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+
+<script>
+      $(document).ready( function () {
+        $('#myTable').DataTable();
+      } );
+</script>
+
+{% endblock javascripts %}

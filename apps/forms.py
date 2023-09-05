@@ -128,3 +128,65 @@ class FormSetup(ModelForm):
             'waktu_masakan_siap': forms.Select(choices=waktu, attrs={'class': 'form-control'}),
             'telp': forms.TextInput({'class': 'form-control', 'type': 'tel', 'placeholder': '+628xxxxxxxxxx'}),
         }
+
+
+class FormCabang(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormCabang, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['nama'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['alamat'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['kota'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['kecamatan'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['telp'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['manager'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['rekening_1'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['atas_nama_1'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['bank_1'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['rekening_2'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['atas_nama_2'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['bank_2'].widget = forms.TextInput(
+            {'class': 'form-control'})
+        self.fields['rekening_2'].required = False
+        self.fields['atas_nama_2'].required = False
+        self.fields['bank_2'].required = False
+
+    class Meta:
+        model = Cabang
+        fields = '__all__'
+
+
+class FormPaket(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormPaket, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['nama'].widget = forms.TextInput(
+            {'class': 'form-control'})
+
+    class Meta:
+        model = Paket
+        fields = '__all__'
+
+
+class FormKategoriItem(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormKategoriItem, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['nama'].widget = forms.TextInput(
+            {'class': 'form-control'})
+
+    class Meta:
+        model = KategoriItem
+        fields = '__all__'
+        
