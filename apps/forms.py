@@ -190,3 +190,14 @@ class FormKategoriItem(ModelForm):
         model = KategoriItem
         fields = '__all__'
         
+
+class FormItem(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormItem, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['nama'].widget = forms.TextInput(
+            {'class': 'form-control'})
+
+    class Meta:
+        model = Item
+        fields = '__all__'

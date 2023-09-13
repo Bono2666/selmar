@@ -106,7 +106,7 @@
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link {% if 'kategori-item' in segment %} active {% endif %}"
+                        <a class="nav-link {% if 'kategori' in segment %} active {% endif %}"
                            href="{% url 'kat-item-index' %}">
                             <i class="fas fa-table text-primary"></i>
                             <span class="nav-link-text mt-1">Kategori Item</span>
@@ -114,8 +114,8 @@
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link {% if 'paket' in segment %} active {% endif %}"
-                           href="">
+                        <a class="nav-link {% if 'item' in segment %} active {% endif %}"
+                           href="{% url 'item-index' %}">
                             <i class="fas fa-tags text-primary"></i>
                             <span class="nav-link-text mt-1">Item</span>
                         </a>

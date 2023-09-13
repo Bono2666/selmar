@@ -28,4 +28,8 @@ urlpatterns = [
      path('master/kategori/view/<int:_id>/',
           views.kategori_item_update, name='kat-item-view'),
      path('master/kategori/delete/<int:_id>/', views.kategori_item_delete, name='kat-item-delete'),
+     path('master/item/', views.item_index, name='item-index'),
+     path('master/item/add/', views.item_add, name='item-add'),
+     path('master/item/view/<int:_id>/', views.item_update, name='item-view'),
+     path('master/item/delete/<int:_id>/', views.item_delete, name='item-delete'),
 ]

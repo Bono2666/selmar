@@ -62,3 +62,9 @@ class Paket(models.Model):
 
 class KategoriItem(models.Model):
     nama = models.CharField(max_length=50)
+
+
+class Item(models.Model):
+    nama = models.CharField(max_length=50)
+    kategori = models.ForeignKey(
+        KategoriItem, on_delete=models.CASCADE, related_name='item_kategori')
