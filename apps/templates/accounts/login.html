@@ -1,65 +1,93 @@
 {% extends 'layouts/base-fullscreen.html' %}
 
-{% block title %} Login {% endblock title %}
-
 {% block content %}
-    <!-- Page content -->
-    <div class="container mt--8 pb-5">
-      <div class="row justify-content-center">
-        <div class="col-lg-5 col-md-7">
-          <div class="card bg-secondary shadow border-0">
-            <div class="card-header bg-transparent pb-4">
-              <div class="text-center mt-2">
-                Sistem Pemesanan Online
+
+  {% include 'includes/navigation-fullscreen.html' %}
+
+  <main class="main-content  mt-0">
+    <section>
+      <div class="page-header min-vh-75">
+        <div class="container">
+          <div class="row">
+            <div class="col-xl-4 col-lg-5 col-md-6 d-flex flex-column mx-auto">
+              <div class="card card-plain mt-8">
+                <div class="card-header pb-0 text-left bg-transparent">
+                  <h3 class="font-weight-bolder text-primary">
+                    Sign IN  
+                  </h3>
+                  <p class="mb-0">
+                    {% if msg %}
+                      <span class="text-danger">{{ msg | safe }}</span>
+                    {% else %}
+                      Add your credentials
+                    {% endif %}                      
+                  </p>
+                </div>
+                <div class="card-body">
+                  <form role="form" method="post" action="#">
+                    {% if form.non_field_errors %}
+                      {% for error in form.non_field_errors %}
+                        <span class="text-danger">{{ error }}</span>
+                      {% endfor %}
+                    {% endif %}
+                    {% csrf_token %}
+                    {% for field in form %}
+                      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                      <div class="mb-3">
+                        {{field}}
+                      </div>
+                    {% endfor %}
+
+                    <div class="text-center">
+                      <button type="submit" class="btn bg-primary w-100 mt-1 mb-0 text-white">Sign in</button>
+                    </div>
+
+                  </form>
+                </div>
               </div>
             </div>
-            <div class="card-body px-lg-5 py-lg-5">
-              <div class="text-center text-muted mb-4">
-
-                {% if msg %}
-                  <p class="text-danger">{{ msg }}</p>
-                {% else %}
-                  <p>
-                    Masukkan User dan Password Anda
-                  </p>
-                {% endif %}  
-
+            <div class="col-md-6">
+              <div class="oblique position-absolute top-0 h-100 d-md-block d-none me-n8">
+                <div class="oblique-image bg-cover position-absolute fixed-top ms-auto h-100 z-index-0 ms-n6" style="background-image:url('/apps/static/img/curved-images/product.jpg')"></div>
               </div>
-
-              <form method="POST">
-
-                {% csrf_token %}
-
-                <div class="form-group mb-3">
-                  <div class="input-group input-group-alternative">
-                    <div class="input-group-prepend">
-                      <span class="input-group-text"><i class="ni ni-circle-08"></i></span>
-                    </div>
-                    {{ form.username }}
-                  </div>
-                </div>
-                <div class="form-group">
-                  <div class="input-group input-group-alternative">
-                    <div class="input-group-prepend">
-                      <span class="input-group-text"><i class="ni ni-lock-circle-open"></i></span>
-                    </div>
-                    {{ form.password }}
-                  </div>
-                </div>
-                <div class="custom-control custom-control-alternative custom-checkbox">
-                  <input class="custom-control-input" id=" customCheckLogin" type="checkbox">
-                  <label class="custom-control-label" for=" customCheckLogin">
-                    <span class="text-muted">Ingatkan saya</span>
-                  </label>
-                </div>
-                <div class="text-center">
-                  <button type="submit" class="btn btn-primary my-4">Masuk</button>
-                </div>
-              </form>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
+  </main>
+
+  {% include 'includes/footer-fullscreen.html' %}
 
 {% endblock content %}
+
+{% block extrascript %}
+    <script type="application/javascript">
+        {% if form.username.errors %}
+            notification.danger("{{ form.username.errors }}", 'top', 'right');
+        {% endif %}
+        {% if form.password.errors %}
+            notification.danger("{{ form.password.errors }}", 'top', 'right');
+        {% endif %}
+
+        {% if user.is_authenticated %}
+            var msg = "You are authenticated as {{ username }}, but are not authorized to " +
+                "access this page.Would you like to login to a different account ?"
+            notification.warning(msg, 'top', 'right');
+        {% endif %}
+
+        {% if form.errors and not form.non_field_errors %}
+            {% if form.errors.items|length == 1 %}
+                notification.warning("Please correct the error below.", 'top', 'right');
+            {% else %}
+                notification.warning("Please correct the errors below.", 'top', 'right');
+            {% endif %}
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            {% for error in form.non_field_errors %}
+                notification.warning("{{ error }}", 'top', 'right');
+            {% endfor %}
+        {% endif %}
+    </script>
+{% endblock %}

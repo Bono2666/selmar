@@ -4,48 +4,60 @@
 
 {% block content %}
 
-<div class="header bg-primary pb-6">
-    <div class="container-fluid">
-        <div class="header-body">
-            <div class="row align-items-center py-4">
-                <div class="col-lg-6 col-7">
-                    <h6 class="h2 text-white d-inline-block mb-0">User</h6>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="container-fluid mt--6">
+<div class="container-fluid mt-4">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
             <form action="{% url 'user-view' data.id %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="card">
                     <div class="card-header">
-                        <div class="row align-items-center">
-                            <div class="col-7">
-                                <h3 class="mb-0">User: {{ data.username }}</h3>
+                        <div class="row">
+                            <div class="col-6 d-flex align-items-center">
+                                <h3 class="mb-0">User ID: {{ data.user_id }}</h3>
                             </div>
-                            <div class="col-5 text-right">
-                                <a href="{% if 'add' not in crud %}{% url 'user-delete' data.id %}{% endif %}"
-                                   class="btn btn-md btn-danger {% if 'add' in crud %} disabled {% endif %}">Hapus</a>
-                                <button type="submit" class="btn btn-md btn-primary">Update</button>
-                                <a href="{% url 'user-index' %}" class="btn btn-md btn-default">Kembali</a>
+                            <div class="col-6 text-end">
+                                <button type="button" class="btn bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                <button type="submit" class="btn bg-gradient-warning mb-0"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
+                                <a href="{% url 'user-index' %}" class="btn bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="confirm-{{ data.id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    Are you sure you want to delete user <strong>{{ data.username }}</strong>?
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'user-delete' data.id %}" role="button" class="btn bg-gradient-primary text-white">Delete
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="pl-lg-0">
                             {% if message %}
-                            <div class="alert alert-danger">
+                            <div class="alert alert-danger text-white">
                                 {{ message }}
                             </div>
                             {% endif %}
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-control-label">Role</label>
-                                        {{ form.role }}
+                                    <div class="form-group shadow-none">
+                                        <label class="form-control-label">User Name</label>
+                                        {{ form.username }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group shadow-none">
+                                        <label class="form-control-label">Email</label>
+                                        {{ form.email }}
                                     </div>
                                 </div>
                             </div>

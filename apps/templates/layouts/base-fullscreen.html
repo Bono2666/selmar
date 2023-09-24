@@ -1,73 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load static %}
 
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <link rel="canonical" href="https://appseed.us/admin-dashboards/django-dashboard-argon">
-  
+  <link rel="apple-touch-icon" sizes="76x76" href="/apps/static/img/apple-icon.png">
+  <link rel="icon" type="image/png" href="/apps/static/img/favicon.png">
+
   <title>
-    Sistem Pemesanan Online - {% block title %} Admin Panel {% endblock %} | Sahabat Aqiqah
+    Selmar Budget | ABC
   </title>
 
-  <link rel="icon" href="/apps/static/img/brand/favicon.png" type="image/png">
-  <!-- Fonts -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700">
-  <!-- Icons -->
-  <link rel="stylesheet" href="/apps/static/vendor/nucleo/css/nucleo.css" type="text/css">
-  <link rel="stylesheet" href="/apps/static/vendor/@fortawesome/fontawesome-free/css/all.min.css" type="text/css">
-  <!-- Argon CSS -->
-  <link rel="stylesheet" href="/apps/static/css/argon.css?v=1.2.0" type="text/css">
+  <!--     Fonts and icons     -->
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet" />
+  <!-- Nucleo Icons -->
+  <link href="/apps/static/css/nucleo-icons.css" rel="stylesheet" />
+  <link href="/apps/static/css/nucleo-svg.css" rel="stylesheet" />
+  <!-- Font Awesome Icons -->
+  <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
+  <link href="/apps/static/css/nucleo-svg.css" rel="stylesheet" />
+  <!-- CSS Files -->
+  <link id="pagestyle" href="/apps/static/css/soft-ui-dashboard.css" rel="stylesheet" />
+  <link id="pagestyle_dark" href="/apps/static/css/dark-theme-core.css" rel="stylesheet" />
 
   <!-- Specific CSS goes HERE -->
   {% block stylesheets %}{% endblock stylesheets %}
 
 </head>
+<body class="">
 
-<body class="bg-default">
+  {% block content %}{% endblock content %}
 
-  <div class="main-content">
-
-    {% include "includes/navigation-fullscreen.html" %}
-
-    <!-- Header -->
-    <div class="header bg-gradient-primary py-7 py-lg-8">
-<!--      <div class="container">-->
-<!--        <div class="header-body text-center mb-7">-->
-<!--          <div class="row justify-content-center">-->
-<!--            <div class="col-lg-5 col-md-6">-->
-<!--              <h1 class="text-white">-->
-<!--                <a target="_blank" class="text-white"-->
-<!--                   href="https://appseed.us/admin-dashboards/django-dashboard-argon">Django Argon</a>-->
-<!--              </h1>-->
-<!--              <p class="text-lead text-light">-->
-<!--                Open-Source Flask Starter with Argon Design-->
-<!--                Coded by <a target="_blank" class="text-white" href="https://appseed.us">AppSeed</a>.-->
-<!--              </p>-->
-<!--            </div>-->
-<!--          </div>-->
-<!--        </div>-->
-<!--      </div>-->
-<!--      <div class="separator separator-bottom separator-skew zindex-100">-->
-<!--        <svg x="0" y="0" viewBox="0 0 2560 100" preserveAspectRatio="none" version="1.1" xmlns="http://www.w3.org/2000/svg">-->
-<!--          <polygon class="fill-default" points="2560 0 2560 100 0 100"></polygon>-->
-<!--        </svg>-->
-<!--      </div>-->
-    </div>
-    
-    {% block content %}{% endblock content %}
-
-    {% include "includes/footer-fullscreen.html" %}
-
-  </div>
-    
   {% include "includes/scripts.html" %}
 
   <!-- Specific JS goes HERE --> 
-  {% block javascripts %}{% endblock javascripts %}
-  
-  <script src="/apps/static/js/argon.js?v=1.2.0"></script>
+  {% block scripts %}{% endblock scripts %}
+
+  <script>
+    var win = navigator.platform.indexOf('Win') > -1;
+    if (win && document.querySelector('#sidenav-scrollbar')) {
+      var options = {
+        damping: '0.5'
+      }
+      Scrollbar.init(document.querySelector('#sidenav-scrollbar'), options);
+    }
+  </script>
+
+  <!-- Github buttons -->
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
+  <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
+  <script src="/apps/static/js/soft-ui-dashboard.min.js"></script>
 
 </body>
-
 </html>

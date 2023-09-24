@@ -7,19 +7,22 @@
   <link rel="canonical" href="https://appseed.us/admin-dashboards/django-dashboard-argon">
   
   <title>
-    Sistem Pemesanan Online - {% block title %} Admin Panel {% endblock %} | Sahabat Aqiqah
+    Selmar Budget - {% block title %} Admin Panel {% endblock %} | ABC President
   </title>
 
   <!-- Favicon - loaded as static -->
-  <link rel="icon" href="/apps/static/img/brand/favicon.png" type="image/png">
+  <link rel="icon" href="/apps/static/img/favicon.png" type="image/png">
   <!-- Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700">
   <!-- Icons -->
   <link rel="stylesheet" href="/apps/static/vendor/nucleo/css/nucleo.css" type="text/css">
   <link rel="stylesheet" href="/apps/static/vendor/@fortawesome/fontawesome-free/css/all.min.css" type="text/css">
   <!-- Page plugins -->
+  <!-- Soft UI Dashboard -->
+  <link id="pagestyle" href="/apps/static/css/soft-ui-dashboard.css" rel="stylesheet" />
+  <link id="pagestyle_dark" href="/apps/static/css/dark-theme-core.css" rel="stylesheet" />
   <!-- Argon CSS -->
-  <link rel="stylesheet" href="/apps/static/css/argon.css?v=1.2.0" type="text/css">
+  <!-- <link rel="stylesheet" href="/apps/static/css/argon.css?v=1.2.0" type="text/css"> -->
   <!-- DataTables -->
   <link rel="stylesheet" href="//cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css" type="text/css">
   <!-- CSS jQuery UI -->
@@ -32,13 +35,13 @@
 
 <body class="">
 
-  {% include "includes/sidenav.html" %}
+  {% include "includes/sidebar.html" %}
 
-  <div class="main-content pb-6" id="panel">
+  <div class="main-content position-relative min-vh-100 pb-4">
 
     {% include "includes/navigation.html" %}
 
-    <div class="content-wrap">
+    <div class="mb-3">
       {% block content %}{% endblock content %}
     </div>
 
@@ -51,6 +54,17 @@
   <!-- Specific JS goes HERE --> 
   {% block javascripts %}{% endblock javascripts %}
 
+  <script>
+    var win = navigator.platform.indexOf('Win') > -1;
+    if (win && document.querySelector('#sidenav-scrollbar')) {
+      var options = {
+        damping: '0.5'
+      }
+      Scrollbar.init(document.querySelector('#sidenav-scrollbar'), options);
+    }
+  </script>
+
+  <!-- Argon JS -->
   <script src="/apps/static/js/argon.js?v=1.2.0"></script>
   <!-- DataTables -->
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
@@ -58,6 +72,9 @@
   <script src="//cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
   <!-- JavaScript jQuery UI -->
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
+  <script src="/apps/static/js/soft-ui-dashboard.min.js"></script>
+  <script src="/apps/static/js/scripts.js"></script>
 
 </body>
 
