@@ -1,6 +1,6 @@
 {% extends 'layouts/base.html' %}
 
-{% block title %} Tambah User {% endblock title %}
+{% block title %} Add New User {% endblock title %}
 
 {% block content %}
 
@@ -38,20 +38,33 @@
                                         </label>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group shadow-none">
                                         <label class="form-control-label">User Name</label>
                                         {{ form.username }}
                                     </div>
                                 </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group shadow-none">
                                         <label class="form-control-label">Email</label>
                                         {{ form.email }}
                                     </div>
                                 </div>
+                                <div class="col-md-6">
+                                    <div class="form-group shadow-none">
+                                        <label class="form-control-label">Position</label>
+                                        <select name="position" class="form-control">
+                                            <option value="">-- Select Position --</option>
+                                            {% for item in position %}
+                                            <option value="{{ item.position_id }}">{{ item.position_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group shadow-none">
                                         <label class="form-control-label">Password</label>

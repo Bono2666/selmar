@@ -1,23 +1,23 @@
 {% extends 'layouts/base.html' %}
 
-{% block title %} Change Password {% endblock title %}
+{% block title %} Add New Position {% endblock title %}
 
 {% block content %}
 
 <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
-            <form action="{% url 'change-password' %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'position-add' %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="card">
                     <div class="card-header">
                         <div class="row">
                             <div class="col-6 d-flex align-items-center">
-                                <h3 class="mb-0">User: {{ data.username }}</h3>
+                                <h3 class="mb-0">Add New Position</h3>
                             </div>
                             <div class="col-6 text-end">
                                 <button type="submit" class="btn bg-gradient-danger mb-0"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <a href="{% url 'home' %}" class="btn bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
+                                <a href="{% url 'position-index' %}" class="btn bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
                             </div>
                         </div>
                     </div>
@@ -31,22 +31,19 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group shadow-none">
-                                        <label class="form-control-label">Old Password</label>
-                                        {{ form.old_password }}
+                                        <label class="form-control-label">Position ID</label>
+                                        {{ form.position_id }}
+                                        <label class="text-muted text-xs">
+                                            <span class="text-danger">*</span> 5 digits position shortname.
+                                        </label>
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group shadow-none">
-                                        <label class="form-control-label">New Password</label>
-                                        {{ form.new_password1 }}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">New Password Confirmation</label>
-                                        {{ form.new_password2 }}
+                                        <label class="form-control-label">Position Name</label>
+                                        {{ form.position_name }}
                                     </div>
                                 </div>
                             </div>

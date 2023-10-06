@@ -5,7 +5,7 @@
     <nav aria-label="app">
       <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
         <li class="text-sm font-weight-bold text-dark active" aria-current="page">
-          Selmar Budget - {% block title %} Admin Panel {% endblock %} | ABC President
+          Integrated System - {% block title %} A&P Application {% endblock %} | ABC President Indonesia
         </li>
       </ol>
     </nav>
@@ -17,18 +17,41 @@
             <span class="d-sm-inline d-none me-3">{{ request.user.username }}</span>
           </div>
         </li>
-        <li class="nav-item d-flex align-items-center">
-          <a href="{% url 'logout' %}" class="nav-link text-body font-weight-bold px-0">
-            Logout
+        
+        <button class="font-weight-bold text-body text-sm  ps-4 border-0 bg-transparent" data-bs-toggle="modal"
+          data-bs-target="#confirm">
+          Logout
+        </button>
+        <div class="modal fade" id="confirm" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+              </div>
+              <div class="modal-body border-bottom-0">
+                Are you sure you want to Logout?
+              </div>
+              <div class="modal-footer border-0">
+                <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="{% url 'logout' %}" role="button" class="btn bg-gradient-danger text-white">Yes
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <li class="nav-item pe-0 px-3 d-flex align-items-center">
+          <a href="{% url 'change-password' %}" class="nav-link text-body p-0 m-0" data-toggle="tooltip" data-original-title="Change Password">
+            <i class="fa fa-lock fixed-plugin-button-nav cursor-pointer"></i>
           </a>
         </li>
-        
         <li class="nav-item pe-2 px-3 d-flex align-items-center">
-          <label for="theme-switch" class="nav-link text-body p-0 m-0">
+          <label for="theme-switch" class="nav-link text-body p-0 m-0" data-toggle="tooltip" data-original-title="Theme">
             <i class="fa fa-sun fixed-plugin-button-nav cursor-pointer" id="theme-indicator"></i>
           </label>
           <input type="checkbox" class="d-none" id="theme-switch"/>
         </li>
+        
       </ul>
     </div>
   </div>

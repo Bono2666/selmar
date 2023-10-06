@@ -2378,7 +2378,7 @@ progress {
   background-color: #fff;
   border-color: #F6B40E;
   outline: 0;
-  box-shadow: 0 0 0 2px #e9aede;
+  box-shadow: 0 0 0 2px #F6B40E;
 }
 .form-control::-webkit-date-and-time-value {
   height: 1.4rem;
@@ -2519,9 +2519,9 @@ textarea.form-control-lg {
   }
 }
 .form-select:focus {
-  border-color: #e293d3;
+  border-color: #F6B40E;
   outline: 0;
-  box-shadow: 0 0 0 2px #e9aede;
+  box-shadow: 0 0 0 2px #F6B40E;
 }
 .form-select[multiple], .form-select[size]:not([size="1"]) {
   padding-right: 0.75rem;
@@ -9735,6 +9735,10 @@ textarea.form-control-lg {
 
 .bg-body {
   background-color: #fff !important;
+}
+
+.bg-default {
+  background-color: #fff;
 }
 
 .bg-transparent {
@@ -18774,6 +18778,9 @@ hr.vertical.gray-light {
 hr.horizontal {
   background-color: transparent;
 }
+hr.horizontal.default {
+  background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0));
+}
 hr.horizontal.light {
   background-image: linear-gradient(to right, rgba(255, 255, 255, 0), white, rgba(255, 255, 255, 0));
 }
@@ -19783,7 +19790,7 @@ hr.horizontal.gray-light {
 }
 
 .sidenav {
-  z-index: 9999;
+  z-index: 0;
 }
 .sidenav .navbar-brand,
 .sidenav .navbar-heading {
