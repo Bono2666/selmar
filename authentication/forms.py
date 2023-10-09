@@ -5,12 +5,12 @@ class LoginForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(LoginForm, self).__init__(*args, **kwargs)
         self.label_suffix = ''
-        self.fields['username'].label = 'User Name'
+        self.fields['user_id'].label = 'User ID'
         
-    username = forms.CharField(
+    user_id = forms.CharField(
         widget=forms.TextInput(
             attrs={
-                "placeholder": "User Name",
+                "placeholder": "User ID",
                 "class": "form-control"
             }
         ))

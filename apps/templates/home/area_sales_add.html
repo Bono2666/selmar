@@ -24,7 +24,7 @@
                     <div class="card-body">
                         <div class="pl-lg-0">
                             {% if message %}
-                            <div class="alert alert-danger text-white">
+                            <div class="alert alert-{{ message.tags }}" role="alert">
                                 {{ message }}
                             </div>
                             {% endif %}
@@ -33,9 +33,9 @@
                                     <div class="form-group shadow-none">
                                         <label class="form-control-label">Area Sales ID</label>
                                         {{ form.area_id }}
-                                        <label class="text-muted text-xs">
-                                            <span class="text-danger">*</span> 5 digits area sales shortname.
-                                        </label>
+                                        <div class="text-sm text-danger">
+                                            {{ form.area_id.errors }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -67,10 +67,10 @@
                     </div>
                     <div class="row">
                         <div class="col-md-12">
-                            <div class="form-group shadow-none mt-0 mb-0">
+                            <div class="form-group shadow-none mt-0 mb-0 border-top">
                                 {{ formset.management_form }}
                                 {% for form in formset %}
-                                <div class="pb-3 mb-3 distributor-list border-bottom">
+                                <div class="pb-0 mb-3 distributor-list border-bottom border-top">
                                     <div class="row">
                                         <div class="col-6">
                                             {{ form.distributor }}
@@ -86,7 +86,7 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                            <div id="empty-form" class="border-bottom pb-3 mb-3 d-none">
+                            <div id="empty-form" class="border-bottom pb-0 d-none">
                                 <div class="row">
                                     <div class="col-6">
                                         {{ formset.empty_form.distributor }}
@@ -99,8 +99,11 @@
                                         <button type="button" class="btn delete-btn bg-transparent shadow-none btn-lg p-0 mt-2" {% if crud == 'view' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
                                     </div>
                                 </div>
+                                <div class="text-sm text-danger">
+                                    {{ formset.empty_form.distributor.errors }}
+                                </div>
                             </div>
-                            <button id="add-more" type="button" class="border-0 bg-transparent text-danger" {% if crud == 'view' %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add More Distributor</button>
+                            <button id="add-more" type="button" class="border-0 bg-transparent text-danger mt-3" {% if crud == 'view' %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add More Distributor</button>
                         </div>
                     </div>
                 </div>
@@ -153,6 +156,11 @@
         clone.innerHTML = clone.innerHTML.replace(regex, currentDistributorCount);
         totalNewForm.value = currentDistributorCount + 1;
         emptyForm.parentNode.insertBefore(clone, emptyForm);
+        // $('.select2').select2({
+        //     placeholder: 'Select Distributor',
+        //     allowClear: true,
+        //     width: '100%'
+        // });
         deleteForm();
     });
 </script>

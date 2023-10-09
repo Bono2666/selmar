@@ -9,7 +9,7 @@ class FormUser(UserCreationForm):
         super(FormUser, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['user_id'].widget = forms.TextInput(
-            {'class': 'form-control text-uppercase', 'placeholder': 'XXXXX'})
+            {'class': 'form-control'})
         self.fields['username'].widget = forms.TextInput(
             {'class': 'form-control'})
         self.fields['email'].widget = forms.EmailInput(
@@ -23,6 +23,10 @@ class FormUser(UserCreationForm):
         model = User
         exclude = ['date_joined', 'password', 'is_active', 'is_staff', 'is_superuser', 'entry_date', 'entry_by', 'update_date', 'update_by']
 
+        widgets = {
+            'position': forms.Select(attrs={'class': 'form-control', 'place_holder': 'Select Position'}),
+        }
+
 
 class FormUserView(ModelForm):
     def __init__(self, *args, **kwargs):
@@ -35,7 +39,11 @@ class FormUserView(ModelForm):
         
     class Meta:
         model = User
-        fields = ['user_id', 'username', 'email']
+        fields = ['user_id', 'username', 'email', 'position']
+
+        widgets = {
+            'position': forms.Select(attrs={'class': 'form-control', 'disabled': 'disabled'}),
+        }
 
 
 class FormUserUpdate(ModelForm):
@@ -43,6 +51,10 @@ class FormUserUpdate(ModelForm):
         model = User
         exclude = ['user_id', 'password', 'date_joined',
                    'is_active', 'is_staff', 'is_superuser', 'entry_date', 'entry_by', 'update_date', 'update_by']
+        
+        widgets = {
+            'position': forms.Select(attrs={'class': 'form-control', 'placeholder': 'Select Position'}),
+        }
 
 
 class FormChangePassword(PasswordChangeForm):
@@ -72,7 +84,7 @@ class FormDistributor(ModelForm):
         super(FormDistributor, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['distributor_id'].widget = forms.TextInput(
-            {'class': 'form-control text-uppercase', 'placeholder': 'XXXXX'})
+            {'class': 'form-control text-uppercase'})
         self.fields['distributor_name'].widget = forms.TextInput(
             {'class': 'form-control'})
 
@@ -104,7 +116,7 @@ class FormAreaSales(ModelForm):
         super(FormAreaSales, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['area_id'].widget = forms.TextInput(
-            {'class': 'form-control text-uppercase', 'placeholder': 'XXXXX'})
+            {'class': 'form-control text-uppercase'})
         self.fields['area_name'].widget = forms.TextInput(
             {'class': 'form-control'})
         self.fields['manager'].widget = forms.TextInput(
@@ -146,7 +158,7 @@ class FormAreaSalesDetailView(ModelForm):
         fields = ['distributor']
 
         widgets = {
-            'distributor': forms.Select(attrs={'class': 'form-control', 'disabled': 'disabled'}),
+            'distributor': forms.Select(attrs={'class': 'form-control select2 border-0 ps-1 shadow-none bg-transparent', 'disabled': 'disabled'}),
         }
 
 
@@ -161,7 +173,7 @@ class FormAreaSalesDetail(ModelForm):
         exclude = ['area', 'entry_date', 'entry_by', 'update_date', 'update_by']
 
         widgets = {
-            'distributor': forms.Select(attrs={'class': 'form-control'}),
+            'distributor': forms.Select(attrs={'class': 'form-control select2 border-0 ps-1 shadow-none bg-transparent cursor-pointer', 'placeholder': 'Select Distributor'}),
         }
 
 

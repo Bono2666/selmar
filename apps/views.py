@@ -1,6 +1,6 @@
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.db import connection
+from django.db import connection, IntegrityError
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
@@ -297,23 +297,26 @@ def area_sales_add(request):
         formset = AreaSalesDetailFormSet(request.POST, queryset=AreaSalesDetail.objects.none())
 
         if all([form.is_valid(), formset.is_valid()]):
-            parent = form.save(commit=False)
-            parent.save()
-            for form in formset:
-                if form.cleaned_data.get('distributor') is None:
-                    if form.cleaned_data.get('DELETE'):
-                        continue
+            try:
+                parent = form.save(commit=False)
+                parent.save()
+                for form in formset:
+                    if form.cleaned_data.get('distributor') is None:
+                        if form.cleaned_data.get('DELETE'):
+                            continue
+                        else:
+                            continue
                     else:
-                        continue
-                else:
-                    if form.cleaned_data.get('DELETE'):
-                        form.instance.delete()
-                        continue
-                    
-                child = form.save(commit=False)
-                child.area = parent
-                child.save()
-            return HttpResponseRedirect(reverse('area-sales-index'))
+                        if form.cleaned_data.get('DELETE'):
+                            form.instance.delete()
+                            continue
+                        
+                    child = form.save(commit=False)
+                    child.area = parent
+                    child.save()
+                return HttpResponseRedirect(reverse('area-sales-index'))
+            except Exception:
+                return HttpResponseRedirect(reverse('area-sales-index'))
         else:
             message = form.errors
             context = {
@@ -376,23 +379,26 @@ def area_sales_update(request, _id):
         form = FormAreaSalesUpdate(request.POST, request.FILES, instance=area_sales)
         formset = AreaSalesDetailFormSet(request.POST, queryset=qs)
         if all([form.is_valid(), formset.is_valid()]):
-            parent = form.save(commit=False)
-            parent.save()
-            for form in formset:
-                if form.cleaned_data.get('distributor') is None:
-                    if form.cleaned_data.get('DELETE'):
-                        continue
+            try:
+                parent = form.save(commit=False)
+                parent.save()
+                for form in formset:
+                    if form.cleaned_data.get('distributor') is None:
+                        if form.cleaned_data.get('DELETE'):
+                            continue
+                        else:
+                            continue
                     else:
-                        continue
-                else:
-                    if form.cleaned_data.get('DELETE'):
-                        form.instance.delete()
-                        continue
-                    
-                child = form.save(commit=False)
-                child.area = parent
-                child.save()
-            return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
+                        if form.cleaned_data.get('DELETE'):
+                            form.instance.delete()
+                            continue
+                        
+                    child = form.save(commit=False)
+                    child.area = parent
+                    child.save()
+                return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
+            except Exception:
+                return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
     else:
         form = FormAreaSalesUpdate(instance=area_sales)
         formset = AreaSalesDetailFormSet(queryset=qs)

@@ -23,25 +23,23 @@
                     </div>
                     <div class="card-body">
                         <div class="pl-lg-0">
-                            {% if message %}
-                            <div class="alert alert-danger text-white">
-                                {{ message }}
-                            </div>
-                            {% endif %}
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group shadow-none">
                                         <label class="form-control-label">Distributor ID</label>
                                         {{ form.distributor_id }}
-                                        <label class="text-muted text-xs">
-                                            <span class="text-danger">*</span> 5 digits distributor shortname.
-                                        </label>
+                                        <div class="text-sm text-danger">
+                                            {{ form.distributor_id.errors }}
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group shadow-none">
                                         <label class="form-control-label">Distributor Name</label>
                                         {{ form.distributor_name }}
+                                        <div class="text-sm text-danger">
+                                            {{ form.distributor_name.errors }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

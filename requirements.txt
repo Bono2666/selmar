@@ -3,9 +3,9 @@ django
 # python-dotenv
 # whitenoise
 # django-admin-soft-dashboard==1.0.11
-django-tables2
 pillow
 pymysql
+django-crum
 # phonenumbers
 # django-phonenumber-field
 djangorestframework

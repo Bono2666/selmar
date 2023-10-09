@@ -35,7 +35,23 @@
   {% include "includes/scripts.html" %}
 
   <!-- Specific JS goes HERE --> 
-  {% block scripts %}{% endblock scripts %}
+  {% block scripts %}
+  <script>
+    $(document).ready(function () {
+        $('#show-hide-pass').click(function () {
+          if ($(this).hasClass('show')) {
+            $(this).removeClass('show');
+            $(this).html('<i class="fas fa-eye my-1"></i>');
+            $('#id_password').attr('type', 'password');
+          } else {
+            $(this).addClass('show');
+            $(this).html('<i class="fas fa-eye-slash my-1"></i>');
+            $('#id_password').attr('type', 'text');
+          }
+        });
+      });
+  </script>
+  {% endblock scripts %}
 
   <script>
     var win = navigator.platform.indexOf('Win') > -1;

@@ -1,8 +1,5 @@
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.hashers import check_password
 from django.shortcuts import redirect, render
-
-from apps.models import User
 from .forms import LoginForm
 
 
@@ -14,16 +11,16 @@ def login_view(request):
     if request.method == "POST":
 
         if form.is_valid():
-            username = form.cleaned_data.get("username")
+            user_id = form.cleaned_data.get("user_id")
             password = form.cleaned_data.get("password")
-            user = authenticate(username=username, password=password)
+            user = authenticate(user_id=user_id, password=password)
             if user is not None:
                 login(request, user)
                 return redirect("/")
             else:
-                msg = 'User/Password tidak valid'
+                msg = 'Invalid User ID/Password'
         else:
-            msg = 'Kesalahan validasi'
+            msg = 'Error validating the form.'
 
     return render(request, "accounts/login.html", {"form": form, "msg": msg})
 
