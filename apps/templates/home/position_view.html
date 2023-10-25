@@ -13,13 +13,13 @@
                     <div class="card-header">
                         <div class="row">
                             <div class="col-4 d-flex align-items-center">
-                                <h4 class="mb-0">Position ID: {{ data.position_id }}</h4>
+                                <h5 class="mb-0">Position ID: {{ data.position_id }}</h5>
                             </div>
                             <div class="col-8 text-end">
                                 <a href="{% if crud == 'view' %}{% url 'position-index' %}{% else %}{% url 'position-view' data.position_id %}{% endif %}" class="btn bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
-                                <a href="{% url 'position-update' data.position_id %}" class="btn bg-gradient-dark mb-0" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
+                                <a href="{% url 'position-update' data.position_id %}" class="btn bg-gradient-dark mb-0 {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
                                 <button type="submit" class="btn bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <button type="button" class="btn bg-gradient-danger mb-0 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.position_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                <button type="button" class="btn bg-gradient-danger mb-0 {% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.position_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
                             </div>
                         </div>
                     </div>

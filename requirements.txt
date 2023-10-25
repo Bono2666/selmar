@@ -6,9 +6,9 @@ django
 pillow
 pymysql
 django-crum
-# phonenumbers
-# django-phonenumber-field
-djangorestframework
+phonenumbers
+django-phonenumber-field
+# djangorestframework
 
 # psycopg2-binary
 # mysqlclient

@@ -9,7 +9,7 @@
   <hr class="horizontal default mt-2">
   <div class="collapse navbar-collapse  w-auto " id="sidenav-collapse-main">
     <ul class="navbar-nav">
-      <li class="nav-item">
+      <!-- <li class="nav-item">
         <a href="{% url 'home' %}" class="nav-link {% if 'index' in segment %} active {% endif %}">
 
           <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
@@ -29,112 +29,105 @@
           </div>
           <span class="nav-link-text ms-1">Dashboard</span>
         </a>
-      </li>
-      {% if 'ADMIN' in role or request.user.is_superuser %}
-      <li class="nav-item mt-3">
-        <span class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6 text-default">Master Data</span>
-      </li>
+      </li> -->
       <li class="nav-item">
-        <a class="nav-link {% if 'user' in segment %} active {% endif %} " href="{% url 'user-index' %}">
+        <a class="nav-link {% if 'anp' in group_segment %}active{% endif %} {% if 'anp' not in group_segment %}collapsed{% endif %}" href="" data-bs-toggle="collapse" data-bs-target="#anp-menu">
           <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-            {% if 'user' in segment %}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-              <title>profile</title>
-              <g stroke-width="1" fill="#F7F7F7" stroke="#F7F7F7">
-                <circle cx="8" cy="3.5" r="3" fill="none" stroke-linecap="round" stroke-linejoin="round"></circle>
-                <path d="M8,9a6.5,6.5,0,0,0-6.5,6.5h13A6.5,6.5,0,0,0,8,9Z" fill="none" stroke="#F7F7F7" stroke-linecap="round" stroke-linejoin="round"></path>
-              </g>
-            </svg>
-            {% else %}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-              <title>profile</title>
-              <g stroke-width="1" fill="#212121" stroke="#212121">
-                  <circle cx="8" cy="3.5" r="3" fill="none" stroke-linecap="round" stroke-linejoin="round"></circle>
-                  <path d="M8,9a6.5,6.5,0,0,0-6.5,6.5h13A6.5,6.5,0,0,0,8,9Z" fill="none" stroke="#212121" stroke-linecap="round" stroke-linejoin="round"></path>
-              </g>
-            </svg>
-            {% endif %}
-          </div>
-          <span class="nav-link-text ms-1">User</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if 'distributor' in segment %} active {% endif %} " href="{% url 'distributor-index' %}">
-          <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-            {% if 'distributor' in segment %}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-              <title>automated-logistics</title>
-              <g stroke-width="1" fill="#F7F7F7" stroke="#F7F7F7">
-                <line x1="12.5" y1="0.5" x2="12.5" y2="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></line>
-                <polyline points="15.5 7.5 15.5 5.5 12.5 3.5 9.5 5.5 9.5 7.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline><polyline points="6.5 15.5 6.5 8.5 0.5 8.5 0.5 15.5 15.5 15.5 15.5 11.5 9.5 11.5 9.5 15.5" fill="none" stroke="#F7F7F7" stroke-linecap="round" stroke-linejoin="round"></polyline>
-              </g>
-            </svg>
-            {% else %}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-              <title>automated-logistics</title>
-              <g stroke-width="1" fill="#212121" stroke="#212121">
-                <line x1="12.5" y1="0.5" x2="12.5" y2="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></line>
-                <polyline points="15.5 7.5 15.5 5.5 12.5 3.5 9.5 5.5 9.5 7.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline><polyline points="6.5 15.5 6.5 8.5 0.5 8.5 0.5 15.5 15.5 15.5 15.5 11.5 9.5 11.5 9.5 15.5" fill="none" stroke="#212121" stroke-linecap="round" stroke-linejoin="round"></polyline>
-              </g>
-            </svg>
-            {% endif %}
-          </div>
-          <span class="nav-link-text ms-1">Distributor</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if 'area_sales' in segment %} active {% endif %} " href="{% url 'area-sales-index' %}">
-          <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-            {% if 'area_sales' in segment %}
+            {% if 'anp' in group_segment %}
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-              <title>pin_drop</title>
+              <title>A & P Manual</title>
               <g fill="none">
-                <path d="M12 4c1.93 0 5 1.4 5 5.15 0 2.16-1.72 4.67-5 7.32-3.28-2.65-5-5.17-5-7.32C7 5.4 10.07 4 12 4zm0-2C8.73 2 5 4.46 5 9.15c0 3.12 2.33 6.41 7 9.85 4.67-3.44 7-6.73 7-9.85C19 4.46 15.27 2 12 2z" fill="#F7F7F7"></path>
-                <path d="M12 7c-1.1 0-2 .9-2 2s.9 2 2 2a2 2 0 0 0 0-4zM5 20h14v2H5v-2z" fill="#F7F7F7"></path>
+                <path d="M11.5 17.1c-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79z" fill="#F7F7F7"></path>
               </g>
             </svg>
             {% else %}
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-              <title>pin_drop</title>
+              <title>A & P Manual</title>
               <g fill="none">
-                <path d="M12 4c1.93 0 5 1.4 5 5.15 0 2.16-1.72 4.67-5 7.32-3.28-2.65-5-5.17-5-7.32C7 5.4 10.07 4 12 4zm0-2C8.73 2 5 4.46 5 9.15c0 3.12 2.33 6.41 7 9.85 4.67-3.44 7-6.73 7-9.85C19 4.46 15.27 2 12 2z" fill="#212121"></path>
-                <path d="M12 7c-1.1 0-2 .9-2 2s.9 2 2 2a2 2 0 0 0 0-4zM5 20h14v2H5v-2z" fill="#212121"></path>
+                <path d="M11.5 17.1c-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79z" fill="#212121"></path>
               </g>
             </svg>
             {% endif %}
           </div>
-          <span class="nav-link-text ms-1">Area Sales</span>
+          <span class="nav-link-text ms-1">A & P Manual</span>
         </a>
+
+        <div class="multi-level ms-5 collapse {% if 'anp' in group_segment %}show{% endif %}" role="list" id="anp-menu" aria-expanded="{% if 'anp' in group_segment %}true{% else %}false{% endif %}">
+          <ul class="flex-column nav">
+            <li class="nav-item {% if 'budget' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link {% if 'BUDGET' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'budget-index' %}">
+                <span class="nav-link-text ms-1 {% if 'BUDGET' not in role and not request.user.is_superuser %}disabled{% endif %}">Budget</span>
+              </a>
+            </li>
+          </ul>
+        </div>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if 'position' in segment %} active {% endif %} " href="{% url 'position-index' %}">
+        <a class="nav-link {% if 'master' in group_segment %}active{% endif %} {% if 'master' not in group_segment %}collapsed{% endif %}" href="{% url 'user-index' %}" data-bs-toggle="collapse" data-bs-target="#user-menu">
           <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-            {% if 'position' in segment %}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-              <title>armchair</title>
-              <g stroke-width="1" fill="#F7F7F7" stroke="#F7F7F7">
-                <path d="M12.5,9v1.5h-9V9A1.5,1.5,0,0,0,2,7.5H2A1.5,1.5,0,0,0,.5,9v4.5h15V9A1.5,1.5,0,0,0,14,7.5h0A1.5,1.5,0,0,0,12.5,9Z" fill="none" stroke="#F7F7F7" stroke-linecap="round" stroke-linejoin="round"></path>
-                <path d="M2.5,5.5V2A1.5,1.5,0,0,1,4,.5h8A1.5,1.5,0,0,1,13.5,2V5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
-                <line x1="2.5" y1="13.5" x2="2.5" y2="15.5" fill="none" stroke="#F7F7F7" stroke-linecap="round" stroke-linejoin="round"></line>
-                <line x1="13.5" y1="13.5" x2="13.5" y2="15.5" fill="none" stroke="#F7F7F7" stroke-linecap="round" stroke-linejoin="round"></line>
+            {% if 'master' in group_segment %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+              <title>Master Data</title>
+              <g stroke-width="2" fill="#F7F7F7" stroke="#F7F7F7">
+                <polygon fill="none" stroke="#F7F7F7" stroke-linecap="square" stroke-miterlimit="10" points="2,7 12,1 22,7 12,13 " stroke-linejoin="miter"></polygon>
+                <polyline fill="none" stroke-linecap="square" stroke-miterlimit="10" points=" 22,12 12,18 2,12 " stroke-linejoin="miter"></polyline>
+                <polyline fill="none" stroke-linecap="square" stroke-miterlimit="10" points=" 22,17 12,23 2,17 " stroke-linejoin="miter"></polyline>
               </g>
             </svg>
             {% else %}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-              <title>armchair</title>
-              <g stroke-width="1" fill="#212121" stroke="#212121">
-                <path d="M12.5,9v1.5h-9V9A1.5,1.5,0,0,0,2,7.5H2A1.5,1.5,0,0,0,.5,9v4.5h15V9A1.5,1.5,0,0,0,14,7.5h0A1.5,1.5,0,0,0,12.5,9Z" fill="none" stroke="#212121" stroke-linecap="round" stroke-linejoin="round"></path>
-                <path d="M2.5,5.5V2A1.5,1.5,0,0,1,4,.5h8A1.5,1.5,0,0,1,13.5,2V5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
-                <line x1="2.5" y1="13.5" x2="2.5" y2="15.5" fill="none" stroke="#212121s" stroke-linecap="round" stroke-linejoin="round"></line>
-                <line x1="13.5" y1="13.5" x2="13.5" y2="15.5" fill="none" stroke="#212121" stroke-linecap="round" stroke-linejoin="round"></line>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+              <title>Master Data</title>
+              <g stroke-width="2" fill="#212121" stroke="#212121">
+                <polygon fill="none" stroke="#212121" stroke-linecap="square" stroke-miterlimit="10" points="2,7 12,1 22,7 12,13 " stroke-linejoin="miter"></polygon>
+                <polyline fill="none" stroke-linecap="square" stroke-miterlimit="10" points=" 22,12 12,18 2,12 " stroke-linejoin="miter"></polyline>
+                <polyline fill="none" stroke-linecap="square" stroke-miterlimit="10" points=" 22,17 12,23 2,17 " stroke-linejoin="miter"></polyline>
               </g>
             </svg>
             {% endif %}
           </div>
-          <span class="nav-link-text ms-1">Posisi</span>
+          <span class="nav-link-text ms-1">Master Data</span>
         </a>
+
+        <div class="multi-level ms-5 collapse {% if 'master' in group_segment %}show{% endif %}" role="list" id="user-menu" aria-expanded="{% if 'anp' in group_segment %}true{% else %}false{% endif %}">
+          <ul class="flex-column nav">
+            <li class="nav-item {% if 'user' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link {% if 'USER' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'user-index' %}">
+                <span class="nav-link-text ms-1 {% if 'USER' not in role and not request.user.is_superuser %}disabled{% endif %}">User</span>
+              </a>
+            </li>
+            <li class="nav-item {% if 'distributor' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link {% if 'DISTRIBUTOR' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'distributor-index' %}">
+                <span class="nav-link-text ms-1 {% if 'DISTRIBUTOR' not in role and not request.user.is_superuser %}disabled{% endif %}">Distributor</span>
+              </a>
+            </li>
+            <li class="nav-item {% if 'area_sales' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link {% if 'AREA' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'area-sales-index' %}">
+                <span class="nav-link-text ms-1 {% if 'AREA' not in role and not request.user.is_superuser %}disabled{% endif %}">Area Sales</span>
+              </a>
+            </li>
+            <li class="nav-item {% if 'position' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link {% if 'POSITION' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'position-index' %}">
+                <span class="nav-link-text ms-1 {% if 'POSITION' not in role and not request.user.is_superuser %}disabled{% endif %}">Position</span>
+              </a>
+            </li>
+            <li class="nav-item {% if 'menu' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link {% if 'MENU' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'menu-index' %}">
+                <span class="nav-link-text ms-1 {% if 'MENU' not in role and not request.user.is_superuser %}disabled{% endif %}">Menu</span>
+              </a>
+            </li>
+            <li class="nav-item {% if segment == 'channel' %}active{% endif %} list-unstyled">
+              <a class="nav-link {% if 'CHANNEL' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'channel-index' %}">
+                <span class="nav-link-text ms-1 {% if 'CHANNEL' not in role and not request.user.is_superuser %}disabled{% endif %}">Channel</span>
+              </a>
+            </li>
+            <li class="nav-item {% if 'area_channel' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link {% if 'AREA-CHANNEL' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'area-channel-index' %}">
+                <span class="nav-link-text ms-1 {% if 'AREA-CHANNEL' not in role and not request.user.is_superuser %}disabled{% endif %}">Area Channel</span>
+              </a>
+            </li>
+          </ul>
+        </div>
       </li>
-      {% endif %}
     </ul>
   </div>
 </aside>

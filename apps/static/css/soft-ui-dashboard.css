@@ -3975,7 +3975,7 @@ textarea.form-control-lg {
   --bs-nav-link-font-weight: ;
   --bs-nav-link-color: var(--bs-link-color);
   --bs-nav-link-hover-color: var(--bs-link-hover-color);
-  --bs-nav-link-disabled-color: #6c757d;
+  --bs-nav-link-disabled-color: rgba(52, 71, 103, 0.3);
   display: flex;
   flex-wrap: wrap;
   padding-left: 0;
@@ -4000,7 +4000,7 @@ textarea.form-control-lg {
   color: var(--bs-nav-link-hover-color);
 }
 .nav-link.disabled {
-  color: var(--bs-nav-link-disabled-color);
+  color: var(--bs-nav-link-disabled-color) !important;
   pointer-events: none;
   cursor: default;
 }
@@ -8696,6 +8696,10 @@ textarea.form-control-lg {
   margin-left: 16rem !important;
 }
 
+.ms-13 {
+  margin-left: 18rem !important;
+}
+
 .ms-auto {
   margin-left: auto !important;
 }
@@ -9058,6 +9062,10 @@ textarea.form-control-lg {
 
 .ms-n12 {
   margin-left: -16rem !important;
+}
+
+.ms-n13 {
+  margin-left: -18rem !important;
 }
 
 .p-0 {
@@ -19170,7 +19178,7 @@ hr.horizontal.gray-light {
   padding-left: 1rem;
   padding-right: 1rem;
   font-weight: 500;
-  color: #67748e;
+  color: #000000;
 }
 .navbar-vertical .navbar-nav .nav-link > i {
   min-width: 1.8rem;
@@ -19929,7 +19937,7 @@ hr.horizontal.gray-light {
   position: relative;
   background-color: transparent;
   box-shadow: none;
-  color: rgba(58, 65, 111, 0.5);
+  color: rgba(0, 0, 0, 0.5);
   margin-left: 1.35rem;
 }
 .navbar-vertical .navbar-nav .nav-item .collapse .nav .nav-item .nav-link:before,

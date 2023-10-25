@@ -14,7 +14,7 @@
                         <h3 class="mb-0">Distributor List</h3>
                     </div>
                     <div class="col-6 text-end">
-                        <a class="btn bg-gradient-danger mb-0" href="{% url 'distributor-add' %}"><i class="fas fa-plus"></i>&nbsp;&nbsp;Add New Distributor</a>
+                        <a class="btn bg-gradient-danger mb-0 {% if not btn.add and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'distributor-add' %}"><i class="fas fa-plus"></i>&nbsp;&nbsp;Add New Distributor</a>
                     </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
@@ -61,7 +61,7 @@
       $('#myTable').DataTable();
     } );
 
-    $('tr').click(function() {
+    $('tbody tr').click(function() {
       window.location = $(this).data('href');
     });
 </script>
