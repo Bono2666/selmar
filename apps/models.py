@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 from crum import get_current_user
+from decimal import Decimal
+from re import sub
 
 
 class User(AbstractUser):
@@ -30,6 +32,7 @@ class User(AbstractUser):
 class Distributor(models.Model):
     distributor_id = models.CharField(max_length=50, primary_key=True)
     distributor_name = models.CharField(max_length=50)
+    sap_code = models.CharField(max_length=50, null=True)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True)
@@ -163,6 +166,32 @@ class AreaChannelDetail(models.Model):
         return self.area_id
 
 
+class AreaUser(models.Model):
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['area', 'user'], name='unique_area_user')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(AreaUser, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.area.area_name
+
+
 class Position(models.Model):
     position_id = models.CharField(
         max_length=3, primary_key=True, help_text='Max 3 digits Position shortname.')
@@ -237,7 +266,7 @@ class Auth(models.Model):
 
 
 class Budget(models.Model):
-    budget_no = models.CharField(max_length=50, primary_key=True)
+    budget_id = models.CharField(max_length=50, primary_key=True)
     budget_year = models.CharField(max_length=4)
     budget_month = models.CharField(max_length=2)
     budget_area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
@@ -256,9 +285,14 @@ class Budget(models.Model):
     update_by = models.CharField(max_length=50, null=True)
 
     def save(self, *args, **kwargs):
-        self.budget_no = 'UBS/' + self.budget_area.area_id + '/' + \
-            self.budget_distributor.distributor_id + '/' + \
-            self.budget_month + '/' + self.budget_year
+        if not self.budget_id:
+            self.budget_id = 'UBS/' + self.budget_area.area_id + '/' + \
+                self.budget_distributor.distributor_id + '/' + \
+                self.budget_month + '/' + self.budget_year
+        self.budget_amount = Decimal(
+            sub(r'[^\d.]', '', str(self.budget_amount)))
+        self.budget_upping = Decimal(
+            sub(r'[^\d.]', '', str(self.budget_upping)))
         self.budget_total = self.budget_amount + self.budget_upping
         if not self.entry_date:
             self.entry_date = timezone.now()
@@ -271,13 +305,19 @@ class Budget(models.Model):
 class BudgetDetail(models.Model):
     budget = models.ForeignKey(Budget, on_delete=models.CASCADE)
     budget_channel = models.ForeignKey(Channel, on_delete=models.CASCADE)
-    budget_percent = models.DecimalField(max_digits=5, decimal_places=2)
-    budget_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    budget_upping = models.DecimalField(max_digits=10, decimal_places=2)
+    budget_percent = models.DecimalField(
+        max_digits=3, decimal_places=0, default=0)
+    budget_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
+    budget_upping = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
     budget_total = models.DecimalField(max_digits=10, decimal_places=2)
-    budget_proposed = models.DecimalField(max_digits=10, decimal_places=2)
-    budget_program = models.DecimalField(max_digits=10, decimal_places=2)
-    budget_claim = models.DecimalField(max_digits=10, decimal_places=2)
+    budget_proposed = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
+    budget_program = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
+    budget_claim = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
     budget_balance = models.DecimalField(max_digits=10, decimal_places=2)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
@@ -291,6 +331,8 @@ class BudgetDetail(models.Model):
         ]
 
     def save(self, *args, **kwargs):
+        self.budget_total = self.budget_amount + self.budget_upping
+        self.budget_balance = self.budget_total - self.budget_proposed
         if not self.entry_date:
             self.entry_date = timezone.now()
             self.entry_by = get_current_user().user_id

@@ -4,68 +4,79 @@
 
 {% block content %}
 
-<div class="container-fluid mt-4">
+<div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
-            <form action="{% url 'budget-add' %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'budget-add' selected_area %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="card">
-                    {{ message }}
                     <div class="card-header">
                         <div class="row">
                             <div class="col-6 d-flex align-items-center">
-                                <h3 class="mb-0">Add New Budget</h3>
+                                <h4 class="mb-2">Add New Budget {% if selected_area != ' ' %}- Area {{ selected_area }}{% endif %}</h4>
                             </div>
                             <div class="col-6 text-end">
-                                <button type="submit" class="btn bg-gradient-danger mb-0"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <a href="{% url 'budget-index' %}" class="btn bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
+                                <button type="submit" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
+                                <a href="{% url 'budget-index' %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
                             </div>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="pl-lg-0">
+                        {% if message %}
+                        <div class="alert text-danger text-sm text-bg-light" role="alert">
+                            {{ message }}
+                        </div>
+                        {% endif %}
                             <div class="row">
                                 <div class="col-md-4">
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Year</label>
+                                    <div class="shadow-none">
+                                        {{ form.budget_year.label_tag }}
                                         {{ form.budget_year }}
                                         <div class="text-sm text-danger">
                                             {{ form.budget_year.errors }}
                                         </div>
                                     </div>
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Month</label>
+                                    <div class="shadow-none">
+                                        {{ form.budget_month.label_tag }}
                                         {{ form.budget_month }}
                                         <div class="text-sm text-danger">
                                             {{ form.budget_month.errors }}
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Area</label>
-                                        {{ form.budget_area }}
+                                    <div class="d-none">
+                                        {{ form.budget_area.label_tag }}
+                                        <select name="budget_area" id="budget_area" class="form-control form-select-sm">
+                                            <option value="{{ selected_area }}">{{ selected_area }}</option>
+                                        </select>
                                         <div class="text-sm text-danger">
                                             {{ form.budget_area.errors }}
                                         </div>
                                     </div>
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Distributor</label>
-                                        {{ form.budget_distributor }}
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="shadow-none">
+                                        {{ form.budget_distributor.label_tag }}
+                                        <select name="budget_distributor" id="budget_distributor" class="form-control form-select-sm">
+                                            <option value="">-- Select Distributor --</option>
+                                            {% for item in distributor %}
+                                            <option value="{{ item.distributor_id }}">{{ item.distributor_name }}</option>
+                                            {% endfor %}
+                                        </select>
                                         <div class="text-sm text-danger">
                                             {{ form.budget_distributor.errors }}
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Beginning Balance</label>
+                                    <div class="shadow-none">
+                                        {{ form.budget_amount.label_tag }}
                                         <div class="input-group input-group-alternative">
                                             {{ form.budget_amount }}
                                         </div>
                                     </div>
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Upping Price</label>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="shadow-none">
+                                        {{ form.budget_upping.label_tag }}
                                         <div class="input-group input-group-alternative">
                                             {{ form.budget_upping }}
                                         </div>
@@ -73,8 +84,8 @@
                                             {{ form.budget_upping.errors }}
                                         </div>
                                     </div>
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Total Budget</label>
+                                    <div class="shadow-none">
+                                        {{ form.budget_total.label_tag }}
                                         <div class="input-group input-group-alternative">
                                             {{ form.budget_total }}
                                         </div>
@@ -88,39 +99,65 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-body border-bottom-0">
+                <div class="table-responsive p-0">
+                    <table class="table hover cursor-pointer align-items-center mb-3" id="areaTable">
+                        <thead>
+                            <tr>
+                                <th
+                                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                    Select Area</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in area %}
+                            <tr data-href="{% url 'budget-add' item.0 %}" class="cursor-pointer">
+                                <td>
+                                    <div class="d-flex pe-2 py-0">
+                                        <div class="d-flex flex-column justify-content-center">
+                                            <h6 class="mb-0 text-sm">{{ item.1 }}</h6>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 d-flex">
+                <a href="{% url 'budget-index' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>            
+        </div>
+    </div>
+</div>
 
 {% endblock content %}
 
 {% block javascripts %}
 <script>
-$(document).ready(function() {
-    $('#show-hide-new-pass').click(function() {
-        if ($(this).hasClass('show')) {
-            $(this).removeClass('show');
-            $(this).addClass('hide');
-            $(this).html('<i class="fas fa-eye my-1"></i>');
-            $('#id_password1').attr('type', 'password');
-        } else {
-            $(this).removeClass('hide');
-            $(this).addClass('show');
-            $(this).html('<i class="fas fa-eye-slash my-1"></i>');
-            $('#id_password1').attr('type', 'text');
-        }
+    let selectedArea = "{{ selected_area }}";
+    if (selectedArea == "NONE") {
+        $('#dialog-popup').modal({
+            backdrop: 'static',
+            keyboard: false
+        });
+    }
+    
+    $(document).ready(function() {
+        $('#areaTable').DataTable({
+            "paging": false,
+            "info": false,
+            "searching": false,
+            "lengthChange": false,
+        });
     });
 
-    $('#show-hide-confirm-pass').click(function() {
-        if ($(this).hasClass('show')) {
-            $(this).removeClass('show');
-            $(this).addClass('hide');
-            $(this).html('<i class="fas fa-eye my-1"></i>');
-            $('#id_password2').attr('type', 'password');
-        } else {
-            $(this).removeClass('hide');
-            $(this).addClass('show');
-            $(this).html('<i class="fas fa-eye-slash my-1"></i>');
-            $('#id_password2').attr('type', 'text');
-        }
+    $('tbody tr').click(function() {
+        window.location = $(this).data('href');
     });
-});
 </script>
 {% endblock javascripts %}

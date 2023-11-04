@@ -6,7 +6,7 @@ class LoginForm(forms.Form):
         super(LoginForm, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['user_id'].label = 'User ID'
-        
+
     user_id = forms.CharField(
         widget=forms.TextInput(
             attrs={

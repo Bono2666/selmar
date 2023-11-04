@@ -8,6 +8,7 @@ from django.forms.models import modelformset_factory
 from apps.forms import *
 from apps.models import *
 from authentication.decorators import role_required
+from tablib import Dataset
 
 
 @login_required(login_url='/login/')
@@ -82,12 +83,17 @@ def user_add(request):
 def user_view(request, _id):
     users = User.objects.get(user_id=_id)
     auth = Auth.objects.filter(user_id=_id)
+    area = AreaUser.objects.filter(user_id=_id)
     form = FormUserView(instance=users)
     position = Position.objects.all()
     with connection.cursor() as cursor:
         cursor.execute(
             "SELECT apps_menu.menu_id, menu_name, q_auth.menu_id FROM apps_menu LEFT JOIN (SELECT * FROM apps_auth WHERE user_id = '" + str(_id) + "') AS q_auth ON apps_menu.menu_id = q_auth.menu_id WHERE q_auth.menu_id IS NULL")
         menu = cursor.fetchall()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_areasales.area_id, area_name, q_area.area_id FROM apps_areasales LEFT JOIN (SELECT * FROM apps_areauser WHERE user_id = '" + str(_id) + "') AS q_area ON apps_areasales.area_id = q_area.area_id WHERE q_area.area_id IS NULL")
+        item_area = cursor.fetchall()
 
     if request.POST:
         check = request.POST.getlist('checks[]')
@@ -100,6 +106,7 @@ def user_view(request, _id):
                     continue
             else:
                 Auth.objects.filter(user_id=_id, menu_id=i[0]).delete()
+
         return HttpResponseRedirect(reverse('user-view', args=[_id, ]))
 
     context = {
@@ -108,9 +115,63 @@ def user_view(request, _id):
         'data': users,
         'auth': auth,
         'menu': menu,
+        'area': area,
+        'item_area': item_area,
         'positions': position,
         'segment': 'user',
         'group_segment': 'master',
+        'tab': 'auth',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='USER') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/user_view.html', context)
+
+
+# View User Area
+@login_required(login_url='/login/')
+@role_required(allowed_roles='USER')
+def user_area_view(request, _id):
+    users = User.objects.get(user_id=_id)
+    auth = Auth.objects.filter(user_id=_id)
+    area = AreaUser.objects.filter(user_id=_id)
+    form = FormUserView(instance=users)
+    position = Position.objects.all()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_menu.menu_id, menu_name, q_auth.menu_id FROM apps_menu LEFT JOIN (SELECT * FROM apps_auth WHERE user_id = '" + str(_id) + "') AS q_auth ON apps_menu.menu_id = q_auth.menu_id WHERE q_auth.menu_id IS NULL")
+        menu = cursor.fetchall()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_areasales.area_id, area_name, q_area.area_id FROM apps_areasales LEFT JOIN (SELECT * FROM apps_areauser WHERE user_id = '" + str(_id) + "') AS q_area ON apps_areasales.area_id = q_area.area_id WHERE q_area.area_id IS NULL")
+        item_area = cursor.fetchall()
+
+    if request.POST:
+        area_check = request.POST.getlist('area[]')
+        for i in item_area:
+            if str(i[0]) in area_check:
+                try:
+                    area = AreaUser(user_id=_id, area_id=i[0])
+                    area.save()
+                except IntegrityError:
+                    continue
+            else:
+                AreaUser.objects.filter(user_id=_id, area_id=i[0]).delete()
+
+        return HttpResponseRedirect(reverse('user-area-view', args=[_id, ]))
+
+    context = {
+        'form': form,
+        'formAuth': form,
+        'data': users,
+        'auth': auth,
+        'menu': menu,
+        'area': area,
+        'item_area': item_area,
+        'positions': position,
+        'segment': 'user',
+        'group_segment': 'master',
+        'tab': 'area',
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='USER') if not request.user.is_superuser else Auth.objects.all(),
@@ -145,6 +206,16 @@ def auth_delete(request, _id, _menu):
     return HttpResponseRedirect(reverse('user-view', args=[_id, ]))
 
 
+# Delete AreaUser
+@login_required(login_url='/login/')
+@role_required(allowed_roles='USER')
+def area_user_delete(request, _id, _area):
+    area = AreaUser.objects.filter(user=_id, area=_area)
+
+    area.delete()
+    return HttpResponseRedirect(reverse('user-area-view', args=[_id, ]))
+
+
 # Update User
 @login_required(login_url='/login/')
 @role_required(allowed_roles='USER')
@@ -152,6 +223,7 @@ def user_update(request, _id):
     users = User.objects.get(user_id=_id)
     position = Position.objects.all()
     auth = Auth.objects.filter(user_id=_id)
+    area = AreaUser.objects.filter(user_id=_id)
 
     if request.POST:
         form = FormUserUpdate(request.POST, request.FILES, instance=users)
@@ -166,12 +238,14 @@ def user_update(request, _id):
         'form': form,
         'data': users,
         'positions': position,
+        'auth': auth,
+        'area': area,
         'segment': 'user',
         'group_segment': 'master',
         'crud': 'update',
+        'tab': 'auth',
         'message': message,
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-        'auth': auth,
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='USER') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/user_view.html', context)
@@ -241,7 +315,7 @@ def set_password(request, _id):
 def distributor_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT distributor_id, distributor_name FROM apps_distributor")
+            "SELECT distributor_id, distributor_name, sap_code FROM apps_distributor")
         distributors = cursor.fetchall()
 
     context = {
@@ -351,7 +425,7 @@ def distributor_delete(request, _id):
 def area_sales_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT area_id, area_name, manager FROM apps_areasales")
+            "SELECT area_id, area_name, username FROM apps_areasales INNER JOIN apps_user ON apps_areasales.manager = apps_user.user_id")
         area_sales = cursor.fetchall()
 
     context = {
@@ -372,37 +446,42 @@ def area_sales_add(request):
     AreaSalesDetailFormSet = modelformset_factory(
         AreaSalesDetail, form=FormAreaSalesDetail, extra=0, can_delete=True, can_delete_extra=True)
     distributor = Distributor.objects.all()
+    manager = User.objects.filter(position_id='ASM')
 
     if request.POST:
         form = FormAreaSales(request.POST, request.FILES)
         formset = AreaSalesDetailFormSet(
             request.POST, queryset=AreaSalesDetail.objects.none())
 
-        if all([form.is_valid(), formset.is_valid()]):
-            try:
-                parent = form.save(commit=False)
-                parent.save()
-                for form in formset:
-                    if form.cleaned_data.get('distributor') is None:
-                        if form.cleaned_data.get('DELETE'):
-                            continue
-                        else:
-                            continue
-                    else:
-                        if form.cleaned_data.get('DELETE'):
-                            form.instance.delete()
-                            continue
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('area-sales-view', args=[form.instance.area_id, ]))
+        # if all([form.is_valid(), formset.is_valid()]):
+        #     try:
+        #         parent = form.save(commit=False)
+        #         parent.save()
+        #         for form in formset:
+        #             if form.cleaned_data.get('distributor') is None:
+        #                 if form.cleaned_data.get('DELETE'):
+        #                     continue
+        #                 else:
+        #                     continue
+        #             else:
+        #                 if form.cleaned_data.get('DELETE'):
+        #                     form.instance.delete()
+        #                     continue
 
-                    child = form.save(commit=False)
-                    child.area = parent
-                    child.save()
-                return HttpResponseRedirect(reverse('area-sales-index'))
-            except Exception:
-                return HttpResponseRedirect(reverse('area-sales-index'))
+        #             child = form.save(commit=False)
+        #             child.area = parent
+        #             child.save()
+        #         return HttpResponseRedirect(reverse('area-sales-index'))
+        #     except Exception:
+        #         return HttpResponseRedirect(reverse('area-sales-index'))
         else:
             message = form.errors
             context = {
                 'form': form,
+                'manager': manager,
                 'segment': 'area_sales',
                 'group_segment': 'master',
                 'crud': 'add',
@@ -420,6 +499,7 @@ def area_sales_add(request):
         message = form.errors
         context = {
             'form': form,
+            'manager': manager,
             'formset': formset,
             'segment': 'area_sales',
             'group_segment': 'master',
@@ -440,14 +520,41 @@ def area_sales_view(request, _id):
     AreaSalesDetailFormSet = modelformset_factory(
         AreaSalesDetail, form=FormAreaSalesDetailView, extra=0)
     qs = area_sales.areasalesdetail_set.all()
-    distributor = Distributor.objects.all()
     form = FormAreaSalesView(instance=area_sales)
     formset = AreaSalesDetailFormSet(queryset=qs)
+    detail = AreaSalesDetail.objects.filter(area_id=_id)
+    managers = User.objects.filter(position_id='ASM')
+    # distributor = Distributor.objects.all()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_distributor.distributor_id, distributor_name, q_distributor.distributor_id FROM apps_distributor LEFT JOIN (SELECT * FROM apps_areasalesdetail WHERE area_id = '" + str(_id) + "') AS q_distributor ON apps_distributor.distributor_id = q_distributor.distributor_id WHERE q_distributor.distributor_id IS NULL")
+        distributor = cursor.fetchall()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT area_id, area_name, username FROM apps_areasales INNER JOIN apps_user ON apps_areasales.manager = apps_user.user_id WHERE area_id = '" + str(_id) + "'")
+        areas = cursor.fetchall()
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        for i in distributor:
+            if str(i[0]) in check:
+                try:
+                    detail = AreaSalesDetail(area_id=_id, distributor_id=i[0])
+                    detail.save()
+                except IntegrityError:
+                    continue
+            else:
+                AreaSalesDetail.objects.filter(
+                    area_id=_id, distributor_id=i[0]).delete()
+        return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
 
     context = {
         'form': form,
         'formset': formset,
         'data': area_sales,
+        'areas': areas,
+        'detail': detail,
+        'managers': managers,
         'segment': 'area_sales',
         'group_segment': 'master',
         'crud': 'view',
@@ -467,31 +574,37 @@ def area_sales_update(request, _id):
         AreaSalesDetail, form=FormAreaSalesDetail, extra=0, can_delete=True, can_delete_extra=True)
     qs = area_sales.areasalesdetail_set.all()
     distributor = Distributor.objects.all()
+    detail = AreaSalesDetail.objects.filter(area_id=_id)
+    managers = User.objects.filter(position_id='ASM')
+
     if request.POST:
         form = FormAreaSalesUpdate(
             request.POST, request.FILES, instance=area_sales)
         formset = AreaSalesDetailFormSet(request.POST, queryset=qs)
-        if all([form.is_valid(), formset.is_valid()]):
-            try:
-                parent = form.save(commit=False)
-                parent.save()
-                for form in formset:
-                    if form.cleaned_data.get('distributor') is None:
-                        if form.cleaned_data.get('DELETE'):
-                            continue
-                        else:
-                            continue
-                    else:
-                        if form.cleaned_data.get('DELETE'):
-                            form.instance.delete()
-                            continue
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
+        # if all([form.is_valid(), formset.is_valid()]):
+        #     try:
+        #         parent = form.save(commit=False)
+        #         parent.save()
+        #         for form in formset:
+        #             if form.cleaned_data.get('distributor') is None:
+        #                 if form.cleaned_data.get('DELETE'):
+        #                     continue
+        #                 else:
+        #                     continue
+        #             else:
+        #                 if form.cleaned_data.get('DELETE'):
+        #                     form.instance.delete()
+        #                     continue
 
-                    child = form.save(commit=False)
-                    child.area = parent
-                    child.save()
-                return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
-            except Exception:
-                return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
+        #             child = form.save(commit=False)
+        #             child.area = parent
+        #             child.save()
+        #         return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
+        #     except Exception:
+        #         return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
     else:
         form = FormAreaSalesUpdate(instance=area_sales)
         formset = AreaSalesDetailFormSet(queryset=qs)
@@ -501,6 +614,8 @@ def area_sales_update(request, _id):
         'form': form,
         'formset': formset,
         'data': area_sales,
+        'detail': detail,
+        'managers': managers,
         'segment': 'area_sales',
         'group_segment': 'master',
         'crud': 'update',
@@ -523,11 +638,21 @@ def area_sales_delete(request, _id):
 
 
 @login_required(login_url='/login/')
+@role_required(allowed_roles='AREA')
+def area_sales_detail_delete(request, _id, _distributor):
+    area_sales_detail = AreaSalesDetail.objects.get(
+        area_id=_id, distributor_id=_distributor)
+
+    area_sales_detail.delete()
+    return HttpResponseRedirect(reverse('area-sales-view', args=[_id, ]))
+
+
+@login_required(login_url='/login/')
 @role_required(allowed_roles='AREA-CHANNEL')
 def area_channel_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT apps_areachannel.area_id, apps_areasales.area_name, apps_areasales.manager FROM apps_areachannel INNER JOIN apps_areasales ON apps_areachannel.area_id = apps_areasales.area_id")
+            "SELECT apps_areachannel.area_id, apps_areasales.area_name, apps_user.username FROM apps_areachannel INNER JOIN apps_areasales ON apps_areachannel.area_id = apps_areasales.area_id INNER JOIN apps_user ON apps_areasales.manager = apps_user.user_id")
         area_channels = cursor.fetchall()
 
     context = {
@@ -593,7 +718,7 @@ def area_channel_add(request):
 def area_channel_view(request, _id):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT apps_areachannel.area_id, apps_areasales.area_name, apps_areasales.manager FROM apps_areachannel INNER JOIN apps_areasales ON apps_areachannel.area_id = apps_areasales.area_id WHERE apps_areachannel.area_id = '" + str(_id) + "'")
+            "SELECT apps_areachannel.area_id, apps_areasales.area_name, apps_user.username FROM apps_areachannel INNER JOIN apps_areasales ON apps_areachannel.area_id = apps_areasales.area_id INNER JOIN apps_user ON apps_areasales.manager = apps_user.user_id WHERE apps_areachannel.area_id = '" + str(_id) + "'")
         area_channels = cursor.fetchone()
 
     detail = AreaChannelDetail.objects.filter(area=_id)
@@ -961,56 +1086,61 @@ def channel_view(request, _id):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET')
-def budget_add(request):
+def budget_add(request, _area):
+    area = AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', 'area__area_name')
+    selected_area = _area
+    distributor = Distributor.objects.filter(
+        distributor_id__in=AreaSalesDetail.objects.filter(area_id=selected_area).values_list('distributor_id', flat=True))
+    message = ''
     if request.POST:
         form = FormBudget(request.POST, request.FILES)
         if form.is_valid():
-            parent = form.save(commit=False)
-            parent.save()
-            area = parent.budget_area.area_id
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
-                area_channels = cursor.fetchall()
-                for i in area_channels:
-                    child = BudgetDetail(
-                        budget_id=parent, budget_channel_id=i[0])
-                    child.save()
-
-            return HttpResponseRedirect(reverse('budget-index'))
+            try:
+                parent = form.save(commit=False)
+                parent.save()
+                area = parent.budget_area.area_id
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
+                    area_channels = cursor.fetchall()
+                    for i in area_channels:
+                        child = BudgetDetail(
+                            budget=parent, budget_channel_id=i[0])
+                        child.save()
+                return HttpResponseRedirect(reverse('budget-view', args=[parent.budget_id, 'NONE']))
+            except IntegrityError:
+                message = 'Budget already exist'
+            except Exception:
+                message = 'Something wrong'
         else:
             message = form.errors
-            context = {
-                'form': form,
-                'segment': 'budget',
-                'group_segment': 'anp',
-                'crud': 'add',
-                'message': message,
-                'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-                'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
-            }
-            return render(request, 'home/budget_add.html', context)
     else:
         form = FormBudget(
             initial={'budget_year': datetime.datetime.now().year, 'budget_month': datetime.datetime.now().month})
-        context = {
-            'form': form,
-            'segment': 'budget',
-            'group_segment': 'anp',
-            'crud': 'add',
-            'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-            'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
-        }
-        return render(request, 'home/budget_add.html', context)
+    context = {
+        'message': message,
+        'form': form,
+        'area': area,
+        'distributor': distributor,
+        'selected_area': selected_area,
+        'segment': 'budget',
+        'group_segment': 'anp',
+        'crud': 'add',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/budget_add.html', context)
 
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET')
 def budget_index(request):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT budget_no, budget_amount, budget_upping, budget_total, budget_status FROM apps_budget")
-        budgets = cursor.fetchall()
+    budgets = Budget.objects.all()
+    for budget in budgets:
+        budget.budget_amount = '{:,}'.format(budget.budget_amount)
+        budget.budget_upping = '{:,}'.format(budget.budget_upping)
+        budget.budget_total = '{:,}'.format(budget.budget_total)
 
     context = {
         'data': budgets,
@@ -1028,24 +1158,46 @@ def budget_index(request):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET')
 def budget_update(request, _id):
-    budgets = Budget.objects.get(budget_no=_id)
+    budgets = Budget.objects.get(budget_id=_id)
+    budgets.budget_amount = '{:,}'.format(budgets.budget_amount)
+    budgets.budget_total = '{:,}'.format(budgets.budget_total)
+    budget_detail = BudgetDetail.objects.filter(budget_id=_id)
+
     if request.POST:
         form = FormBudgetUpdate(
             request.POST, request.FILES, instance=budgets)
         if form.is_valid():
-            form.save()
-            return HttpResponseRedirect(reverse('budget-view', args=[_id, ]))
+            update = form.save(commit=False)
+            update.budget_year = budgets.budget_year
+            update.budget_month = budgets.budget_month
+            update.save()
+            for i in budget_detail:
+                i.budget_upping = (i.budget_percent/100) * \
+                    budgets.budget_upping
+                i.save()
+            return HttpResponseRedirect(reverse('budget-view', args=[_id, 'NONE']))
     else:
         form = FormBudgetUpdate(instance=budgets)
+
+    YEAR_CHOICES = []
+    for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
+        YEAR_CHOICES.append(str(r))
+
+    MONTH_CHOICES = []
+    for r in range(1, 13):
+        MONTH_CHOICES.append(str(r))
 
     message = form.errors
     context = {
         'form': form,
         'data': budgets,
+        'year': YEAR_CHOICES,
+        'month': MONTH_CHOICES,
+        'budget_detail': budget_detail,
         'segment': 'budget',
         'group_segment': 'anp',
         'crud': 'update',
-        'message': message,
+        'message': message if message else 'NONE',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
     }
@@ -1056,7 +1208,7 @@ def budget_update(request, _id):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET')
 def budget_delete(request, _id):
-    budgets = Budget.objects.get(budget_no=_id)
+    budgets = Budget.objects.get(budget_id=_id)
 
     budgets.delete()
     return HttpResponseRedirect(reverse('budget-index'))
@@ -1064,19 +1216,38 @@ def budget_delete(request, _id):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET')
-def budget_view(request, _id):
-    budgets = Budget.objects.get(budget_no=_id)
+def budget_view(request, _id, _msg):
+    budgets = Budget.objects.get(budget_id=_id)
+    budgets.budget_amount = '{:,}'.format(budgets.budget_amount)
+    budgets.budget_upping = '{:,}'.format(budgets.budget_upping)
+    budgets.budget_total = '{:,}'.format(budgets.budget_total)
     form = FormBudgetView(instance=budgets)
-    budget_detail = BudgetDetail.objects.filter(budget_no=_id)
+    budget_detail = BudgetDetail.objects.filter(budget_id=_id)
+    for detail in budget_detail:
+        detail.budget_amount = '{:,}'.format(detail.budget_amount)
+        detail.budget_upping = '{:,}'.format(detail.budget_upping)
+        detail.budget_total = '{:,}'.format(detail.budget_total)
+        detail.budget_balance = '{:,}'.format(detail.budget_balance)
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT apps_channel.channel_id, channel_name, q_channel.budget_channel_id FROM apps_channel LEFT JOIN (SELECT * FROM apps_budget_detail WHERE budget_no = '" + str(_id) + "') AS q_channel ON apps_channel.channel_id = q_channel.budget_channel_id WHERE q_channel.budget_channel_id IS NULL")
+            "SELECT apps_channel.channel_id, channel_name, q_channel.budget_channel_id FROM apps_channel LEFT JOIN (SELECT * FROM apps_budgetdetail WHERE budget_id = '" + str(_id) + "') AS q_channel ON apps_channel.channel_id = q_channel.budget_channel_id WHERE q_channel.budget_channel_id IS NULL")
         channel = cursor.fetchall()
+
+    YEAR_CHOICES = []
+    for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
+        YEAR_CHOICES.append(str(r))
+
+    MONTH_CHOICES = []
+    for r in range(1, 13):
+        MONTH_CHOICES.append(str(r))
 
     context = {
         'form': form,
         'data': budgets,
+        'year': YEAR_CHOICES,
+        'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
+        'message': _msg,
         'channel': channel,
         'segment': 'budget',
         'group_segment': 'anp',
@@ -1089,35 +1260,83 @@ def budget_view(request, _id):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET')
-def budget_detail_update(request, _id, _channel_id):
-    budgets = Budget.objects.get(budget_no=_id, budget_channel_id=_channel_id)
+def budget_detail_update(request, _id):
+    budgets = Budget.objects.get(budget_id=_id)
+    detail = BudgetDetail.objects.filter(budget_id=_id)
+    msg = 'NONE'
     if request.POST:
-        form = FormBudgetDetailUpdate(
-            request.POST, request.FILES, instance=budgets)
-        if form.is_valid():
-            form.save()
-            return HttpResponseRedirect(reverse('budget-detail-view', args=[_id, ]))
-    else:
-        form = FormBudgetDetailUpdate(instance=budgets)
+        hundreds = 0
+        for i in detail:
+            i.budget_percent = request.POST.get(
+                'budget_percent_'+str(i.budget_channel_id))
+            hundreds += int(i.budget_percent)
+        if hundreds == 100:
+            for i in detail:
+                i.budget_upping = Decimal(
+                    int(i.budget_percent)/100) * budgets.budget_upping
+                i.save()
+            return HttpResponseRedirect(reverse('budget-view', args=[_id, 'NONE']))
+        else:
+            msg = 'Total budget percentage you entered is not 100%'
 
-    message = form.errors
-    context = {
-        'form': form,
-        'data': budgets,
-        'segment': 'budget',
-        'group_segment': 'anp',
-        'crud': 'update',
-        'message': message,
-        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-        'btn': Auth.objects.all(),
-    }
-    return render(request, 'home/budget_detail_view.html', context)
+    return HttpResponseRedirect(reverse('budget-view', args=[_id, msg, ]))
 
 
 @login_required(login_url='/login/')
-@role_required(allowed_roles='BUDGET')
-def budget_detail_delete(request, _id, _channel_id):
-    budgets = Budget.objects.get(budget_no=_id, budget_channel_id=_channel_id)
+@role_required(allowed_roles='UPLOAD')
+def budget_upload(request):
+    channels = Channel.objects.all()
+    success = 0
+    failed = 0
+    errors = []
+    if request.POST:
+        dataset = Dataset()
+        new_budget_percent = request.FILES['budget_file']
+        imported_data = dataset.load(new_budget_percent.read(), format='xlsx')
+        for data in imported_data:
+            col = 5
+            hundreds = 0
+            try:
+                Budget.objects.get(budget_id=data[4], budget_status='OPEN')
+                for i in range(col, col+(channels.count())):
+                    hundreds += data[i]
+                if hundreds == 100:
+                    for channel in channels:
+                        try:
+                            rec = BudgetDetail.objects.get(
+                                budget_id=data[4], budget_channel_id=channel.channel_id)
+                            rec.budget_percent = data[col]
+                            rec.save()
+                            success += 1
+                        except BudgetDetail.DoesNotExist:
+                            pass
+                        col += 1
+                else:
+                    failed += 1
+                    errors.append(
+                        'Budget No. ' + data[4] + ' percentage is not 100%.')
+            except Budget.DoesNotExist:
+                failed += 1
+                errors.append('Budget No. ' + data[4] + ' could not be found.')
 
-    budgets.delete()
-    return HttpResponseRedirect(reverse('budget-detail-view', args=[_id, ]))
+        context = {
+            'success': success,
+            'failed': failed,
+            'errors': errors,
+            'total': imported_data.height,
+            'segment': 'budget_upload',
+            'group_segment': 'anp',
+            'crud': 'upload',
+            'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+            'btn': Auth.objects.all(),
+        }
+        return render(request, 'home/budget_uploadlog.html', context)
+
+    context = {
+        'segment': 'budget_upload',
+        'group_segment': 'anp',
+        'crud': 'upload',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.all(),
+    }
+    return render(request, 'home/budget_upload.html', context)

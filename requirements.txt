@@ -8,6 +8,8 @@ pymysql
 django-crum
 phonenumbers
 django-phonenumber-field
+dj-database-url
+django-import-export
 # djangorestframework
 
 # psycopg2-binary

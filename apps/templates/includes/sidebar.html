@@ -3,7 +3,7 @@
   <div class="sidenav-header">
     <i class="fas fa-times p-3 cursor-pointer text-secondary opacity-5 position-absolute end-0 top-0 d-none d-xl-none" aria-hidden="true" id="iconSidenav"></i>
     <a class="navbar-brand m-0" href="{% url 'home' %}">
-      <img src="{% static 'img/favicon.png' %}" class="navbar-brand-img w-40" alt="main_logo">
+      <img src="https://ksisolusi.com/apps/static/img/favicon.png" class="navbar-brand-img w-40" alt="main_logo">
     </a>
   </div>
   <hr class="horizontal default mt-2">
@@ -54,9 +54,14 @@
 
         <div class="multi-level ms-5 collapse {% if 'anp' in group_segment %}show{% endif %}" role="list" id="anp-menu" aria-expanded="{% if 'anp' in group_segment %}true{% else %}false{% endif %}">
           <ul class="flex-column nav">
-            <li class="nav-item {% if 'budget' in segment %}active{% endif %} list-unstyled">
+            <li class="nav-item {% if segment == 'budget' %}active{% endif %} list-unstyled">
               <a class="nav-link {% if 'BUDGET' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'budget-index' %}">
                 <span class="nav-link-text ms-1 {% if 'BUDGET' not in role and not request.user.is_superuser %}disabled{% endif %}">Budget</span>
+              </a>
+            </li>
+            <li class="nav-item {% if 'budget_upload' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link {% if 'UPLOAD' not in role and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'budget-upload' %}">
+                <span class="nav-link-text ms-1 {% if 'UPLOAD' not in role and not request.user.is_superuser %}disabled{% endif %}">Budget Upload</span>
               </a>
             </li>
           </ul>

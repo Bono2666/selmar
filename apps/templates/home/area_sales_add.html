@@ -13,11 +13,11 @@
                     <div class="card-header">
                         <div class="row">
                             <div class="col-6 d-flex align-items-center">
-                                <h3 class="mb-0">Add New Area Sales</h3>
+                                <h4  class="mb-2">Add New Area Sales</h4>
                             </div>
                             <div class="col-6 text-end">
-                                <button type="submit" class="btn bg-gradient-danger mb-0"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <a href="{% url 'area-sales-index' %}" class="btn bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
+                                <button type="submit" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
+                                <a href="{% url 'area-sales-index' %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
                             </div>
                         </div>
                     </div>
@@ -29,10 +29,9 @@
                             </div>
                             {% endif %}
                             <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Area Sales ID</label>
-                                        {{ form.area_id }}
+                                <div class="col-md-3">
+                                    <div class="shadow-none">
+                                        {{ form.area_id.label_tag }}{{ form.area_id }}
                                         <div class="text-sm text-danger">
                                             {{ form.area_id.errors }}
                                         </div>
@@ -41,22 +40,34 @@
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Area Sales Name</label>
-                                        {{ form.area_name }}
+                                    <div class="shadow-none">
+                                        {{ form.area_name.label_tag }}{{ form.area_name }}
+                                        <div class="text-sm text-danger">
+                                            {{ form.area_name.errors }}
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-6">
-                                    <div class="form-group shadow-none">
-                                        <label class="form-control-label">Manager</label>
-                                        {{ form.manager }}
+                                    <div class="shadow-none">
+                                        {{ form.manager.label_tag }}
+                                        <select name="manager" class="form-control form-select-sm">
+                                            <option value="">-- Select Manager --</option>
+                                            {% for item in manager %}
+                                            <option value="{{ item.user_id }}">{{ item.username }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="text-sm text-danger">
+                                            {{ form.manager.errors }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="card mt-4 mb-4 p-4">
+                <!-- <div class="card mt-4 mb-4 p-4">
                     <div class="row mb-0">
                         <div class="col-12 d-flex align-items-center">
                             <h5 class="mb-0">Distributor List</h5>
@@ -106,7 +117,7 @@
                             <button id="add-more" type="button" class="border-0 bg-transparent text-danger mt-3" {% if crud == 'view' %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add More Distributor</button>
                         </div>
                     </div>
-                </div>
+                </div> -->
             </form>
         </div>
     </div>
