@@ -146,7 +146,7 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <button class="btn-icon-only text-dark bg-transparent border-0" data-bs-toggle="modal" data-bs-target="{% if btn.edit or request.user.is_superuser %}#delete-{{ item.distributor_id }}{% endif %}" {% if crud == 'update' %}disabled{% endif %}><i class="fas fa-times-circle py-0"></i></button>
+                                        <button class="btn-icon-only text-dark bg-transparent border-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-{{ item.distributor_id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}><i class="fas fa-times-circle py-0"></i></button>
                                     </td>
                                     <div class="modal fade" id="delete-{{ item.distributor_id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                                         aria-hidden="true">
@@ -233,18 +233,21 @@
 {% block javascripts %}
 <script>
     $(document).ready( function () {
-      $('#myTable').DataTable(
-            {
-                "searching": false,
-                "lengthChange": false,
-            }
-      );
+        $('#myTable').DataTable(
+                {
+                    "searching": false,
+                    "lengthChange": false,
+                }
+        );
+        
+        $('#distributorTable').DataTable();
+
+        btn = document.getElementsByClassName('paginate_button');
+        for (var i = 0; i < btn.length; i++) {
+            btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
     } );
 
-    $(document).ready( function () {
-      $('#distributorTable').DataTable();
-    } );
-    
     // const addMore = document.getElementById('add-more');
     // const totalNewForm = document.getElementById('id_form-TOTAL_FORMS');
     // let currentDistributorCount = document.getElementsByClassName('distributor-list').length;

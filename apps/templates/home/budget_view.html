@@ -111,7 +111,7 @@
                         <h5 class="mb-0">Budget Detail</h5>
                     </div>
                     <div class="col-6 text-end">
-                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0" data-bs-toggle="modal" data-bs-target="#updPercent"><i class="fas fa-edit"></i>&nbsp;&nbsp;Change Budget Percentage</button>
+                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#updPercent"><i class="fas fa-edit"></i>&nbsp;&nbsp;Change Budget Percentage</button>
                     </div>
                 </div>
                 <div class="modal fade" id="updPercent" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -254,20 +254,22 @@
         'searching': false,
         'lengthChange': false,
       });
-    } );
 
-    $(document).ready( function () {
       $('#channelTable').DataTable();
-    } );
-
-    $(document).ready( function () {
+    
       $('#updTable').DataTable({
         'searching': false,
         'lengthChange': false,
         'paging': false,
         'info': false,
       });
+      
+      btn = document.getElementsByClassName('paginate_button');
+      for (var i = 0; i < btn.length; i++) {
+          btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+      }
     } );
+
 
     let msg = "{{ message }}";
     if (msg != "NONE") {

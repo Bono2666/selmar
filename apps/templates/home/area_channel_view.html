@@ -137,12 +137,17 @@
 {% block javascripts %}
 <script>
     $(document).ready( function () {
-      $('#myTable').DataTable({
-        'pageLength': 5,
-        'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
-        'searching': false,
-        'lengthChange': false,
-      });
+        $('#myTable').DataTable({
+            'pageLength': 5,
+            'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
+            'searching': false,
+            'lengthChange': false,
+        });
+
+        btn = document.getElementsByClassName('paginate_button');
+        for (var i = 0; i < btn.length; i++) {
+            btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
     } );
 </script>
 {% endblock javascripts %}
