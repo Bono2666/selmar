@@ -1113,8 +1113,6 @@ def budget_add(request, _area):
                 message = 'Budget already exist'
             except Exception:
                 message = 'Something wrong'
-        else:
-            message = form.errors
     else:
         form = FormBudget(
             initial={'budget_year': datetime.datetime.now().year, 'budget_month': datetime.datetime.now().month})

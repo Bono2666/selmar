@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import pymysql
 import dj_database_url
+from datetime import timedelta
 pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -42,6 +43,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'crum.CurrentRequestUserMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_auto_logout.middleware.auto_logout',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -60,6 +64,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django_auto_logout.context_processors.auto_logout_client',
             ],
         },
     },
@@ -77,6 +82,9 @@ DATABASES = {
         'NAME': 'integrated_system',
         'USER': 'root',
         'PASSWORD': '',
+        # 'NAME': 'ksis8742_abc_is',
+        # 'USER': 'ksis8742_abc_is',
+        # 'PASSWORD': 'B0n0harry!',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -130,3 +138,9 @@ MEDIA_URL = '/apps/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'apps/media/')
 
 AUTH_USER_MODEL = 'apps.User'
+
+AUTO_LOGOUT = {
+    'IDLE_TIME': timedelta(minutes=10),
+    'REDIRECT_TO_LOGIN_IMMEDIATELY': True,
+    'MESSAGE': 'The session has expired. Please login again to continue.',
+}

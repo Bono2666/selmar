@@ -1,8 +1,10 @@
 from django.contrib.auth import authenticate, login
 from django.shortcuts import redirect, render
 from .forms import LoginForm
+from django.views.decorators.cache import cache_control
 
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def login_view(request):
     form = LoginForm(request.POST or None)
 

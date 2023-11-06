@@ -22,7 +22,7 @@
           data-bs-target="#confirm">
           Logout
         </button>
-        
+
         <li class="nav-item pe-0 px-3 d-flex align-items-center">
           <a href="{% url 'change-password' %}" class="nav-link text-body p-0 m-0" data-toggle="tooltip" data-original-title="Change Password">
             <i class="fa fa-lock fixed-plugin-button-nav cursor-pointer"></i>
@@ -57,6 +57,9 @@
     </div>
   </div>
 </div>
+
 <div>
   <img src="https://ksisolusi.com/apps/static/img/transparent-logo.png" alt="ABC Logo" class="position-fixed h-100 w-40 top-0 d-none d-lg-block start-50 ms-n9 opacity-2" style="object-fit: contain;">
 </div>
+
+{{ redirect_to_login_immediately }}

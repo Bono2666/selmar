@@ -13,7 +13,7 @@
               <div class="card card-plain mt-8">
                 <div class="card-header pb-0 text-left bg-transparent">
                   <h3 class="font-weight-bolder text-primary">
-                    Sign IN  
+                    Sign In  
                   </h3>
                   <p class="mb-0">
                     {% if msg %}
@@ -30,6 +30,11 @@
                         <span class="text-danger">{{ error }}</span>
                       {% endfor %}
                     {% endif %}
+                    {% for message in messages %}
+                    <div class="message text-sm text-danger">
+                      {{ message }}
+                    </div>
+                    {% endfor %}
                     {% csrf_token %}
                     <label for="username">User ID</label>
                     <div class="mb-3">

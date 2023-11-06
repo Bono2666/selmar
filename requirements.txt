@@ -10,6 +10,8 @@ phonenumbers
 django-phonenumber-field
 dj-database-url
 django-import-export
+django-auto-logout
+pytz
 # djangorestframework
 
 # psycopg2-binary
