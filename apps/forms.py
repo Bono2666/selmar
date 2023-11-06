@@ -505,3 +505,53 @@ class FormBudgetDetailView(ModelForm):
     class Meta:
         model = BudgetDetail
         fields = ['budget_percent']
+
+
+class FormBudgetApproval(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormBudgetApproval, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['area'].label = 'Area'
+        self.fields['approver1'].label = 'Financial Planning Supervisor'
+        self.fields['approver2'].label = 'Financial Planning Manager'
+        self.fields['approver1'].widget = forms.Select(
+            attrs={'class': 'form-control form-select-sm'})
+        self.fields['approver2'].widget = forms.Select(
+            attrs={'class': 'form-control form-select-sm'})
+
+    class Meta:
+        model = Budget
+        fields = '__all__'
+
+
+class FormBudgetApprovalView(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormBudgetApprovalView, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['area'].label = 'Area'
+        self.fields['approver1'].label = 'Financial Planning Supervisor'
+        self.fields['approver2'].label = 'Financial Planning Manager'
+        self.fields['approver1'].widget = forms.Select(
+            attrs={'class': 'form-control form-select-sm', 'disabled': 'disabled'})
+        self.fields['approver2'].widget = forms.Select(
+            attrs={'class': 'form-control form-select-sm', 'disabled': 'disabled'})
+
+    class Meta:
+        model = Budget
+        fields = ['area', 'approver1', 'approver2']
+
+
+class FormBudgetApprovalUpdate(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormBudgetApprovalUpdate, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['approver1'].label = 'Financial Planning Supervisor'
+        self.fields['approver2'].label = 'Financial Planning Manager'
+        self.fields['approver1'].widget = forms.Select(
+            attrs={'class': 'form-control form-select-sm'})
+        self.fields['approver2'].widget = forms.Select(
+            attrs={'class': 'form-control form-select-sm'})
+
+    class Meta:
+        model = Budget
+        fields = ['approver1', 'approver2']

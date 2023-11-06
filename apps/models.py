@@ -339,3 +339,24 @@ class BudgetDetail(models.Model):
         self.update_date = timezone.now()
         self.update_by = get_current_user().user_id
         super(BudgetDetail, self).save(*args, **kwargs)
+
+
+class BudgetApproval(models.Model):
+    area = models.OneToOneField(
+        AreaSales, on_delete=models.CASCADE, unique=True)
+    approver1 = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='approver1')
+    approver2 = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='approver2')
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(BudgetApproval, self).save(*args, **kwargs)

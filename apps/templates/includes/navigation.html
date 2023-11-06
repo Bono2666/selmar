@@ -18,13 +18,12 @@
           </div>
         </li>
         
-        <button class="font-weight-bold text-body text-sm ps-4 border-0 bg-transparent" data-bs-toggle="modal"
-          data-bs-target="#confirm">
+        <button class="font-weight-bold button text-body text-sm ps-4 border-0 bg-transparent" data-bs-toggle="modal" {% if crud != 'add' and crud != 'update' %}data-bs-target="#confirm"{% endif %}>
           Logout
         </button>
 
         <li class="nav-item pe-0 px-3 d-flex align-items-center">
-          <a href="{% url 'change-password' %}" class="nav-link text-body p-0 m-0" data-toggle="tooltip" data-original-title="Change Password">
+          <a {% if crud != 'add' and crud != 'update' %}href="{% url 'change-password' %}"{% endif %} class="nav-link button text-body p-0 m-0" data-toggle="tooltip" data-original-title="Change Password">
             <i class="fa fa-lock fixed-plugin-button-nav cursor-pointer"></i>
           </a>
         </li>
