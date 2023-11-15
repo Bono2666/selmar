@@ -6,6 +6,8 @@
 
 {% load my_filter %}
 
+{% load humanize %}
+
 <div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
@@ -19,9 +21,69 @@
                             </div>
                             <div class="col-6 text-end">
                                 <a href="{% if crud == 'view' %}{% url 'budget-index' %}{% else %}{% url 'budget-view' data.budget_id 'NONE' %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
-                                <a href="{% url 'budget-update' data.budget_id %}" class="btn btn-sm bg-gradient-dark mb-0 {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
+                                <a href="{% url 'budget-update' data.budget_id %}" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 {% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.budget_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.budget_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Approval</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="approval" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Approval Status</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    <table class="table border cell-border align-items-center mb-0" id="releaseTable">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for item in approval %}
+                                        <tr>
+                                            <td class="d-none">
+                                                <div class="d-flex pe-2 py-0">
+                                                    <div class="d-flex flex-column justify-content-center">
+                                                        <h6 class="mb-0 cursor-default text-sm">{{ item.sequence }}</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex pe-2 py-0">
+                                                    <div class="d-flex flex-column justify-content-center">
+                                                        <h6 class="mb-0 cursor-default text-sm" data-toggle="tooltip" data-original-title="{{ item.budget_approval_name }}">{{ item.budget_approval_position }}</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex pe-2 py-0">
+                                                    <div class="d-flex flex-column justify-content-center">
+                                                        <h6 class="mb-0 cursor-default text-sm">{% if item.budget_approval_date == NONE %}Waiting for approval ... {% else %}{{ item.budget_approval_date }}{% endif %}</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex py-0">
+                                                    <div class="d-flex flex-column justify-content-center">
+                                                        <i class="mb-0 cursor-default text-sm fas {% if item.budget_approval_status == 'Y' %}fa-check text-danger{% else %}fa-clock{% endif %}"></i>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Close</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -111,14 +173,14 @@
                         <h5 class="mb-0">Budget Detail</h5>
                     </div>
                     <div class="col-6 text-end">
-                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#updPercent"><i class="fas fa-edit"></i>&nbsp;&nbsp;Change Budget Percentage</button>
+                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#updPercent"><i class="fas fa-edit"></i>&nbsp;&nbsp;Change Budget Percentage</button>
                     </div>
                 </div>
                 <div class="modal fade" id="updPercent" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
                     <div class="modal-dialog modal-dialog-centered" role="document">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5 class="modal-title" id="ModalLabel">Update Percentage</h5>
+                                <h5 class="modal-title" id="ModalLabel">Percentage Update</h5>
                             </div>
                             <form method="post" action="{% url 'budget-detail-update' data.budget_id %}" enctype="multipart/form-data">
                                 {% csrf_token %}
@@ -162,6 +224,9 @@
                                             {% endfor %}
                                             </tbody>
                                         </table>
+                                    </div>
+                                    <div class="text-body text-sm mt-2">
+                                        This percentage update will change the budget status to PENDING APPROVAL and is ready to wait for approval.
                                     </div>
                                 </div>
                                 <div class="modal-footer border-0">
@@ -248,26 +313,34 @@
 {% block javascripts %}
 <script>
     $(document).ready( function () {
-      $('#myTable').DataTable({
-        'pageLength': 5,
-        'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
-        'searching': false,
-        'lengthChange': false,
-      });
+        $('#myTable').DataTable({
+            'pageLength': 5,
+            'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
+            'searching': false,
+            'lengthChange': false,
+        });
 
-      $('#channelTable').DataTable();
-    
-      $('#updTable').DataTable({
-        'searching': false,
-        'lengthChange': false,
-        'paging': false,
-        'info': false,
-      });
+        $('#channelTable').DataTable();
+        
+        $('#updTable').DataTable({
+            'searching': false,
+            'lengthChange': false,
+            'paging': false,
+            'info': false,
+        });
+
+        $('#releaseTable').DataTable({
+            'searching': false,
+            'lengthChange': false,
+            'paging': false,
+            'info': false,
+            'cell-border': true,
+        });
       
-      btn = document.getElementsByClassName('paginate_button');
-      for (var i = 0; i < btn.length; i++) {
-          btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
-      }
+        btn = document.getElementsByClassName('paginate_button');
+        for (var i = 0; i < btn.length; i++) {
+            btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
     } );
 
     let msg = "{{ message }}";

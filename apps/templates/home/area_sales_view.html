@@ -234,17 +234,17 @@
 <script>
     $(document).ready( function () {
         $('#myTable').DataTable(
-                {
-                    "searching": false,
-                    "lengthChange": false,
-                }
+            {
+                "searching": false,
+                "lengthChange": false,
+            }
         );
         
         $('#distributorTable').DataTable();
 
-        btn = document.getElementsByClassName('paginate_button');
-        for (var i = 0; i < btn.length; i++) {
-            btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        let btn = document.getElementsByClassName('paginate_button');
+        for (const button of btn) {
+            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
         }
     } );
 

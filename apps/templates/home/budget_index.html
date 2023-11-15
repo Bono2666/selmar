@@ -4,6 +4,8 @@
 
 {% block content %}
 
+{% load humanize %}
+
 <!-- Page content -->
 <div class="container-fluid py-0">
     <div class="row">
@@ -25,10 +27,12 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Budget No.
                                     </th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Distributor</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">
                                         beginning Balance</th>
-                                    <th class="text-uppercase text-Usecondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                    <th class="text-uppercase text-Usecondary text-xxs text-end font-weight-bolder opacity-7 ps-2">
                                         Upping Price</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">
                                         Total Budget</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Status</th>
@@ -45,13 +49,16 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.budget_amount }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.budget_distributor.distributor_name }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.budget_upping }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_amount|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.budget_total }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_upping|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_total|intcomma }}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">{{ item.budget_status }}</h6>
@@ -75,13 +82,13 @@
     $(document).ready( function () {
         $('#myTable').DataTable();
 
-        $('tr').click(function() {
+        $('tbody tr').click(function() {
             window.location = $(this).data('href');
         });
 
-        btn = document.getElementsByClassName('paginate_button');
-        for (var i = 0; i < btn.length; i++) {
-            btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        let btn = document.getElementsByClassName('paginate_button');
+        for (const button of btn) {
+            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
         }
     } );
 </script>

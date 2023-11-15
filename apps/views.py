@@ -6,9 +6,16 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.forms.models import modelformset_factory
 from apps.forms import *
+from apps.mail import send_email
 from apps.models import *
 from authentication.decorators import role_required
 from tablib import Dataset
+from django.utils import timezone
+import xlwt
+from django.http import HttpResponse
+from django.core.mail import send_mail
+from core.settings import EMAIL_HOST_USER
+from django.conf import settings
 
 
 @login_required(login_url='/login/')
@@ -17,7 +24,6 @@ def home(request):
         'segment': 'index',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
     }
-    print(context['role'])
     return render(request, 'home/index.html', context)
 
 
@@ -1090,16 +1096,29 @@ def budget_add(request, _area):
     area = AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', 'area__area_name')
     selected_area = _area
+    name = AreaSales.objects.get(
+        area_id=selected_area) if selected_area != 'NONE' else None
     distributor = Distributor.objects.filter(
         distributor_id__in=AreaSalesDetail.objects.filter(area_id=selected_area).values_list('distributor_id', flat=True))
     message = ''
     if request.POST:
         form = FormBudget(request.POST, request.FILES)
         if form.is_valid():
+            _id = 'UBS/' + \
+                request.POST.get('budget_area') + '/' + \
+                request.POST.get('budget_distributor') + '/' + request.POST.get(
+                    'budget_month') + '/' + request.POST.get('budget_year')
             try:
+                budget = Budget.objects.get(budget_id=_id)
+                if budget:
+                    message = 'Budget already exist'
+            except Budget.DoesNotExist:
                 parent = form.save(commit=False)
+                parent.budget_status = 'DRAFT'
                 parent.save()
                 area = parent.budget_area.area_id
+                approvers = BudgetApproval.objects.filter(
+                    area_id=area).order_by('sequence')
                 with connection.cursor() as cursor:
                     cursor.execute(
                         "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
@@ -1108,22 +1127,25 @@ def budget_add(request, _area):
                         child = BudgetDetail(
                             budget=parent, budget_channel_id=i[0])
                         child.save()
+
+                for j in approvers:
+                    release = BudgetRelease(
+                        budget=parent, budget_approval_id=j.approver_id, budget_approval_name=j.approver.username, budget_approval_email=j.approver.email, budget_approval_position=j.approver.position.position_name, sequence=j.sequence)
+                    release.save()
+
                 return HttpResponseRedirect(reverse('budget-view', args=[parent.budget_id, 'NONE']))
-            except IntegrityError:
-                message = 'Budget already exist'
-            except Exception:
-                message = 'Something wrong'
     else:
         form = FormBudget(
-            initial={'budget_year': datetime.datetime.now().year, 'budget_month': datetime.datetime.now().month})
+            initial={'budget_year': datetime.datetime.now().year, 'budget_month': datetime.datetime.now().month, 'budget_amount': 0, 'budget_upping': 0, 'budget_total': 0})
     context = {
         'message': message,
         'form': form,
         'area': area,
         'distributor': distributor,
         'selected_area': selected_area,
+        'name': name,
         'segment': 'budget',
-        'group_segment': 'anp',
+        'group_segment': 'budget',
         'crud': 'add',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
@@ -1135,15 +1157,11 @@ def budget_add(request, _area):
 @role_required(allowed_roles='BUDGET')
 def budget_index(request):
     budgets = Budget.objects.all()
-    for budget in budgets:
-        budget.budget_amount = '{:,}'.format(budget.budget_amount)
-        budget.budget_upping = '{:,}'.format(budget.budget_upping)
-        budget.budget_total = '{:,}'.format(budget.budget_total)
 
     context = {
         'data': budgets,
         'segment': 'budget',
-        'group_segment': 'anp',
+        'group_segment': 'budget',
         'crud': 'index',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
@@ -1193,7 +1211,7 @@ def budget_update(request, _id):
         'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
         'segment': 'budget',
-        'group_segment': 'anp',
+        'group_segment': 'budget',
         'crud': 'update',
         'message': message if message else 'NONE',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
@@ -1215,11 +1233,252 @@ def budget_delete(request, _id):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET')
 def budget_view(request, _id, _msg):
-    budgets = Budget.objects.get(budget_id=_id)
-    budgets.budget_amount = '{:,}'.format(budgets.budget_amount)
-    budgets.budget_upping = '{:,}'.format(budgets.budget_upping)
-    budgets.budget_total = '{:,}'.format(budgets.budget_total)
-    form = FormBudgetView(instance=budgets)
+    budget = Budget.objects.get(budget_id=_id)
+    budget.budget_amount = '{:,}'.format(budget.budget_amount)
+    budget.budget_upping = '{:,}'.format(budget.budget_upping)
+    budget.budget_total = '{:,}'.format(budget.budget_total)
+    form = FormBudgetView(instance=budget)
+    budget_detail = BudgetDetail.objects.filter(budget_id=_id)
+    for detail in budget_detail:
+        detail.budget_amount = '{:,}'.format(detail.budget_amount)
+        detail.budget_upping = '{:,}'.format(detail.budget_upping)
+        detail.budget_total = '{:,}'.format(detail.budget_total)
+        detail.budget_balance = '{:,}'.format(detail.budget_balance)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_channel.channel_id, channel_name, q_channel.budget_channel_id FROM apps_channel LEFT JOIN (SELECT * FROM apps_budgetdetail WHERE budget_id = '" + str(_id) + "') AS q_channel ON apps_channel.channel_id = q_channel.budget_channel_id WHERE q_channel.budget_channel_id IS NULL")
+        channel = cursor.fetchall()
+    approval = BudgetRelease.objects.filter(budget_id=_id).order_by('sequence')
+
+    YEAR_CHOICES = []
+    for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
+        YEAR_CHOICES.append(str(r))
+
+    MONTH_CHOICES = []
+    for r in range(1, 13):
+        MONTH_CHOICES.append(str(r))
+
+    context = {
+        'form': form,
+        'data': budget,
+        'status': budget.budget_status,
+        'year': YEAR_CHOICES,
+        'month': MONTH_CHOICES,
+        'budget_detail': budget_detail,
+        'approval': approval,
+        'message': _msg,
+        'channel': channel,
+        'segment': 'budget',
+        'group_segment': 'budget',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/budget_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET')
+def budget_detail_update(request, _id):
+    budget = Budget.objects.get(budget_id=_id)
+    detail = BudgetDetail.objects.filter(budget_id=_id)
+    msg = 'NONE'
+    if request.POST:
+        hundreds = 0
+        for i in detail:
+            i.budget_percent = request.POST.get(
+                'budget_percent_'+str(i.budget_channel_id))
+            hundreds += int(i.budget_percent)
+        if hundreds == 100:
+            for i in detail:
+                i.budget_amount = (Decimal(
+                    int(i.budget_percent)/100) * budget.budget_amount)
+                i.budget_upping = Decimal(
+                    int(i.budget_percent)/100) * budget.budget_upping
+                i.save()
+
+            budget.budget_status = 'PENDING'
+            budget.save()
+
+            email = BudgetRelease.objects.filter(
+                budget_id=_id).order_by('sequence').values_list('budget_approval_email', flat=True)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT username FROM apps_budgetrelease INNER JOIN apps_user ON apps_budgetrelease.budget_approval_id = apps_user.user_id WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                approver = cursor.fetchone()
+
+            subject = 'Budget Approval'
+            message = 'Dear ' + approver[0] + ',\n\nYou have a budget to approve. Please check your dashboard.\n\n' + \
+                'Click this link to approve, revise or return the budget. http://127.0.0.1:8000/budget/release/' + \
+                '\n\nThank you.'
+            send_email(subject, message, [email[0]])
+
+            return HttpResponseRedirect(reverse('budget-view', args=[_id, 'NONE']))
+        else:
+            msg = 'Total budget percentage you entered is not 100%'
+
+    return HttpResponseRedirect(reverse('budget-view', args=[_id, msg, ]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='UPLOAD')
+def budget_upload(request):
+    channels = Channel.objects.all()
+    success = 0
+    failed = 0
+    errors = []
+    recipients = []
+    is_send = False
+    if request.POST:
+        UploadLog.objects.filter(document='BUDGET').delete()
+        dataset = Dataset()
+        new_budget_percent = request.FILES['budget_file']
+        imported_data = dataset.load(new_budget_percent.read(), format='xlsx')
+        for data in imported_data:
+            col = 5
+            hundreds = 0
+            try:
+                budget = Budget.objects.get(budget_id=data[4])
+                if budget.budget_status == 'DRAFT':
+                    for i in range(col, col+(channels.count())):
+                        hundreds += data[i]
+                    if hundreds == 100:
+                        for channel in channels:
+                            try:
+                                rec = BudgetDetail.objects.get(
+                                    budget_id=data[4], budget_channel_id=channel.channel_id)
+                                rec.budget_percent = data[col]
+                                rec.budget_amount = (Decimal(
+                                    int(data[col])/100) * budget.budget_amount)
+                                rec.budget_upping = Decimal(
+                                    int(data[col])/100) * budget.budget_upping
+                                rec.save()
+                                success += 1
+                                budget.budget_status = 'PENDING'
+                                budget.save()
+
+                                is_send = True
+                                email = BudgetRelease.objects.filter(
+                                    budget_id=data[4]).order_by('sequence').values_list('budget_approval_email', flat=True)
+                                with connection.cursor() as cursor:
+                                    cursor.execute(
+                                        "SELECT username FROM apps_budgetrelease INNER JOIN apps_user ON apps_budgetrelease.budget_approval_id = apps_user.user_id WHERE budget_id = '" + str(data[4]) + "' AND budget_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                                    approver = cursor.fetchone()
+                                recipients.append((approver[0], email[0]))
+
+                            except BudgetDetail.DoesNotExist:
+                                pass
+                            col += 1
+                    else:
+                        failed += 1
+                        errors.append(
+                            'Budget No. ' + data[4] + ' percentage is not 100%.')
+                        log = UploadLog(
+                            document='BUDGET', document_id=data[4], description='Budget No. ' + data[4] + ' percentage is not 100%.')
+                        log.save()
+                else:
+                    failed += 1
+                    errors.append(
+                        'Budget No. ' + data[4] + ' is not in DRAFT status.')
+                    log = UploadLog(
+                        document='BUDGET', document_id=data[4], description='Budget No. ' + data[4] + ' is not in DRAFT status.')
+                    log.save()
+            except Budget.DoesNotExist:
+                failed += 1
+                errors.append('Budget No. ' + data[4] + ' could not be found.')
+                log = UploadLog(
+                    document='BUDGET', document_id=data[4], description='Budget No. ' + data[4] + ' could not be found.')
+                log.save()
+
+        context = {
+            'success': success,
+            'failed': failed,
+            'errors': errors,
+            'total': imported_data.height,
+            'segment': 'budget_upload',
+            'group_segment': 'budget',
+            'crud': 'upload',
+            'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+            'btn': Auth.objects.all(),
+        }
+
+        if is_send:
+            recipient_list = list(dict.fromkeys(recipients))
+            for mail_to in recipient_list:
+                subject = 'Budget Approval'
+                message = 'Dear ' + mail_to[0] + ',\n\nYou have a budget to approve. Please check your dashboard.\n\n' + \
+                    'Click this link to approve, revise or return the budget. http://127.0.0.1:8000/budget/release/' + \
+                    '\n\nThank you.'
+                send_email(subject, message, mail_to[1])
+
+        return render(request, 'home/budget_uploadlog.html', context)
+
+    context = {
+        'segment': 'budget_upload',
+        'group_segment': 'budget',
+        'crud': 'upload',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.all(),
+    }
+    return render(request, 'home/budget_upload.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='UPLOAD')
+def export_uploadlog(request):
+    response = HttpResponse(content_type='application/ms-excel')
+    response['Content-Disposition'] = 'attachment; filename="Upload-Log-' + \
+        str(datetime.datetime.now()) + '.xls"'
+    wb = xlwt.Workbook(encoding='utf-8')
+    ws = wb.add_sheet('Upload Log')
+    row_num = 0
+    font_style = xlwt.XFStyle()
+    font_style.font.bold = True
+
+    columns = ['Budget No.', 'Description']
+    for col_num in range(len(columns)):
+        ws.write(row_num, col_num, columns[col_num], font_style)
+    font_style = xlwt.XFStyle()
+
+    rows = UploadLog.objects.filter(document='BUDGET').values_list(
+        'document_id', 'description')
+    for row in rows:
+        row_num += 1
+        for col_num in range(len(row)):
+            ws.write(row_num, col_num, row[col_num], font_style)
+
+    wb.save(response)
+    return response
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-RELEASE')
+def budget_release_index(request):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_budget.budget_id, apps_distributor.distributor_name, apps_budget.budget_amount, apps_budget.budget_upping, apps_budget.budget_total, apps_budget.budget_status, apps_budgetrelease.sequence FROM apps_distributor INNER JOIN apps_budget ON apps_distributor.distributor_id = apps_budget.budget_distributor_id INNER JOIN apps_budgetrelease ON apps_budget.budget_id = apps_budgetrelease.budget_id INNER JOIN (SELECT budget_id, MIN(sequence) AS seq FROM apps_budgetrelease WHERE budget_approval_status = 'N' GROUP BY budget_id ORDER BY sequence ASC) AS q_group ON apps_budgetrelease.budget_id = q_group.budget_id AND apps_budgetrelease.sequence = q_group.seq WHERE (apps_budget.budget_status = 'PENDING' OR apps_budget.budget_status = 'IN APPROVAL') AND apps_budgetrelease.budget_approval_id = '" + str(request.user.user_id) + "'")
+        release = cursor.fetchall()
+
+    context = {
+        'data': release,
+        'segment': 'budget_release',
+        'group_segment': 'budget',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/budget_release_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-RELEASE')
+def budget_release_view(request, _id, _msg, _is_revise):
+    budget = Budget.objects.get(budget_id=_id)
+    budget.budget_amount = '{:,}'.format(budget.budget_amount)
+    budget.budget_upping = '{:,}'.format(budget.budget_upping)
+    budget.budget_total = '{:,}'.format(budget.budget_total)
+    form = FormBudgetView(instance=budget)
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
     for detail in budget_detail:
         detail.budget_amount = '{:,}'.format(detail.budget_amount)
@@ -1241,26 +1500,122 @@ def budget_view(request, _id, _msg):
 
     context = {
         'form': form,
-        'data': budgets,
+        'data': budget,
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
         'message': _msg,
         'channel': channel,
-        'segment': 'budget',
-        'group_segment': 'anp',
+        'is_revise': _is_revise,
+        'segment': 'budget_release',
+        'group_segment': 'budget',
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
     }
-    return render(request, 'home/budget_view.html', context)
+    return render(request, 'home/budget_release_view.html', context)
+
+
+# Update Budget
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-RELEASE')
+def budget_release_update(request, _id):
+    budgets = Budget.objects.get(budget_id=_id)
+    budgets.budget_amount = '{:,}'.format(budgets.budget_amount)
+    budgets.budget_total = '{:,}'.format(budgets.budget_total)
+    budget_detail = BudgetDetail.objects.filter(budget_id=_id)
+    upping_before = budgets.budget_upping
+
+    if request.POST:
+        form = FormBudgetUpdate(
+            request.POST, request.FILES, instance=budgets)
+        if form.is_valid():
+            update = form.save(commit=False)
+            update.budget_year = budgets.budget_year
+            update.budget_month = budgets.budget_month
+            update.save()
+            for i in budget_detail:
+                i.budget_upping = (i.budget_percent/100) * \
+                    budgets.budget_upping
+                i.save()
+
+            recipients = []
+
+            release = BudgetRelease.objects.get(
+                budget_id=_id, budget_approval_id=request.user.user_id)
+            release.upping_note = request.POST.get('upping_note')
+            release.save()
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT budget_id, email FROM apps_budget INNER JOIN apps_user ON apps_budget.entry_by = apps_user.user_id WHERE budget_id = '" + str(_id) + "'")
+                entry_mail = cursor.fetchone()
+                recipients.append(entry_mail[1])
+
+                cursor.execute(
+                    "SELECT budget_id, email FROM apps_budget INNER JOIN apps_user ON apps_budget.update_by = apps_user.user_id WHERE budget_id = '" + str(_id) + "'")
+                update_mail = cursor.fetchone()
+                recipients.append(update_mail[1])
+
+                cursor.execute(
+                    "SELECT budget_id, email FROM apps_budgetdetail INNER JOIN apps_user ON apps_budgetdetail.update_by = apps_user.user_id WHERE budget_id = '" + str(_id) + "'")
+                detail_mail = cursor.fetchone()
+                recipients.append(detail_mail[1])
+
+                cursor.execute(
+                    "SELECT budget_approval_email FROM apps_budgetrelease WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'Y'")
+                approver_mail = cursor.fetchone()
+                recipients.append(approver_mail)
+
+            subject = 'Upping Price Revised'
+            message = 'Dear All,\n\nThe following is Upping Price update for Budget No. ' + \
+                str(_id) + ':\n\nValue before: ' + \
+                '{:,}'.format(upping_before) + '\nValue after: ' + \
+                '{:,}'.format(update.budget_upping) + '\n\nNote: ' + \
+                str(release.upping_note) + '\n\nClick the following link to view the budget. http://127.0.0.1:8000/budget/view/' + \
+                str(_id) + '/NONE/' + \
+                '\n\nThank you.'
+            recipient_list = list(dict.fromkeys(recipients))
+            send_email(subject, message, recipient_list)
+
+            return HttpResponseRedirect(reverse('budget-release-view', args=[_id, 'NONE', 0]))
+    else:
+        form = FormBudgetUpdate(instance=budgets)
+
+    YEAR_CHOICES = []
+    for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
+        YEAR_CHOICES.append(str(r))
+
+    MONTH_CHOICES = []
+    for r in range(1, 13):
+        MONTH_CHOICES.append(str(r))
+
+    message = form.errors
+    context = {
+        'form': form,
+        'data': budgets,
+        'year': YEAR_CHOICES,
+        'month': MONTH_CHOICES,
+        'budget_detail': budget_detail,
+        'segment': 'budget_release',
+        'group_segment': 'budget',
+        'crud': 'update',
+        'message': message if message else 'NONE',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/budget_release_view.html', context)
 
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET')
-def budget_detail_update(request, _id):
-    budgets = Budget.objects.get(budget_id=_id)
+def budget_detail_release_update(request, _id):
+    budget = Budget.objects.get(budget_id=_id)
     detail = BudgetDetail.objects.filter(budget_id=_id)
+    channel_percent_before = []
+    for i in detail:
+        channel_percent_before.append((i.budget_channel_id, i.budget_percent))
+
     msg = 'NONE'
     if request.POST:
         hundreds = 0
@@ -1270,71 +1625,233 @@ def budget_detail_update(request, _id):
             hundreds += int(i.budget_percent)
         if hundreds == 100:
             for i in detail:
+                i.budget_amount = (Decimal(
+                    int(i.budget_percent)/100) * budget.budget_amount)
                 i.budget_upping = Decimal(
-                    int(i.budget_percent)/100) * budgets.budget_upping
+                    int(i.budget_percent)/100) * budget.budget_upping
                 i.save()
-            return HttpResponseRedirect(reverse('budget-view', args=[_id, 'NONE']))
+
+            recipients = []
+
+            release = BudgetRelease.objects.get(
+                budget_id=_id, budget_approval_id=request.user.user_id)
+            release.percentage_note = request.POST.get('percentage_note')
+            release.save()
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT budget_id, email FROM apps_budget INNER JOIN apps_user ON apps_budget.entry_by = apps_user.user_id WHERE budget_id = '" + str(_id) + "'")
+                entry_mail = cursor.fetchone()
+                recipients.append(entry_mail[1])
+
+                cursor.execute(
+                    "SELECT budget_id, email FROM apps_budget INNER JOIN apps_user ON apps_budget.update_by = apps_user.user_id WHERE budget_id = '" + str(_id) + "'")
+                update_mail = cursor.fetchone()
+                recipients.append(update_mail[1])
+
+                cursor.execute(
+                    "SELECT budget_id, email FROM apps_budgetdetail INNER JOIN apps_user ON apps_budgetdetail.update_by = apps_user.user_id WHERE budget_id = '" + str(_id) + "'")
+                detail_mail = cursor.fetchone()
+                recipients.append(detail_mail[1])
+
+                cursor.execute(
+                    "SELECT budget_approval_email FROM apps_budgetrelease WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'Y'")
+                approver_mail = cursor.fetchone()
+                recipients.append(approver_mail[0])
+
+            subject = 'Channel Percentage Revised'
+            message = 'Dear All,\n\nThe following are channel percentages update for Budget No. ' + \
+                str(_id) + ':\n\nBEFORE\n'
+            for i in channel_percent_before:
+                message += str(i[0]) + ': ' + str(i[1]) + '%\n'
+            message += '\nAFTER\n'
+            for i in detail:
+                message += str(i.budget_channel_id) + ': ' + \
+                    str(i.budget_percent) + '%\n'
+            message += '\nNote: ' + \
+                str(release.percentage_note) + '\n\nClick the following link to view the budget. http://127.0.0.1:8000/budget/view/' + \
+                str(_id) + '/NONE/' + \
+                '\n\nThank you.'
+            recipient_list = list(dict.fromkeys(recipients))
+            send_email(subject, message, recipient_list)
+
+            return HttpResponseRedirect(reverse('budget-release-view', args=[_id, 'NONE', 0]))
         else:
             msg = 'Total budget percentage you entered is not 100%'
 
-    return HttpResponseRedirect(reverse('budget-view', args=[_id, msg, ]))
+    return HttpResponseRedirect(reverse('budget-release-view', args=[_id, msg, 1]))
 
 
 @login_required(login_url='/login/')
-@role_required(allowed_roles='UPLOAD')
-def budget_upload(request):
-    channels = Channel.objects.all()
-    success = 0
-    failed = 0
-    errors = []
-    if request.POST:
-        dataset = Dataset()
-        new_budget_percent = request.FILES['budget_file']
-        imported_data = dataset.load(new_budget_percent.read(), format='xlsx')
-        for data in imported_data:
-            col = 5
-            hundreds = 0
-            try:
-                Budget.objects.get(budget_id=data[4], budget_status='OPEN')
-                for i in range(col, col+(channels.count())):
-                    hundreds += data[i]
-                if hundreds == 100:
-                    for channel in channels:
-                        try:
-                            rec = BudgetDetail.objects.get(
-                                budget_id=data[4], budget_channel_id=channel.channel_id)
-                            rec.budget_percent = data[col]
-                            rec.save()
-                            success += 1
-                        except BudgetDetail.DoesNotExist:
-                            pass
-                        col += 1
-                else:
-                    failed += 1
-                    errors.append(
-                        'Budget No. ' + data[4] + ' percentage is not 100%.')
-            except Budget.DoesNotExist:
-                failed += 1
-                errors.append('Budget No. ' + data[4] + ' could not be found.')
+@role_required(allowed_roles='BUDGET-RELEASE')
+def budget_release_approve(request, _id):
+    release = BudgetRelease.objects.get(
+        budget_id=_id, budget_approval_id=request.user.user_id)
+    release.budget_approval_status = 'Y'
+    release.budget_approval_date = timezone.now()
+    release.save()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT budget_id, MAX(sequence) AS seq FROM apps_budgetrelease GROUP BY budget_id HAVING budget_id = '" + str(_id) + "'")
+        max_seq = cursor.fetchall()
 
-        context = {
-            'success': success,
-            'failed': failed,
-            'errors': errors,
-            'total': imported_data.height,
-            'segment': 'budget_upload',
-            'group_segment': 'anp',
-            'crud': 'upload',
-            'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-            'btn': Auth.objects.all(),
-        }
-        return render(request, 'home/budget_uploadlog.html', context)
+    budget = Budget.objects.get(budget_id=_id)
+    if release.sequence == max_seq[0][1]:
+        budget.budget_status = 'OPEN'
+    else:
+        budget.budget_status = 'IN APPROVAL'
+
+        email = BudgetRelease.objects.filter(budget_id=_id, budget_approval_status='N').order_by(
+            'sequence').values_list('budget_approval_email', flat=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT username FROM apps_budgetrelease INNER JOIN apps_user ON apps_budgetrelease.budget_approval_id = apps_user.user_id WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'N' ORDER BY sequence LIMIT 1")
+            approver = cursor.fetchone()
+
+        subject = 'Budget Approval'
+        message = 'Dear ' + approver[0] + ',\n\nYou have a budget to approve. Please check your dashboard.\n\n' + \
+            'Click this link to approve, revise or return the budget. http://127.0.0.1:8000/budget/release/' + \
+            '\n\nThank you.'
+        send_email(subject, message, [email[0]])
+
+    budget.save()
+
+    return HttpResponseRedirect(reverse('budget-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-RELEASE')
+def budget_release_return(request, _id):
+    recipients = []
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT budget_id, email FROM apps_budget INNER JOIN apps_user ON apps_budget.entry_by = apps_user.user_id WHERE budget_id = '" + str(_id) + "'")
+        entry_mail = cursor.fetchone()
+        recipients.append(entry_mail[1])
+
+        cursor.execute(
+            "SELECT budget_id, email FROM apps_budget INNER JOIN apps_user ON apps_budget.update_by = apps_user.user_id WHERE budget_id = '" + str(_id) + "'")
+        update_mail = cursor.fetchone()
+        recipients.append(update_mail[1])
+
+        cursor.execute(
+            "SELECT budget_id, email FROM apps_budgetdetail INNER JOIN apps_user ON apps_budgetdetail.update_by = apps_user.user_id WHERE budget_id = '" + str(_id) + "'")
+        detail_mail = cursor.fetchone()
+        recipients.append(detail_mail[1])
+
+        cursor.execute(
+            "SELECT budget_approval_email FROM apps_budgetrelease WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'Y'")
+        approver_mail = cursor.fetchone()
+        recipients.append(approver_mail)
+
+    print(recipients)
+
+    try:
+        release = BudgetRelease.objects.filter(
+            budget_id=_id, budget_approval_status='Y')
+        for i in release:
+            i.budget_approval_status = 'N'
+            i.budget_approval_date = None
+            i.upping_note = ''
+            i.percentage_note = ''
+            i.save()
+    except BudgetRelease.DoesNotExist:
+        pass
+
+    note = BudgetRelease.objects.get(
+        budget_id=_id, budget_approval_id=request.user.user_id)
+    note.return_note = request.POST.get('return_note')
+    note.save()
+
+    budget = Budget.objects.get(budget_id=_id)
+    budget.budget_status = 'DRAFT'
+    budget.save()
+
+    subject = 'Budget Returned'
+    message = 'Dear All,\n\nBudget No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
+        str(note.return_note) + '\n\nClick the following link to revise the budget. http://127.0.0.1:8000/budget/view/' + \
+        str(_id) + '/NONE/' + \
+        '\n\nThank you.'
+    recipient_list = list(dict.fromkeys(recipients))
+    send_email(subject, message, recipient_list)
+
+    return HttpResponseRedirect(reverse('budget-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-APPROVAL')
+def budget_approval_index(request):
+    areas = AreaSales.objects.all()
 
     context = {
-        'segment': 'budget_upload',
-        'group_segment': 'anp',
-        'crud': 'upload',
+        'data': areas,
+        'segment': 'budget_approval',
+        'group_segment': 'approval',
+        'crud': 'index',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-        'btn': Auth.objects.all(),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
     }
-    return render(request, 'home/budget_upload.html', context)
+    return render(request, 'home/budget_approval_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-APPROVAL')
+def budget_approval_view(request, _id):
+    area = AreaSales.objects.get(area_id=_id)
+    approvers = BudgetApproval.objects.filter(area_id=_id)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT user_id, username, position_name, q_budgetapprover.approver_id FROM apps_user INNER JOIN apps_position ON apps_user.position_id = apps_position.position_id LEFT JOIN (SELECT * FROM apps_budgetapproval WHERE area_id = '" + str(_id) + "') AS q_budgetapprover ON apps_user.user_id = q_budgetapprover.approver_id WHERE q_budgetapprover.approver_id IS NULL")
+        users = cursor.fetchall()
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        for i in users:
+            if str(i[0]) in check:
+                try:
+                    approver = BudgetApproval(area_id=_id, approver_id=i[0])
+                    approver.save()
+                except IntegrityError:
+                    continue
+            else:
+                BudgetApproval.objects.filter(
+                    area_id=_id, approver_id=i[0]).delete()
+
+        return HttpResponseRedirect(reverse('budget-approval-view', args=[_id, ]))
+
+    context = {
+        'data': area,
+        'users': users,
+        'approvers': approvers,
+        'segment': 'budget_approval',
+        'group_segment': 'approval',
+        'tab': 'auth',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/budget_approval_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-APPROVAL')
+def budget_approval_update(request, _id, _approver):
+    approvers = BudgetApproval.objects.get(area=_id, approver_id=_approver)
+
+    if request.POST:
+        approvers.sequence = request.POST.get('sequence')
+        approvers.save()
+
+        return HttpResponseRedirect(reverse('budget-approval-view', args=[_id, ]))
+
+    return render(request, 'home/budget_approval_view.html')
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-APPROVAL')
+def budget_approval_delete(request, _id, _arg):
+    approvers = BudgetApproval.objects.get(area=_id, approver_id=_arg)
+    approvers.delete()
+
+    return HttpResponseRedirect(reverse('budget-approval-view', args=[_id, ]))

@@ -12,6 +12,7 @@ dj-database-url
 django-import-export
 django-auto-logout
 pytz
+xlwt
 # djangorestframework
 
 # psycopg2-binary

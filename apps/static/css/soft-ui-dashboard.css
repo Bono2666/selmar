@@ -30,7 +30,7 @@
   --bs-gray-900: #212529;
   --bs-primary: #cb0c9f;
   --bs-secondary: #8392AB;
-  --bs-success: #82d616;
+  --bs-success: #1d6f42;
   --bs-info: #17c1e8;
   --bs-warning: #fbcf33;
   --bs-danger: #ea0606;
@@ -7090,7 +7090,7 @@ textarea.form-control-lg {
 
 .text-bg-success {
   color: #000 !important;
-  background-color: RGBA(130, 214, 22, var(--bs-bg-opacity, 1)) !important;
+  background-color: RGBA(29, 111, 66, var(--bs-bg-opacity, 1)) !important;
 }
 
 .text-bg-info {
@@ -9714,7 +9714,7 @@ textarea.form-control-lg {
 }
 
 .bg-success {
-  background-color: #82d616 !important;
+  background-color: #1d6f42 !important;
 }
 
 .bg-info {
@@ -19001,6 +19001,10 @@ hr.horizontal.gray-light {
   opacity: 0.8;
 }
 
+.cursor-default {
+  cursor: default;
+}
+
 .cursor-pointer {
   cursor: pointer;
 }
@@ -22738,4 +22742,8 @@ pre[class*=language-] {
 .no-spinners::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+#releaseTable thead {
+  display: none;
 }

@@ -212,7 +212,7 @@
                                                     <div class="modal-header">
                                                         <h5 class="modal-title" id="ModalLabel">Menu: {{ item.menu }}</h5>
                                                     </div>
-                                                    <form method="post" action="{% url 'auth-update' item.user item.menu_id %}" enctype="multipart/form-data">
+                                                    <form method="post" action="{% url 'auth-update' item.user_id item.menu_id %}" enctype="multipart/form-data">
                                                         {% csrf_token %}
                                                         <div class="modal-body border-bottom-0">
                                                             <div class="pl-lg-0">
@@ -381,9 +381,16 @@
         $('#menuTable').DataTable();
         $('#areaTable').DataTable();
 
-        btn = document.getElementsByClassName('paginate_button');
-        for (var i = 0; i < btn.length; i++) {
-            btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        let btn = document.getElementsByClassName('paginate_button');
+        for (const button of btn) {
+            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
+
+        let btn2 = document.getElementsByClassName('paginate_button next', 'paginate_button previous');
+        for (const button of btn2) {
+            button.hover(function() {
+                $(this).css('background-color', 'transparent');
+            });
         }
     } );
 </script>

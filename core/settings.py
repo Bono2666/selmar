@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'apps',
     'phonenumber_field',
 ]
@@ -144,3 +145,11 @@ AUTO_LOGOUT = {
     'REDIRECT_TO_LOGIN_IMMEDIATELY': True,
     'MESSAGE': 'The session has expired. Please login again to continue.',
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'mail.ksisolusi.com'
+EMAIL_PORT = 465
+EMAIL_HOST_USER = 'abc_is@ksisolusi.com'
+EMAIL_HOST_PASSWORD = 'E;$q%YR%c;P='
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True

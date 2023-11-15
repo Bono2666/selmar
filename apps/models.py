@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -27,6 +28,9 @@ class User(AbstractUser):
 
     USERNAME_FIELD = 'user_id'
     REQUIRED_FIELDS = ['username']
+
+    def __str__(self):
+        return self.username
 
 
 class Distributor(models.Model):
@@ -189,7 +193,7 @@ class AreaUser(models.Model):
         super(AreaUser, self).save(*args, **kwargs)
 
     def __str__(self):
-        return self.area.area_name
+        return self.area_id
 
 
 class Position(models.Model):
@@ -273,12 +277,12 @@ class Budget(models.Model):
     budget_distributor = models.ForeignKey(
         Distributor, on_delete=models.CASCADE)
     budget_amount = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
+        max_digits=10, decimal_places=2)
     budget_upping = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
+        max_digits=10, decimal_places=2)
     budget_total = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
-    budget_status = models.CharField(max_length=5, default='OPEN')
+        max_digits=10, decimal_places=2)
+    budget_status = models.CharField(max_length=15)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True)
@@ -300,6 +304,9 @@ class Budget(models.Model):
         self.update_date = timezone.now()
         self.update_by = get_current_user().user_id
         super(Budget, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.budget_id
 
 
 class BudgetDetail(models.Model):
@@ -341,13 +348,10 @@ class BudgetDetail(models.Model):
         super(BudgetDetail, self).save(*args, **kwargs)
 
 
-class BudgetApproval(models.Model):
-    area = models.OneToOneField(
-        AreaSales, on_delete=models.CASCADE, unique=True)
-    approver1 = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='approver1')
-    approver2 = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='approver2')
+class UploadLog(models.Model):
+    document = models.CharField(max_length=50)
+    document_id = models.CharField(max_length=50)
+    description = models.CharField(max_length=200)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True)
@@ -359,4 +363,64 @@ class BudgetApproval(models.Model):
             self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
         self.update_by = get_current_user().user_id
+        super(UploadLog, self).save(*args, **kwargs)
+
+
+class BudgetRelease(models.Model):
+    budget = models.ForeignKey(Budget, on_delete=models.CASCADE)
+    budget_approval_id = models.CharField(max_length=50, null=True)
+    budget_approval_name = models.CharField(max_length=50, null=True)
+    budget_approval_email = models.CharField(max_length=50, null=True)
+    budget_approval_position = models.CharField(max_length=50, null=True)
+    budget_approval_date = models.DateTimeField(null=True)
+    budget_approval_status = models.CharField(max_length=1, default='N')
+    upping_note = models.CharField(max_length=200, null=True)
+    percentage_note = models.CharField(max_length=200, null=True)
+    return_note = models.CharField(max_length=200, null=True)
+    sequence = models.IntegerField(default=0)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['budget', 'budget_approval_id'], name='unique_budget_approval')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(BudgetRelease, self).save(*args, **kwargs)
+
+
+class BudgetApproval(models.Model):
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
+    approver = models.ForeignKey(User, on_delete=models.CASCADE)
+    sequence = models.IntegerField(default=0)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['area', 'approver'], name='unique_area_approver')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
         super(BudgetApproval, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.area.area_name
