@@ -79,7 +79,7 @@
     $(document).ready( function () {
         $('#myTable').DataTable();
 
-        $('tbody tr').click(function() {
+        $(document).on('click', 'tbody tr', function() {
             window.location = $(this).data('href');
         });
 

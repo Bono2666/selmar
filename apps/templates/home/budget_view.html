@@ -173,7 +173,11 @@
                         <h5 class="mb-0">Budget Detail</h5>
                     </div>
                     <div class="col-6 text-end">
-                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#updPercent"><i class="fas fa-edit"></i>&nbsp;&nbsp;Change Budget Percentage</button>
+                        {% if btn_percent != None %}
+                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn_percent.edit and not request.user.is_superuser %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#updPercent"><i class="fas fa-edit"></i>&nbsp;&nbsp;Change Budget Percentage</button>
+                        {% else %}
+                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not request.user.is_superuser %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#updPercent"><i class="fas fa-edit"></i>&nbsp;&nbsp;Change Budget Percentage</button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal fade" id="updPercent" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -213,7 +217,7 @@
                                                 <td>
                                                     <div class="row text-end">
                                                         <div class="col-md-4 pe-0">
-                                                            <input type="number" class="form-control-sm no-spinners text-end" name="budget_percent_{{ item.budget_channel_id }}" value="{{ item.budget_percent }}" {% if not btn.edit and not request.user.is_superuser %}readonly{% endif %}/>
+                                                            <input type="number" class="form-control-sm no-spinners text-end" name="budget_percent_{{ item.budget_channel_id }}" value="{{ item.budget_percent }}" {% if not btn_percent.edit and not request.user.is_superuser %}readonly{% endif %}/>
                                                         </div>
                                                         <div class="col-md-1 px-0">
                                                             <h6 class="mt-1 text-sm">%</h6>
@@ -232,7 +236,7 @@
                                 <div class="modal-footer border-0">
                                     <a href="{% url 'budget-view' data.budget_id 'NONE' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                     <button type="submit"
-                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
+                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn_percent.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
                                 </div>
                             </form>
                         </div>

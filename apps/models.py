@@ -424,3 +424,131 @@ class BudgetApproval(models.Model):
 
     def __str__(self):
         return self.area.area_name
+
+
+class Closing(models.Model):
+    document = models.CharField(max_length=50, primary_key=True)
+    year_closed = models.CharField(max_length=4)
+    month_closed = models.CharField(max_length=2)
+    year_open = models.CharField(max_length=4)
+    month_open = models.CharField(max_length=2)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    def save(self, *args, **kwargs):
+        self.document = self.document.upper()
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(Closing, self).save(*args, **kwargs)
+
+
+class Division(models.Model):
+    division_id = models.BigAutoField(primary_key=True)
+    division_name = models.CharField(max_length=50)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(Division, self).save(*args, **kwargs)
+
+
+class Proposal(models.Model):
+    proposal_id = models.CharField(max_length=50, primary_key=True)
+    proposal_date = models.DateTimeField(null=True)
+    type = models.CharField(max_length=1, default='B')
+    budget = models.ForeignKey(Budget, on_delete=models.CASCADE)
+    channel = models.CharField(max_length=5)
+    division = models.ForeignKey(Division, on_delete=models.CASCADE)
+    program_name = models.CharField(max_length=200)
+    products = models.TextField()
+    area = models.CharField(max_length=50)
+    period_start = models.DateTimeField(null=True)
+    period_from = models.DateTimeField(null=True)
+    duration = models.IntegerField(default=0)
+    objectives = models.TextField()
+    mechanism = models.TextField()
+    remarks = models.CharField(max_length=200, null=True)
+    attachment = models.CharField(max_length=200, null=True)
+    total_cost = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=15, default='DRAFT')
+    seq_number = models.IntegerField(default=0)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.duration = (self.period_from - self.period_start).days + 1
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(Proposal, self).save(*args, **kwargs)
+
+
+class IncrementalSales(models.Model):
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
+    product = models.CharField(max_length=50)
+    swop_carton = models.IntegerField(default=0)
+    swop_nom = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
+    swp_carton = models.IntegerField(default=0)
+    swp_nom = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['proposal', 'product'], name='unique_proposal_product')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(IncrementalSales, self).save(*args, **kwargs)
+
+
+class ProjectedCost(models.Model):
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
+    activities = models.CharField(max_length=200)
+    cost = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['proposal', 'activities'], name='unique_proposal_activities')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(ProjectedCost, self).save(*args, **kwargs)

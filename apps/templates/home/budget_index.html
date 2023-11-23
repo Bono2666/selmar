@@ -29,7 +29,7 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Distributor</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">
-                                        beginning Balance</th>
+                                        Beginning Balance</th>
                                     <th class="text-uppercase text-Usecondary text-xxs text-end font-weight-bolder opacity-7 ps-2">
                                         Upping Price</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">
@@ -82,7 +82,7 @@
     $(document).ready( function () {
         $('#myTable').DataTable();
 
-        $('tbody tr').click(function() {
+        $(document).on('click', 'tbody tr', function() {
             window.location = $(this).data('href');
         });
 

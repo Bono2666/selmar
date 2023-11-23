@@ -16,6 +16,7 @@ from django.http import HttpResponse
 from django.core.mail import send_mail
 from core.settings import EMAIL_HOST_USER
 from django.conf import settings
+import xlsxwriter
 
 
 @login_required(login_url='/login/')
@@ -1100,20 +1101,23 @@ def budget_add(request, _area):
         area_id=selected_area) if selected_area != 'NONE' else None
     distributor = Distributor.objects.filter(
         distributor_id__in=AreaSalesDetail.objects.filter(area_id=selected_area).values_list('distributor_id', flat=True))
+    month = '{:02d}'.format(int(request.POST.get('budget_month'))) if request.POST.get(
+        'budget_month') else '{:02d}'.format(int(datetime.datetime.now().month))
     message = ''
     if request.POST:
         form = FormBudget(request.POST, request.FILES)
         if form.is_valid():
             _id = 'UBS/' + \
                 request.POST.get('budget_area') + '/' + \
-                request.POST.get('budget_distributor') + '/' + request.POST.get(
-                    'budget_month') + '/' + request.POST.get('budget_year')
+                request.POST.get('budget_distributor') + '/' + \
+                month + '/' + request.POST.get('budget_year')
             try:
                 budget = Budget.objects.get(budget_id=_id)
                 if budget:
                     message = 'Budget already exist'
             except Budget.DoesNotExist:
                 parent = form.save(commit=False)
+                parent.budget_id = _id
                 parent.budget_status = 'DRAFT'
                 parent.save()
                 area = parent.budget_area.area_id
@@ -1136,7 +1140,7 @@ def budget_add(request, _area):
                 return HttpResponseRedirect(reverse('budget-view', args=[parent.budget_id, 'NONE']))
     else:
         form = FormBudget(
-            initial={'budget_year': datetime.datetime.now().year, 'budget_month': datetime.datetime.now().month, 'budget_amount': 0, 'budget_upping': 0, 'budget_total': 0})
+            initial={'budget_year': datetime.datetime.now().year, 'budget_month': month, 'budget_amount': 0, 'budget_upping': 0, 'budget_total': 0})
     context = {
         'message': message,
         'form': form,
@@ -1203,6 +1207,12 @@ def budget_update(request, _id):
     for r in range(1, 13):
         MONTH_CHOICES.append(str(r))
 
+    try:
+        auth_percent = Auth.objects.get(
+            user_id=request.user.user_id, menu_id='BUDGET-PERCENTAGE')
+    except Auth.DoesNotExist:
+        auth_percent = None
+
     message = form.errors
     context = {
         'form': form,
@@ -1216,6 +1226,7 @@ def budget_update(request, _id):
         'message': message if message else 'NONE',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
+        'btn_percent': auth_percent if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/budget_view.html', context)
 
@@ -1258,6 +1269,12 @@ def budget_view(request, _id, _msg):
     for r in range(1, 13):
         MONTH_CHOICES.append(str(r))
 
+    try:
+        auth_percent = Auth.objects.get(
+            user_id=request.user.user_id, menu_id='BUDGET-PERCENTAGE')
+    except Auth.DoesNotExist:
+        auth_percent = None
+
     context = {
         'form': form,
         'data': budget,
@@ -1273,7 +1290,9 @@ def budget_view(request, _id, _msg):
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET') if not request.user.is_superuser else Auth.objects.all(),
+        'btn_percent': auth_percent if not request.user.is_superuser else Auth.objects.all(),
     }
+    print(context.get('btn_percent'))
     return render(request, 'home/budget_view.html', context)
 
 
@@ -1321,7 +1340,7 @@ def budget_detail_update(request, _id):
 
 
 @login_required(login_url='/login/')
-@role_required(allowed_roles='UPLOAD')
+@role_required(allowed_roles='BUDGET-PERCENTAGE')
 def budget_upload(request):
     channels = Channel.objects.all()
     success = 0
@@ -1409,7 +1428,7 @@ def budget_upload(request):
                 message = 'Dear ' + mail_to[0] + ',\n\nYou have a budget to approve. Please check your dashboard.\n\n' + \
                     'Click this link to approve, revise or return the budget. http://127.0.0.1:8000/budget/release/' + \
                     '\n\nThank you.'
-                send_email(subject, message, mail_to[1])
+                send_email(subject, message, [mail_to[1]])
 
         return render(request, 'home/budget_uploadlog.html', context)
 
@@ -1424,7 +1443,7 @@ def budget_upload(request):
 
 
 @login_required(login_url='/login/')
-@role_required(allowed_roles='UPLOAD')
+@role_required(allowed_roles='BUDGET-PERCENTAGE')
 def export_uploadlog(request):
     response = HttpResponse(content_type='application/ms-excel')
     response['Content-Disposition'] = 'attachment; filename="Upload-Log-' + \
@@ -1449,6 +1468,84 @@ def export_uploadlog(request):
 
     wb.save(response)
     return response
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-PERCENTAGE')
+def export_budget_to_excel(request):
+    # Retrieve budget data from the database
+    budget_data = Budget.objects.filter(budget_status='DRAFT')
+
+    # Create a new Excel workbook and add a worksheet
+    workbook = xlsxwriter.Workbook('Budget_Data.xlsx')
+    worksheet = workbook.add_worksheet('Budget Data')
+
+    # Define column headers
+    headers = ['Year', 'Month',
+               'Area', 'Distributor', 'Budget ID']
+    channel_ids = Channel.objects.values_list('channel_id', flat=True)
+    headers.extend([f"{channel_id} (%)" for channel_id in channel_ids])
+    headers.append('Check')
+
+    # Define cell formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#7eaa55',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+    })
+    cell_format = workbook.add_format({'border': 1, 'bg_color': '#e5eedc'})
+    center = workbook.add_format(
+        {'align': 'center', 'border': 1, 'bg_color': '#e5eedc'})
+
+    # Set column width
+    worksheet.set_column(3, 3, 9)
+    worksheet.set_column(4, 4, 22)
+
+    # Write column headers to the worksheet
+    for col_index, header in enumerate(headers):
+        worksheet.write(0, col_index, header, header_format)
+
+    # Write budget data to the worksheet
+    for row_index, budget in enumerate(budget_data, start=1):
+        worksheet.write(row_index, 0, budget.budget_year, center)
+        worksheet.write(row_index, 1, budget.budget_month, center)
+        worksheet.write(row_index, 2, budget.budget_area_id, cell_format)
+        worksheet.write(
+            row_index, 3, budget.budget_distributor_id, cell_format)
+        worksheet.write(row_index, 4, budget.budget_id, cell_format)
+
+        # Write channel data to the worksheet
+        for col_index, channel_id in enumerate(channel_ids, start=5):
+            try:
+                budget_detail = BudgetDetail.objects.get(
+                    budget_id=budget.budget_id, budget_channel_id=channel_id)
+                worksheet.write(row_index, col_index,
+                                budget_detail.budget_percent, cell_format)
+            except BudgetDetail.DoesNotExist:
+                worksheet.write(row_index, col_index, 0, cell_format)
+
+        # Write formula for the 'Check' column
+        formula = f"SUM({xlsxwriter.utility.xl_range(row_index, 5, row_index, 4 + len(channel_ids))})"
+        worksheet.write_formula(
+            row_index, 5 + len(channel_ids), formula, cell_format)
+
+        # Apply conditional formatting for 'Check' column
+        check_cell = xlsxwriter.utility.xl_rowcol_to_cell(
+            row_index, 5 + len(channel_ids))
+        format_red = workbook.add_format({'bg_color': 'red', 'border': 1})
+        worksheet.conditional_format(
+            check_cell, {'type': 'cell', 'criteria': '!=', 'value': 100, 'format': format_red})
+
+    workbook.close()
+
+    # Return the Excel file as a response
+    with open('Budget_Data.xlsx', 'rb') as file:
+        response = HttpResponse(file.read(
+        ), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=Budget_Data.xlsx'
+        return response
 
 
 @login_required(login_url='/login/')
@@ -1563,10 +1660,12 @@ def budget_release_update(request, _id):
                 recipients.append(detail_mail[1])
 
                 cursor.execute(
-                    "SELECT budget_approval_email FROM apps_budgetrelease WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'Y'")
+                    "SELECT budget_id, budget_approval_email FROM apps_budgetrelease WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'Y'")
                 approver_mail = cursor.fetchone()
-                recipients.append(approver_mail)
+                if approver_mail:
+                    recipients.append(approver_mail[1])
 
+            print(recipients)
             subject = 'Upping Price Revised'
             message = 'Dear All,\n\nThe following is Upping Price update for Budget No. ' + \
                 str(_id) + ':\n\nValue before: ' + \
@@ -1655,9 +1754,10 @@ def budget_detail_release_update(request, _id):
                 recipients.append(detail_mail[1])
 
                 cursor.execute(
-                    "SELECT budget_approval_email FROM apps_budgetrelease WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'Y'")
+                    "SELECT budget_id, budget_approval_email FROM apps_budgetrelease WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'Y'")
                 approver_mail = cursor.fetchone()
-                recipients.append(approver_mail[0])
+                if approver_mail:
+                    recipients.append(approver_mail[1])
 
             subject = 'Channel Percentage Revised'
             message = 'Dear All,\n\nThe following are channel percentages update for Budget No. ' + \
@@ -1741,11 +1841,10 @@ def budget_release_return(request, _id):
         recipients.append(detail_mail[1])
 
         cursor.execute(
-            "SELECT budget_approval_email FROM apps_budgetrelease WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'Y'")
+            "SELECT budget_id, budget_approval_email FROM apps_budgetrelease WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'Y'")
         approver_mail = cursor.fetchone()
-        recipients.append(approver_mail)
-
-    print(recipients)
+        if approver_mail:
+            recipients.append(approver_mail[1])
 
     try:
         release = BudgetRelease.objects.filter(
@@ -1855,3 +1954,413 @@ def budget_approval_delete(request, _id, _arg):
     approvers.delete()
 
     return HttpResponseRedirect(reverse('budget-approval-view', args=[_id, ]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLOSING-PERIOD')
+def closing_index(request):
+    periods = Closing.objects.all()
+
+    context = {
+        'data': periods,
+        'segment': 'closing_period',
+        'group_segment': 'master',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='CLOSING-PERIOD') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/closing_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLOSING-PERIOD')
+def closing_add(request):
+    if request.POST:
+        form = FormClosing(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('closing-index'))
+    else:
+        last_month = (datetime.datetime(datetime.datetime.now(
+        ).year, datetime.datetime.now().month, 1) - datetime.timedelta(days=1)).month
+        last_year = (datetime.datetime(datetime.datetime.now(
+        ).year, datetime.datetime.now().month, 1) - datetime.timedelta(days=1)).year
+
+        form = FormClosing(initial={'year_closed': last_year, 'month_closed': last_month,
+                           'year_open': datetime.datetime.now().year, 'month_open': datetime.datetime.now().month})
+
+    context = {
+        'form': form,
+        'segment': 'closing_period',
+        'group_segment': 'master',
+        'crud': 'add',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='CLOSING-PERIOD') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/closing_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLOSING-PERIOD')
+def closing_update(request, _id):
+    period = Closing.objects.get(document=_id)
+
+    if request.POST:
+        form = FormClosingUpdate(request.POST, request.FILES, instance=period)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('closing-view', args=[_id, ]))
+    else:
+        form = FormClosingUpdate(instance=period)
+
+    YEAR_CHOICES = []
+    for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
+        YEAR_CHOICES.append(str(r))
+
+    MONTH_CHOICES = []
+    for r in range(1, 13):
+        MONTH_CHOICES.append(str(r))
+
+    context = {
+        'form': form,
+        'data': period,
+        'years': YEAR_CHOICES,
+        'months': MONTH_CHOICES,
+        'segment': 'closing_period',
+        'group_segment': 'master',
+        'crud': 'update',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='CLOSING-PERIOD') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/closing_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLOSING-PERIOD')
+def closing_delete(request, _id):
+    periods = Closing.objects.get(document=_id)
+    periods.delete()
+
+    return HttpResponseRedirect(reverse('closing-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLOSING-PERIOD')
+def closing_view(request, _id):
+    period = Closing.objects.get(document=_id)
+    form = FormClosingView(instance=period)
+
+    YEAR_CHOICES = []
+    for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
+        YEAR_CHOICES.append(str(r))
+
+    MONTH_CHOICES = []
+    for r in range(1, 13):
+        MONTH_CHOICES.append(str(r))
+
+    context = {
+        'data': period,
+        'form': form,
+        'years': YEAR_CHOICES,
+        'months': MONTH_CHOICES,
+        'segment': 'closing_period',
+        'group_segment': 'master',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='CLOSING-PERIOD') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/closing_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLOSING')
+def closing(request):
+    period = Closing.objects.get(document='BUDGET')
+    budgets = Budget.objects.filter(budget_status='OPEN')
+
+    if request.POST:
+        period.year_closed = request.POST.get('year_closed')
+        period.month_closed = request.POST.get('month_closed')
+        next_month = (datetime.datetime(int(period.year_closed),
+                      int(period.month_closed), 1) + datetime.timedelta(days=32)).month
+        next_year = (datetime.datetime(int(period.year_closed),
+                     int(period.month_closed), 1) + datetime.timedelta(days=32)).year
+        period.year_open = next_year
+        period.month_open = next_month
+        period.save()
+        for budget in budgets:
+            detail = BudgetDetail.objects.filter(budget_id=budget.budget_id)
+            total_amount = 0
+            for i in detail:
+                total_amount += i.budget_balance
+
+            new_budget = Budget(
+                budget_year=str(next_year),
+                budget_month='{:02d}'.format(next_month),
+                budget_area=budget.budget_area,
+                budget_distributor=budget.budget_distributor,
+                budget_amount=total_amount,
+                budget_upping=0,
+                budget_status='DRAFT')
+            new_budget.save()
+
+            for i in detail:
+                new_detail = BudgetDetail(
+                    budget_id=new_budget.budget_id,
+                    budget_channel=i.budget_channel,
+                    budget_amount=i.budget_balance)
+                new_detail.save()
+
+            approvers = BudgetApproval.objects.filter(
+                area_id=new_budget.budget_area).order_by('sequence')
+            for approver in approvers:
+                new_release = BudgetRelease(
+                    budget_id=new_budget.budget_id,
+                    budget_approval_id=approver.approver_id,
+                    budget_approval_name=approver.approver.username,
+                    budget_approval_email=approver.approver.email,
+                    budget_approval_position=approver.approver.position.position_name,
+                    sequence=approver.sequence)
+                new_release.save()
+
+            budget.budget_status = 'CLOSED'
+            budget.save()
+
+        context = {
+            'data': period,
+            'month': period.month_closed,
+            'year': period.year_closed,
+            'next_month': next_month,
+            'next_year': next_year,
+            'total': budgets.count(),
+            'segment': 'closing',
+            'group_segment': 'budget',
+            'crud': 'index',
+            'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+            'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLOSING') if not request.user.is_superuser else Auth.objects.all(),
+        }
+        return render(request, 'home/budget_closingreport.html', context)
+
+    YEAR_CHOICES = []
+    for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
+        YEAR_CHOICES.append(str(r))
+
+    MONTH_CHOICES = []
+    for r in range(1, 13):
+        MONTH_CHOICES.append(str(r))
+
+    context = {
+        'data': period,
+        'segment': 'closing',
+        'years': YEAR_CHOICES,
+        'months': MONTH_CHOICES,
+        'group_segment': 'budget',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLOSING') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/closing.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='DIVISION')
+def division_index(request):
+    divisions = Division.objects.all()
+
+    context = {
+        'data': divisions,
+        'segment': 'division',
+        'group_segment': 'master',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='DIVISION') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/division_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='DIVISION')
+def division_add(request):
+    if request.POST:
+        form = FormDivision(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('division-index'))
+    else:
+        form = FormDivision()
+
+    context = {
+        'form': form,
+        'segment': 'division',
+        'group_segment': 'master',
+        'crud': 'add',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='DIVISION') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/division_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='DIVISION')
+def division_update(request, _id):
+    division = Division.objects.get(division_id=_id)
+
+    if request.POST:
+        form = FormDivisionUpdate(
+            request.POST, request.FILES, instance=division)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('division-index'))
+    else:
+        form = FormDivisionUpdate(instance=division)
+
+    context = {
+        'form': form,
+        'data': division,
+        'segment': 'division',
+        'group_segment': 'master',
+        'crud': 'update',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='DIVISION') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/division_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='DIVISION')
+def division_delete(request, _id):
+    division = Division.objects.get(division_id=_id)
+    division.delete()
+
+    return HttpResponseRedirect(reverse('division-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='DIVISION')
+def division_view(request, _id):
+    division = Division.objects.get(division_id=_id)
+    form = FormDivisionView(instance=division)
+
+    context = {
+        'data': division,
+        'form': form,
+        'segment': 'division',
+        'group_segment': 'master',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='DIVISION') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/division_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL')
+def proposal_index(request):
+    proposals = Proposal.objects.all()
+
+    context = {
+        'data': proposals,
+        'segment': 'proposal',
+        'group_segment': 'proposal',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='PROPOSAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/proposal_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL')
+def proposal_add(request, _area, _budget, _channel):
+    selected_area = _area
+    selected_budget = _budget
+    selected_channel = _channel
+    area = AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', 'area__area_name')
+    name = AreaSales.objects.get(
+        area_id=selected_area) if selected_area != '0' else None
+    divs = Division.objects.all()
+    budgets = Budget.objects.filter(
+        budget_status='OPEN', budget_area=selected_area) if selected_area != '0' else None
+    budget_detail = BudgetDetail.objects.filter(
+        budget_id=selected_budget) if selected_budget != '0' else None
+    distributor = Budget.objects.get(
+        budget_id=selected_budget).budget_distributor_id if selected_budget != '0' else None
+
+    try:
+        _no = Proposal.objects.all().order_by('seq_number').last()
+    except Proposal.DoesNotExist:
+        _no = None
+    if _no is None:
+        format_no = '{:04d}'.format(1)
+    else:
+        format_no = '{:04d}'.format(_no.seq_number + 1)
+
+    if request.POST:
+        form = FormProposal(request.POST, request.FILES)
+        if form.is_valid():
+            parent = form.save(commit=False)
+            parent.seq_number = _no.seq_number + 1 if _no else 1
+            parent.save()
+            return HttpResponseRedirect(reverse('proposal-view', args=[parent.proposal_id]))
+    else:
+
+        _id = 'PBS-2' + format_no + '/' + selected_channel + '/' + selected_area + '/' + \
+            str(distributor) + '/' + \
+            str(datetime.datetime.now().month) + \
+            '/' + str(datetime.datetime.now().year)
+        form = FormProposal(initial={'proposal_id': _id})
+
+    context = {
+        'form': form,
+        'area': area,
+        'name': name,
+        'divs': divs,
+        'budgets': budgets,
+        'budget_detail': budget_detail,
+        'selected_area': selected_area,
+        'selected_budget': selected_budget,
+        'selected_channel': selected_channel,
+        'segment': 'proposal',
+        'group_segment': 'proposal',
+        'crud': 'add',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='PROPOSAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/proposal_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL')
+def proposal_view(request, _id):
+    proposal = Proposal.objects.get(proposal_id=_id)
+    form = FormProposalView(instance=proposal)
+
+    context = {
+        'data': proposal,
+        'form': form,
+        'segment': 'proposal',
+        'group_segment': 'proposal',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='PROPOSAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/proposal_view.html', context)

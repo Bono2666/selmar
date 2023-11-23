@@ -70,8 +70,8 @@
       }
     } );
 
-    $('tbody tr').click(function() {
-      window.location = $(this).data('href');
+    $(document).on('click', 'tbody tr', function() {
+        window.location = $(this).data('href');
     });
 </script>
 

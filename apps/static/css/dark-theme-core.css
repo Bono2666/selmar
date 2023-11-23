@@ -136,6 +136,9 @@ body.dark-page .form-switch .form-check-input:checked {
   border-color: rgba(36, 39, 57, 0.95);
   background-color: rgba(36, 39, 57, 0.95);
 }
+body.dark-page .form-select-sm {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='none'%3E%3Cpath d='M3.87 6.49l-1.77 1.77 9.9 9.9 9.9-9.9-1.77-1.77-8.13 8.13-8.13-8.13z' fill='%23F7F7F7'%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+}
 body.dark-page .navbar.blur-rounded {
   background-color: rgba(64, 75, 105, 0.8) !important;
 }

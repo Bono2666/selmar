@@ -13,6 +13,7 @@ django-import-export
 django-auto-logout
 pytz
 xlwt
+xlsxwriter
 # djangorestframework
 
 # psycopg2-binary
