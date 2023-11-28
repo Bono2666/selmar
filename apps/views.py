@@ -1117,27 +1117,30 @@ def budget_add(request, _area):
                     message = 'Budget already exist'
             except Budget.DoesNotExist:
                 parent = form.save(commit=False)
-                parent.budget_id = _id
-                parent.budget_status = 'DRAFT'
-                parent.save()
-                area = parent.budget_area.area_id
-                approvers = BudgetApproval.objects.filter(
-                    area_id=area).order_by('sequence')
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
-                    area_channels = cursor.fetchall()
-                    for i in area_channels:
-                        child = BudgetDetail(
-                            budget=parent, budget_channel_id=i[0])
-                        child.save()
+                if parent.budget_amount == 0:
+                    message = 'Beginning Budget is required'
+                else:
+                    parent.budget_id = _id
+                    parent.budget_status = 'DRAFT'
+                    parent.save()
+                    area = parent.budget_area.area_id
+                    approvers = BudgetApproval.objects.filter(
+                        area_id=area).order_by('sequence')
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
+                        area_channels = cursor.fetchall()
+                        for i in area_channels:
+                            child = BudgetDetail(
+                                budget=parent, budget_channel_id=i[0])
+                            child.save()
 
-                for j in approvers:
-                    release = BudgetRelease(
-                        budget=parent, budget_approval_id=j.approver_id, budget_approval_name=j.approver.username, budget_approval_email=j.approver.email, budget_approval_position=j.approver.position.position_name, sequence=j.sequence)
-                    release.save()
+                    for j in approvers:
+                        release = BudgetRelease(
+                            budget=parent, budget_approval_id=j.approver_id, budget_approval_name=j.approver.username, budget_approval_email=j.approver.email, budget_approval_position=j.approver.position.position_name, sequence=j.sequence)
+                        release.save()
 
-                return HttpResponseRedirect(reverse('budget-view', args=[parent.budget_id, 'NONE']))
+                    return HttpResponseRedirect(reverse('budget-view', args=[parent.budget_id, 'NONE']))
     else:
         form = FormBudget(
             initial={'budget_year': datetime.datetime.now().year, 'budget_month': month, 'budget_amount': 0, 'budget_upping': 0, 'budget_total': 0})
@@ -1328,7 +1331,7 @@ def budget_detail_update(request, _id):
 
             subject = 'Budget Approval'
             message = 'Dear ' + approver[0] + ',\n\nYou have a budget to approve. Please check your dashboard.\n\n' + \
-                'Click this link to approve, revise or return the budget. http://127.0.0.1:8000/budget/release/' + \
+                'Click this link to approve, revise or return the budget.\nhttp://127.0.0.1:8000/budget/release/view/' + str(_id) + '/NONE/0/' + \
                 '\n\nThank you.'
             send_email(subject, message, [email[0]])
 
@@ -1359,8 +1362,16 @@ def budget_upload(request):
             try:
                 budget = Budget.objects.get(budget_id=data[4])
                 if budget.budget_status == 'DRAFT':
-                    for i in range(col, col+(channels.count())):
-                        hundreds += data[i]
+                    i = col
+                    for channel in channels:
+                        try:
+                            BudgetDetail.objects.get(
+                                budget_id=data[4], budget_channel_id=channel.channel_id)
+                            hundreds += data[i]
+                            i += 1
+                        except BudgetDetail.DoesNotExist:
+                            pass
+
                     if hundreds == 100:
                         for channel in channels:
                             try:
@@ -1425,8 +1436,8 @@ def budget_upload(request):
             recipient_list = list(dict.fromkeys(recipients))
             for mail_to in recipient_list:
                 subject = 'Budget Approval'
-                message = 'Dear ' + mail_to[0] + ',\n\nYou have a budget to approve. Please check your dashboard.\n\n' + \
-                    'Click this link to approve, revise or return the budget. http://127.0.0.1:8000/budget/release/' + \
+                message = 'Dear ' + mail_to[0] + ',\n\nYou have some budgets to approve. Please check your dashboard.\n\n' + \
+                    'Click this link to approve, revise or return the budgets.\nhttp://127.0.0.1:8000/budget/release/' + \
                     '\n\nThank you.'
                 send_email(subject, message, [mail_to[1]])
 
@@ -1498,10 +1509,12 @@ def export_budget_to_excel(request):
     cell_format = workbook.add_format({'border': 1, 'bg_color': '#e5eedc'})
     center = workbook.add_format(
         {'align': 'center', 'border': 1, 'bg_color': '#e5eedc'})
+    cell_unlock = workbook.add_format(
+        {'border': 1, 'bg_color': '#ffffff', 'locked': False})
 
     # Set column width
     worksheet.set_column(3, 3, 9)
-    worksheet.set_column(4, 4, 22)
+    worksheet.set_column(4, 4, 24)
 
     # Write column headers to the worksheet
     for col_index, header in enumerate(headers):
@@ -1522,7 +1535,7 @@ def export_budget_to_excel(request):
                 budget_detail = BudgetDetail.objects.get(
                     budget_id=budget.budget_id, budget_channel_id=channel_id)
                 worksheet.write(row_index, col_index,
-                                budget_detail.budget_percent, cell_format)
+                                budget_detail.budget_percent, cell_unlock)
             except BudgetDetail.DoesNotExist:
                 worksheet.write(row_index, col_index, 0, cell_format)
 
@@ -1537,6 +1550,9 @@ def export_budget_to_excel(request):
         format_red = workbook.add_format({'bg_color': 'red', 'border': 1})
         worksheet.conditional_format(
             check_cell, {'type': 'cell', 'criteria': '!=', 'value': 100, 'format': format_red})
+
+    # Protect the worksheet
+    worksheet.protect()
 
     workbook.close()
 
@@ -1671,7 +1687,7 @@ def budget_release_update(request, _id):
                 str(_id) + ':\n\nValue before: ' + \
                 '{:,}'.format(upping_before) + '\nValue after: ' + \
                 '{:,}'.format(update.budget_upping) + '\n\nNote: ' + \
-                str(release.upping_note) + '\n\nClick the following link to view the budget. http://127.0.0.1:8000/budget/view/' + \
+                str(release.upping_note) + '\n\nClick the following link to view the budget.\nhttp://127.0.0.1:8000/budget/view/' + \
                 str(_id) + '/NONE/' + \
                 '\n\nThank you.'
             recipient_list = list(dict.fromkeys(recipients))
@@ -1769,7 +1785,7 @@ def budget_detail_release_update(request, _id):
                 message += str(i.budget_channel_id) + ': ' + \
                     str(i.budget_percent) + '%\n'
             message += '\nNote: ' + \
-                str(release.percentage_note) + '\n\nClick the following link to view the budget. http://127.0.0.1:8000/budget/view/' + \
+                str(release.percentage_note) + '\n\nClick the following link to view the budget.\nhttp://127.0.0.1:8000/budget/view/' + \
                 str(_id) + '/NONE/' + \
                 '\n\nThank you.'
             recipient_list = list(dict.fromkeys(recipients))
@@ -1810,7 +1826,7 @@ def budget_release_approve(request, _id):
 
         subject = 'Budget Approval'
         message = 'Dear ' + approver[0] + ',\n\nYou have a budget to approve. Please check your dashboard.\n\n' + \
-            'Click this link to approve, revise or return the budget. http://127.0.0.1:8000/budget/release/' + \
+            'Click this link to approve, revise or return the budget.\nhttp://127.0.0.1:8000/budget/release/view/' + str(_id) + '/NONE/0/' + \
             '\n\nThank you.'
         send_email(subject, message, [email[0]])
 
@@ -1869,7 +1885,7 @@ def budget_release_return(request, _id):
 
     subject = 'Budget Returned'
     message = 'Dear All,\n\nBudget No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
-        str(note.return_note) + '\n\nClick the following link to revise the budget. http://127.0.0.1:8000/budget/view/' + \
+        str(note.return_note) + '\n\nClick the following link to revise the budget.\nhttp://127.0.0.1:8000/budget/view/' + \
         str(_id) + '/NONE/' + \
         '\n\nThank you.'
     recipient_list = list(dict.fromkeys(recipients))

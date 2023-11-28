@@ -24,7 +24,7 @@
                                 <a href="{% url 'budget-update' data.budget_id %}" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.budget_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
-                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Approval</button>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
                             </div>
                         </div>
                     </div>
