@@ -7,7 +7,7 @@
     </a>
   </div>
   <hr class="horizontal default mt-2">
-  <div class="collapse navbar-collapse  w-auto " id="sidenav-collapse-main">
+  <div class="collapse navbar-collapse  w-auto mb-4 " id="sidenav-collapse-main">
     <ul class="navbar-nav">
       <!-- <li class="nav-item">
         <a href="{% url 'home' %}" class="nav-link {% if 'index' in segment %} active {% endif %}">
@@ -31,7 +31,7 @@
         </a>
       </li> -->
       <li class="nav-item">
-        <a class="nav-link {% if 'budget' in group_segment %}active{% endif %} {% if 'budget' not in group_segment %}collapsed{% endif %}" href="" data-bs-toggle="collapse" data-bs-target="#budget-menu">
+        <a class="nav-link toggle {% if 'budget' in group_segment %}active{% endif %} {% if 'budget' not in group_segment %}collapsed{% endif %}" href="" data-bs-toggle="collapse" data-bs-target="#budget-menu">
           <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
             {% if 'budget' in group_segment %}
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -78,7 +78,7 @@
         </div>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if 'proposal' in group_segment %}active{% endif %} {% if 'proposal' not in group_segment %}collapsed{% endif %}" href="" data-bs-toggle="collapse" data-bs-target="#proposal-menu">
+        <a class="nav-link toggle {% if 'proposal' in group_segment %}active{% endif %} {% if 'proposal' not in group_segment %}collapsed{% endif %}" href="" data-bs-toggle="collapse" data-bs-target="#proposal-menu">
           <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
             {% if 'proposal' in group_segment %}
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
@@ -227,3 +227,29 @@
     </ul>
   </div>
 </aside>
+
+<script>
+  // Get all the nav-item elements
+  const navItems = document.querySelectorAll('.toggle');
+
+  // Add click event listener to each nav-item
+  navItems.forEach(navItem => {
+    navItem.addEventListener('click', () => {
+      // Get the multi-level element
+      const multiLevel = navItem.querySelector('.multi-level');
+
+      // Check if it contains the show class
+      if (multiLevel.classList.contains('show')) {
+        // Remove the show class
+        multiLevel.classList.remove('show');
+        // Set aria-expanded to false
+        navItem.setAttribute('aria-expanded', 'false');
+      } else {
+        // Add the show class
+        multiLevel.classList.add('show');
+        // Set aria-expanded to true
+        navItem.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+</script>

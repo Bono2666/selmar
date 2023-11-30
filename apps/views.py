@@ -1122,25 +1122,28 @@ def budget_add(request, _area):
                 else:
                     parent.budget_id = _id
                     parent.budget_status = 'DRAFT'
-                    parent.save()
                     area = parent.budget_area.area_id
                     approvers = BudgetApproval.objects.filter(
                         area_id=area).order_by('sequence')
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
-                        area_channels = cursor.fetchall()
-                        for i in area_channels:
-                            child = BudgetDetail(
-                                budget=parent, budget_channel_id=i[0])
-                            child.save()
+                    if approvers.count() == 0:
+                        message = 'Approver not found. Please contact your administrator.'
+                    else:
+                        parent.save()
+                        with connection.cursor() as cursor:
+                            cursor.execute(
+                                "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
+                            area_channels = cursor.fetchall()
+                            for i in area_channels:
+                                child = BudgetDetail(
+                                    budget=parent, budget_channel_id=i[0])
+                                child.save()
 
-                    for j in approvers:
-                        release = BudgetRelease(
-                            budget=parent, budget_approval_id=j.approver_id, budget_approval_name=j.approver.username, budget_approval_email=j.approver.email, budget_approval_position=j.approver.position.position_name, sequence=j.sequence)
-                        release.save()
+                        for j in approvers:
+                            release = BudgetRelease(
+                                budget=parent, budget_approval_id=j.approver_id, budget_approval_name=j.approver.username, budget_approval_email=j.approver.email, budget_approval_position=j.approver.position.position_name, sequence=j.sequence)
+                            release.save()
 
-                    return HttpResponseRedirect(reverse('budget-view', args=[parent.budget_id, 'NONE']))
+                        return HttpResponseRedirect(reverse('budget-view', args=[parent.budget_id, 'NONE']))
     else:
         form = FormBudget(
             initial={'budget_year': datetime.datetime.now().year, 'budget_month': month, 'budget_amount': 0, 'budget_upping': 0, 'budget_total': 0})
@@ -1163,10 +1166,44 @@ def budget_add(request, _area):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET')
 def budget_index(request):
-    budgets = Budget.objects.all()
+    budgets = Budget.objects.filter(budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
+    budget_count = Budget.objects.filter(budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
+    drafts = Budget.objects.filter(budget_status='DRAFT', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
+    draft_count = Budget.objects.filter(budget_status='DRAFT', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
+    pendings = Budget.objects.filter(budget_status='PENDING', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
+    pendings_count = Budget.objects.filter(budget_status='PENDING', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
+    inapprovals = Budget.objects.filter(budget_status='IN APPROVAL', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
+    inapprovals_count = Budget.objects.filter(budget_status='IN APPROVAL', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
+    opens = Budget.objects.filter(budget_status='OPEN', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
+    opens_count = Budget.objects.filter(budget_status='OPEN', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
+    closes = Budget.objects.filter(budget_status='CLOSED', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
+    closes_count = Budget.objects.filter(budget_status='CLOSED', budget_area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
 
     context = {
         'data': budgets,
+        'budget_count': budget_count,
+        'drafts': drafts,
+        'drafts_count': draft_count,
+        'pendings': pendings,
+        'pendings_count': pendings_count,
+        'inapprovals': inapprovals,
+        'inapprovals_count': inapprovals_count,
+        'opens': opens,
+        'opens_count': opens_count,
+        'closes': closes,
+        'closes_count': closes_count,
         'segment': 'budget',
         'group_segment': 'budget',
         'crud': 'index',
@@ -1877,6 +1914,7 @@ def budget_release_return(request, _id):
     note = BudgetRelease.objects.get(
         budget_id=_id, budget_approval_id=request.user.user_id)
     note.return_note = request.POST.get('return_note')
+    print(request.POST.get('return_note'))
     note.save()
 
     budget = Budget.objects.get(budget_id=_id)

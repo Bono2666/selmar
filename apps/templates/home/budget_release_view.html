@@ -26,27 +26,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="modal fade" id="confirm-return" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-                        aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
-                                </div>
-                                <div class="modal-body border-bottom-0">
-                                    Are you sure you want to return budget no.: <strong>{{ data.budget_id }}</strong>?
-                                    <div class="input-group mt-3">
-                                        <textarea class="form-control text-body" name="return_note" aria-label="Return Note" placeholder="Your note here ..."></textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-0">
-                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
-                                    <a href="{% url 'budget-release-return' data.budget_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Return
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="modal fade" id="confirm-approve" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                         aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered" role="document">
@@ -70,21 +49,18 @@
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="ModalLabel">Upping Price Update Notes</h5>
                                 </div>
-                                <form method="post" action="{% url 'budget-release-update' data.budget_id %}" enctype="multipart/form-data">
-                                    {% csrf_token %}
-                                    <div class="modal-body border-bottom-0">
-                                        <div class="pl-lg-0">
-                                            <div class="input-group">
-                                                <textarea class="form-control text-body" name="upping_note" aria-label="Upping Price Note" placeholder="Your note here ..."></textarea>
-                                            </div>
+                                <div class="modal-body border-bottom-0">
+                                    <div class="pl-lg-0">
+                                        <div class="input-group">
+                                            <textarea class="form-control text-body" name="upping_note" aria-label="Upping Price Note" placeholder="Your note here ..."></textarea>
                                         </div>
                                     </div>
-                                    <div class="modal-footer border-0">
-                                        <a href="{% url 'budget-release-view' data.budget_id 'NONE' 1 %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
-                                        <button type="submit"
-                                            class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
-                                    </div>
-                                </form>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <a href="{% url 'budget-release-view' data.budget_id 'NONE' 1 %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
+                                    <button type="submit"
+                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
+                                </div>
                             </div>
                         </div>
                     </div>    
@@ -144,6 +120,30 @@
                     </div>
                 </div>
             </form>
+            <div class="modal fade" id="confirm-return" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                        </div>
+                        <form method="post" action="{% url 'budget-release-return' data.budget_id %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="modal-body border-bottom-0">
+                                Are you sure you want to return budget no.: <strong>{{ data.budget_id }}</strong>?
+                                <div class="input-group mt-3">
+                                    <textarea class="form-control text-body" name="return_note" aria-label="Return Note"
+                                        placeholder="Your note here ..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer border-0">
+                                <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-sm bg-gradient-danger text-white">Return</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
