@@ -16,8 +16,8 @@
                                 <h4 class="mb-2">Add New Budget {% if selected_area != 'NONE' %}- Area {{ name }}{% endif %}</h4>
                             </div>
                             <div class="col-6 text-end">
-                                <button type="submit" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <a href="{% url 'budget-index' %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
+                                <button type="submit" class="btn btn-sm bg-gradient-danger mb-0" {% if no_save %}disabled{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
+                                <a href="{% url 'budget-index' 'open' %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
                             </div>
                         </div>
                     </div>
@@ -26,6 +26,11 @@
                             {% if message %}
                             <div class="alert text-danger text-sm text-bg-light" role="alert">
                                 {{ message }}
+                            </div>
+                            {% endif %}
+                            {% if form.errors %}
+                            <div class="alert text-danger text-sm text-bg-light" role="alert">
+                                {{ msg }}
                             </div>
                             {% endif %}
                             <div class="row">
@@ -98,8 +103,7 @@
             </form>
         </div>
     </div>
-</div>
-<div class="modal fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    <div class="modal fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -130,8 +134,24 @@
                 </div>
             </div>
             <div class="modal-footer border-top-0 d-flex">
-                <a href="{% url 'budget-index' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>   
-                         
+                <a href="{% url 'budget-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<div class="modal fade" id="closing-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ModalLabel">Warning</h5>
+            </div>
+            <div class="modal-body border-bottom-0">
+                Last month budget is not closed yet. Please close the last month budget first.
+            </div>
+            <div class="modal-footer border-0">
+                <a href="{% url 'budget-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-check"></i>&nbsp;&nbsp;Ok</a>
         </div>
     </div>
 </div>
@@ -141,7 +161,14 @@
 {% block javascripts %}
 <script>
     let selectedArea = "{{ selected_area }}";
-    if (selectedArea == "NONE") {
+    let closing = "{{ closing }}";
+
+    if (closing == 'False') {
+        $('#closing-popup').modal({
+            backdrop: 'static',
+            keyboard: false
+        });
+    } else if (selectedArea == "NONE") {
         $('#dialog-popup').modal({
             backdrop: 'static',
             keyboard: false

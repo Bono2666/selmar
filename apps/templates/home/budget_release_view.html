@@ -19,10 +19,10 @@
                             </div>
                             <div class="col-6 text-end">
                                 <a href="{% if crud == 'view' and is_revise == 0 %}{% url 'budget-release-index' %}{% else %}{% if crud == 'update' %}{% url 'budget-release-view' data.budget_id 'NONE' 1 %}{% else %}{% url 'budget-release-view' data.budget_id 'NONE' 0 %}{% endif %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' and is_revise == 0 %}Back{% else %}Cancel{% endif %}</a>
-                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' or is_revise == 1 %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-approve"><i class="fas fa-check"></i>&nbsp;&nbsp;Approve</button>
-                                <a href="{% if is_revise == 0 %}{% url 'budget-release-view' data.budget_id 'NONE' 1 %}{% else %}{% url 'budget-release-update' data.budget_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;{% if is_revise == 0 %}Revise{% else %}Edit{% endif %}</a>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' or is_revise == 1 %}disabled{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-approve"><i class="fas fa-check"></i>&nbsp;&nbsp;Approve</button>
+                                <a href="{% if is_revise == 0 %}{% url 'budget-release-view' data.budget_id 'NONE' 1 %}{% else %}{% url 'budget-release-update' data.budget_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 {% if approved == 'Y' %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;{% if is_revise == 0 %}Revise{% else %}Edit{% endif %}</a>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#upping-note"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 {% if crud == 'update' or is_revise == 1 %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-return"><i class="fas fa-reply-all"></i>&nbsp;&nbsp;Return</button>
+                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 {% if crud == 'update' or is_revise == 1 %}disabled{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-return"><i class="fas fa-reply-all"></i>&nbsp;&nbsp;Return</button>
                             </div>
                         </div>
                     </div>
@@ -63,7 +63,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>    
+                    </div>
                     <div class="card-body">
                         <div class="pl-lg-0">
                             <div class="row">
@@ -163,7 +163,7 @@
                     <div class="modal-dialog modal-dialog-centered" role="document">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5 class="modal-title" id="ModalLabel">Update Percentage</h5>
+                                <h5 class="modal-title" id="ModalLabel">Percentage Update</h5>
                             </div>
                             <form method="post" action="{% url 'budget-detail-release-update' data.budget_id %}" enctype="multipart/form-data">
                                 {% csrf_token %}

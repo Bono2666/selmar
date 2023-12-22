@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'apps',
     'phonenumber_field',
+    'mathfilters',
 ]
 
 MIDDLEWARE = [
@@ -123,6 +124,8 @@ USE_I18N = True
 
 USE_TZ = False
 
+USE_L10N = True
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
@@ -141,7 +144,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'apps/media/')
 AUTH_USER_MODEL = 'apps.User'
 
 AUTO_LOGOUT = {
-    'IDLE_TIME': timedelta(minutes=10),
+    'IDLE_TIME': timedelta(minutes=15),
     'REDIRECT_TO_LOGIN_IMMEDIATELY': True,
     'MESSAGE': 'The session has expired. Please login again to continue.',
 }
@@ -150,6 +153,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'mail.ksisolusi.com'
 EMAIL_PORT = 465
 EMAIL_HOST_USER = 'abc_is@ksisolusi.com'
+EMAIL_HOST_NAME = 'ABC Integrated System'
 EMAIL_HOST_PASSWORD = 'E;$q%YR%c;P='
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = True

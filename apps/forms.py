@@ -3,6 +3,7 @@ from django.forms import ModelForm
 from apps.models import *
 from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm, UserCreationForm
 import datetime
+from django.forms import DateInput
 
 
 class FormUser(UserCreationForm):
@@ -13,6 +14,7 @@ class FormUser(UserCreationForm):
         self.fields['username'].label = 'User Name'
         self.fields['email'].label = 'Email'
         self.fields['position'].label = 'Position'
+        self.fields['signature'].label = 'Signature'
         self.fields['password1'].label = 'Password'
         self.fields['password2'].label = 'Confirm Password'
         self.fields['user_id'].widget = forms.TextInput(
@@ -30,6 +32,9 @@ class FormUser(UserCreationForm):
         model = User
         exclude = ['date_joined', 'password', 'is_active', 'is_staff',
                    'is_superuser', 'entry_date', 'entry_by', 'update_date', 'update_by']
+        widgets = {
+            'signature': forms.FileInput(attrs={'class': 'form-control form-control-sm'}),
+        }
 
 
 class FormUserView(ModelForm):
@@ -46,10 +51,11 @@ class FormUserView(ModelForm):
 
     class Meta:
         model = User
-        fields = ['user_id', 'username', 'email', 'position']
+        fields = ['user_id', 'username', 'email', 'position', 'signature']
 
         widgets = {
             'position': forms.Select(attrs={'class': 'form-control form-select-sm', 'disabled': 'disabled'}),
+            'signature': forms.FileInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
         }
 
 
@@ -72,6 +78,7 @@ class FormUserUpdate(ModelForm):
 
         widgets = {
             'position': forms.Select(attrs={'class': 'form-control form-select-sm'}),
+            'signature': forms.FileInput(attrs={'class': 'form-control form-control-sm'}),
         }
 
 
@@ -414,6 +421,10 @@ class FormBudget(ModelForm):
         self.fields['budget_amount'].label = 'Beginning Balance'
         self.fields['budget_upping'].label = 'Upping Price'
         self.fields['budget_total'].label = 'Total Budget'
+        self.fields['budget_year'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['budget_month'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['budget_amount'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
         self.fields['budget_upping'].widget = forms.NumberInput(
@@ -423,7 +434,7 @@ class FormBudget(ModelForm):
 
     class Meta:
         model = Budget
-        exclude = ['budget_id', 'budget_status', 'entry_date',
+        exclude = ['budget_id', 'budget_balance', 'budget_status', 'entry_date',
                    'entry_by', 'update_date', 'update_by']
 
         YEAR_CHOICES = []
@@ -433,11 +444,6 @@ class FormBudget(ModelForm):
         MONTH_CHOICES = []
         for r in range(1, 13):
             MONTH_CHOICES.append((r, r))
-
-        widgets = {
-            'budget_year': forms.Select(choices=YEAR_CHOICES, attrs={'class': 'form-control form-select-sm'}),
-            'budget_month': forms.Select(choices=MONTH_CHOICES, attrs={'class': 'form-control form-select-sm'}),
-        }
 
 
 class FormBudgetUpdate(ModelForm):
@@ -514,6 +520,16 @@ class FormBudgetApproval(ModelForm):
 
     class Meta:
         model = BudgetApproval
+        exclude = ['entry_date', 'entry_by', 'update_date', 'update_by']
+
+
+class FormProposalMatrix(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormProposalMatrix, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+
+    class Meta:
+        model = ProposalMatrix
         exclude = ['entry_date', 'entry_by', 'update_date', 'update_by']
 
 
@@ -654,24 +670,24 @@ class FormDivisionView(ModelForm):
         fields = ['division_id', 'division_name']
 
 
+class DateInput(forms.DateInput):
+    input_type = 'date'
+
+
 class FormProposal(ModelForm):
     def __init__(self, *args, **kwargs):
         super(FormProposal, self).__init__(*args, **kwargs)
         self.label_suffix = ''
-        self.fields['proposal_id'].label = 'Proposal No.'
         self.fields['proposal_id'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm text-uppercase', 'readonly': 'readonly'})
+            attrs={'class': 'd-none'})
         self.fields['proposal_date'].label = 'Date'
         self.fields['proposal_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm datepicker', 'readonly': 'readonly'})
-        self.fields['proposal_date'].input_formats = ['%d-%m-%Y']
-        self.fields['proposal_date'].initial = datetime.date.today()
-        self.fields['proposal_date'].disabled = True
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['proposal_date'].input_formats = ['%d/%m/%Y']
+        self.fields['proposal_date'].initial = datetime.date.today().strftime(
+            '%d/%m/%Y')
         self.fields['type'].label = 'Type'
         self.fields['type'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['channel'].label = 'Channel'
-        self.fields['channel'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['division'].label = 'Division'
         self.fields['program_name'].label = 'Program Name'
@@ -680,22 +696,10 @@ class FormProposal(ModelForm):
         self.fields['products'].label = 'Products'
         self.fields['products'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['area'].label = 'Area'
         self.fields['area'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm'})
+            attrs={'class': 'd-none', })
         self.fields['period_start'].label = 'Period (Start)'
-        self.fields['period_start'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm datepicker'})
-        self.fields['period_start'].input_formats = ['%d-%m-%Y']
-        self.fields['period_start'].initial = datetime.date.today()
-        self.fields['period_from'].label = 'Period (From)'
-        self.fields['period_from'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm datepicker'})
-        self.fields['period_from'].input_formats = ['%d-%m-%Y']
-        self.fields['period_from'].initial = datetime.date.today()
-        self.fields['duration'].label = 'Duration'
-        self.fields['duration'].widget = forms.NumberInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['period_end'].label = 'Period (End)'
         self.fields['objectives'].label = 'Objectives'
         self.fields['objectives'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 3})
@@ -706,17 +710,19 @@ class FormProposal(ModelForm):
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
         self.fields['attachment'].label = 'Attachment'
+        self.fields['attachment'].required = False
 
     class Meta:
         model = Proposal
-        exclude = ['proposal_status', 'entry_date',
-                   'entry_by', 'update_date', 'update_by']
+        exclude = ['budget', 'channel', 'duration', 'total_cost', 'roi', 'status', 'seq_number', 'proposal_status', 'entry_date',
+                   'entry_by', 'update_date', 'update_by', 'entry_pos']
 
         widgets = {
             'division': forms.Select(attrs={'class': 'form-control form-select-sm'}),
-            'period_start': forms.DateInput(attrs={'class': 'form-control datepicker-sm'}),
-            'period_from': forms.DateInput(attrs={'class': 'form-control datepicker'}),
-            'attachment': forms.ClearableFileInput(attrs={'class': 'form-control form-control-sm'}),
+            # Set the date picker for period_start and period_end fields
+            'period_start': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
+            'period_end': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
+            'attachment': forms.FileInput(attrs={'class': 'form-control form-control-sm'}),
         }
 
 
@@ -727,23 +733,23 @@ class FormIncrementalSales(ModelForm):
         self.fields['product'].label = 'Product'
         self.fields['product'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['swop_carton'].label = 'Sales W/O Program (Carton)'
+        self.fields['swop_carton'].label = 'Carton'
         self.fields['swop_carton'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
-        self.fields['swop_nom'].label = 'Sales W/O Program (Rp)'
-        self.fields['swop_nom'].widget = forms.NumberInput(
+        self.fields['swop_nom_carton'].label = 'Rp (per Carton)'
+        self.fields['swop_nom_carton'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
-        self.fields['swp_carton'].label = 'Sales With Program (Carton)'
+        self.fields['swp_carton'].label = 'Carton'
         self.fields['swp_carton'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
-        self.fields['swp_nom'].label = 'Sales With Program (Rp)'
-        self.fields['swp_nom'].widget = forms.NumberInput(
+        self.fields['swp_nom_carton'].label = 'Rp (per Carton)'
+        self.fields['swp_nom_carton'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
 
     class Meta:
         model = IncrementalSales
-        exclude = ['proposal', 'entry_date',
-                   'entry_by', 'update_date', 'update_by']
+        fields = ['product', 'swop_carton',
+                  'swop_nom_carton', 'swp_carton', 'swp_nom_carton']
 
 
 class FormProjectedCost(ModelForm):
@@ -768,29 +774,23 @@ class FormProposalView(ModelForm):
         super(FormProposalView, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['proposal_date'].label = 'Date'
-        self.fields['proposal_date'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['channel'].label = 'Channel'
         self.fields['channel'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['division'].label = 'Division'
-        self.fields['division'].widget = forms.TextInput(
+        self.fields['type'].label = 'Type'
+        self.fields['type'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['division'].label = 'Division'
         self.fields['program_name'].label = 'Program Name'
         self.fields['program_name'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['products'].label = 'Products'
         self.fields['products'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['area'].label = 'Area'
         self.fields['area'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+            attrs={'class': 'd-none'})
         self.fields['period_start'].label = 'Start'
-        self.fields['period_start'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['period_from'].label = 'From'
-        self.fields['period_from'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['period_end'].label = 'End'
         self.fields['duration'].label = 'Duration'
         self.fields['duration'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
@@ -809,5 +809,56 @@ class FormProposalView(ModelForm):
 
     class Meta:
         model = Proposal
-        fields = ['proposal_id', 'proposal_date', 'channel', 'division', 'program_name', 'products', 'area',
-                  'period_start', 'period_from', 'duration', 'objectives', 'mechanism', 'remarks', 'attachment']
+        fields = ['proposal_id', 'proposal_date', 'channel', 'type', 'division', 'program_name', 'products', 'area',
+                  'period_start', 'period_end', 'duration', 'objectives', 'mechanism', 'remarks', 'attachment']
+
+        widgets = {
+            'proposal_date': DateInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
+            'period_start': DateInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
+            'period_end': DateInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
+        }
+
+
+class FormProposalUpdate(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormProposalUpdate, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['area'].widget = forms.TextInput(
+            attrs={'class': 'd-none'})
+        self.fields['program_name'].label = 'Program Name'
+        self.fields['program_name'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['proposal_date'].label = 'Date'
+        self.fields['proposal_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['type'].label = 'Type'
+        self.fields['type'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['products'].label = 'Products'
+        self.fields['products'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['period_start'].label = 'Period (Start)'
+        self.fields['period_end'].label = 'Period (End)'
+        self.fields['objectives'].label = 'Objectives'
+        self.fields['objectives'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 3})
+        self.fields['mechanism'].label = 'Mechanism'
+        self.fields['mechanism'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 3})
+        self.fields['remarks'].label = 'Remarks'
+        self.fields['remarks'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['attachment'].label = 'Attachment'
+        self.fields['attachment'].required = False
+
+    class Meta:
+        model = Proposal
+        exclude = ['proposal_id', 'budget', 'channel', 'duration', 'total_cost', 'roi', 'status', 'seq_number', 'entry_date', 'entry_pos',
+                   'entry_by', 'update_date', 'update_by']
+
+        widgets = {
+            'division': forms.Select(attrs={'class': 'form-control form-select-sm'}),
+            'period_start': DateInput(attrs={'class': 'form-control form-control-sm'}),
+            'period_end': DateInput(attrs={'class': 'form-control form-control-sm'}),
+            'attachment': forms.ClearableFileInput(attrs={'class': 'form-control form-control-sm'}),
+        }

@@ -14,33 +14,31 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-6 d-flex align-items-center">
-                                <h4 class="mb-2">Add New Proposal {% if selected_area != '0' %}- Area {{ name }}{% endif %}</h4>
+                            <div class="col-sm-8 d-flex align-items-center">
+                                <h5 class="mb-2">Add New Proposal {% if selected_budget != '0' %}- Budget No. {{ selected_budget }}{% endif %} {% if selected_channel != '0' %}({{ selected_channel }}){% endif %}</h5>
                             </div>
-                            <div class="col-6 text-end">
-                                <button type="submit" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <a href="{% url 'proposal-index' %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
+                            <div class="col-sm-4 text-end">
+                                <button type="submit" class="btn btn-sm bg-gradient-danger mb-0" {% if no_save %}disabled{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
+                                <a href="{% url 'proposal-index' 'open' %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
                             </div>
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="pl-lg-0">
+                        <div class="pl-lg-0 mt-2">
                             {% if message %}
                             <div class="alert text-danger text-sm text-bg-light" role="alert">
                                 {{ message }}
                             </div>
                             {% endif %}
+                            <!-- {% if form.errors %}
+                            <div class="alert text-danger text-sm text-bg-light" role="alert">
+                                {{ msg }}
+                            </div>
+                            {% endif %} -->
                             <div class="row">
-                                <div class="col-md-3">
-                                    <div class="shadow-none">
-                                        {{ form.proposal_id.label_tag }}
-                                        {{ form.proposal_id }}
-                                        <div class="text-sm text-danger">
-                                            {{ form.proposal_id.errors }}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-9">
+                                {{ form.proposal_id }}
+                                {{ form.area }}
+                                <div class="col-md-12">
                                     <div class="shadow-none">
                                         {{ form.program_name.label_tag }}
                                         {{ form.program_name }}
@@ -83,7 +81,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-3">
                                     <div class="shadow-none">
                                         {{ form.products.label_tag }}
                                         {{ form.products }}
@@ -100,17 +98,10 @@
                                     </div>
                                 </div>
                                 <div class="col-md-2">
-                                    {{ form.period_from.label_tag }}
-                                    {{ form.period_from }}
+                                    {{ form.period_end.label_tag }}
+                                    {{ form.period_end }}
                                     <div class="text-sm text-danger">
-                                        {{ form.period_from.errors }}
-                                    </div>
-                                </div>
-                                <div class="col-md-1">
-                                    {{ form.duration.label_tag }}
-                                    {{ form.duration }}
-                                    <div class="text-sm text-danger">
-                                        {{ form.duration.errors }}
+                                        {{ form.period_end.errors }}
                                     </div>
                                 </div>
                             </div>
@@ -186,7 +177,7 @@
                 </div>
             </div>
             <div class="modal-footer border-top-0 d-flex">
-                <a href="{% url 'proposal-index' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>   
+                <a href="{% url 'proposal-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
             </div>             
         </div>
     </div>
@@ -234,7 +225,8 @@
                 </div>
             </div>
             <div class="modal-footer border-top-0 d-flex">
-                <a href="{% url 'proposal-add' '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Back</a>   
+                <a href="{% url 'proposal-add' '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
+                <a href="{% url 'proposal-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
             </div>             
         </div>
     </div>
@@ -261,7 +253,7 @@
                         </thead>
                         <tbody>
                             {% for item in budget_detail %}
-                            <tr data-href="{% url 'proposal-add' selected_area item.budget_id item.budget_channel_id %}" class="cursor-pointer">
+                            <tr data-href="{% if item.budget_balance > 0 %}{% url 'proposal-add' selected_area item.budget_id item.budget_channel_id %}{% else %}#{% endif %}" {% if item.budget_balance > 0 %}class="cursor-pointer"{% endif %}>
                                 <td>
                                     <div class="d-flex pe-2 py-0">
                                         <div class="d-flex flex-column justify-content-center">
@@ -282,7 +274,8 @@
                 </div>
             </div>
             <div class="modal-footer border-top-0 d-flex">
-                <a href="{% url 'proposal-add' selected_area '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Back</a>   
+                <a href="{% url 'proposal-add' selected_area '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
+                <a href="{% url 'proposal-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
             </div>             
         </div>
     </div>

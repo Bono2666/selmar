@@ -1,10 +1,10 @@
-from collections.abc import Iterable
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 from crum import get_current_user
 from decimal import Decimal
 from re import sub
+from django.db import models
 
 
 class User(AbstractUser):
@@ -13,6 +13,7 @@ class User(AbstractUser):
     username = models.CharField(max_length=50)
     position = models.ForeignKey(
         'Position', on_delete=models.CASCADE, null=True)
+    signature = models.ImageField(upload_to='signature/', null=True)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True)
@@ -21,9 +22,9 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            # self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        # self.update_by = get_current_user().user_id
         super(User, self).save(*args, **kwargs)
 
     USERNAME_FIELD = 'user_id'
@@ -277,12 +278,15 @@ class Budget(models.Model):
     budget_distributor = models.ForeignKey(
         Distributor, on_delete=models.CASCADE)
     budget_amount = models.DecimalField(
-        max_digits=10, decimal_places=2)
+        max_digits=12, decimal_places=0)
     budget_upping = models.DecimalField(
-        max_digits=10, decimal_places=2)
+        max_digits=12, decimal_places=0)
     budget_total = models.DecimalField(
-        max_digits=10, decimal_places=2)
+        max_digits=12, decimal_places=0)
+    budget_balance = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
     budget_status = models.CharField(max_length=15)
+    budget_new = models.BooleanField(default=False)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True)
@@ -315,17 +319,17 @@ class BudgetDetail(models.Model):
     budget_percent = models.DecimalField(
         max_digits=3, decimal_places=0, default=0)
     budget_amount = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
+        max_digits=12, decimal_places=0, default=0)
     budget_upping = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
-    budget_total = models.DecimalField(max_digits=10, decimal_places=2)
+        max_digits=12, decimal_places=0, default=0)
+    budget_total = models.DecimalField(max_digits=12, decimal_places=0)
     budget_proposed = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
+        max_digits=12, decimal_places=0, default=0)
     budget_program = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
+        max_digits=12, decimal_places=0, default=0)
     budget_claim = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
-    budget_balance = models.DecimalField(max_digits=10, decimal_places=2)
+        max_digits=12, decimal_places=0, default=0)
+    budget_balance = models.DecimalField(max_digits=12, decimal_places=0)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True)
@@ -398,6 +402,49 @@ class BudgetRelease(models.Model):
         super(BudgetRelease, self).save(*args, **kwargs)
 
 
+class ProposalRelease(models.Model):
+    proposal = models.ForeignKey('Proposal', on_delete=models.CASCADE)
+    proposal_approval_id = models.CharField(max_length=50, null=True)
+    proposal_approval_name = models.CharField(max_length=50, null=True)
+    proposal_approval_email = models.CharField(max_length=50, null=True)
+    proposal_approval_position = models.CharField(max_length=50, null=True)
+    proposal_approval_date = models.DateTimeField(null=True)
+    proposal_approval_status = models.CharField(max_length=1, default='N')
+    sequence = models.IntegerField(default=0)
+    limit = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    return_to = models.BooleanField(default=False)
+    revise_note = models.CharField(max_length=200, null=True)
+    return_note = models.CharField(max_length=200, null=True)
+    reject_note = models.CharField(max_length=200, null=True)
+    mail_sent = models.BooleanField(default=False)
+    approve = models.BooleanField(default=False)
+    revise = models.BooleanField(default=False)
+    returned = models.BooleanField(default=False)
+    reject = models.BooleanField(default=False)
+    printed = models.BooleanField(default=False)
+    notif = models.BooleanField(default=False)
+    as_approved = models.CharField(max_length=15, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['proposal', 'proposal_approval_id'], name='unique_proposal_approval')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(ProposalRelease, self).save(*args, **kwargs)
+
+
 class BudgetApproval(models.Model):
     area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
     approver = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -421,6 +468,45 @@ class BudgetApproval(models.Model):
         self.update_date = timezone.now()
         self.update_by = get_current_user().user_id
         super(BudgetApproval, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.area.area_name
+
+
+class ProposalMatrix(models.Model):
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
+    channel = models.ForeignKey(Channel, on_delete=models.CASCADE, null=True)
+    approver = models.ForeignKey(User, on_delete=models.CASCADE)
+    sequence = models.IntegerField(default=0)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, null=True)
+    return_to = models.BooleanField(default=False)
+    limit = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    approve = models.BooleanField(default=False)
+    revise = models.BooleanField(default=False)
+    returned = models.BooleanField(default=False)
+    reject = models.BooleanField(default=False)
+    printed = models.BooleanField(default=False)
+    notif = models.BooleanField(default=False)
+    as_approved = models.CharField(max_length=15, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['area', 'channel', 'approver'], name='unique_proposal_approver')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(ProposalMatrix, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.area.area_name
@@ -463,6 +549,9 @@ class Division(models.Model):
         self.update_by = get_current_user().user_id
         super(Division, self).save(*args, **kwargs)
 
+    def __str__(self):
+        return self.division_name
+
 
 class Proposal(models.Model):
     proposal_id = models.CharField(max_length=50, primary_key=True)
@@ -475,23 +564,26 @@ class Proposal(models.Model):
     products = models.TextField()
     area = models.CharField(max_length=50)
     period_start = models.DateTimeField(null=True)
-    period_from = models.DateTimeField(null=True)
+    period_end = models.DateTimeField(null=True)
     duration = models.IntegerField(default=0)
     objectives = models.TextField()
     mechanism = models.TextField()
     remarks = models.CharField(max_length=200, null=True)
-    attachment = models.CharField(max_length=200, null=True)
+    attachment = models.FileField(upload_to='proposal/', null=True)
     total_cost = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
+        max_digits=12, decimal_places=0, default=0)
+    roi = models.DecimalField(
+        max_digits=10, decimal_places=0, default=0)
     status = models.CharField(max_length=15, default='DRAFT')
     seq_number = models.IntegerField(default=0)
+    entry_pos = models.CharField(max_length=5, null=True)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True, blank=True)
     update_by = models.CharField(max_length=50, null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        self.duration = (self.period_from - self.period_start).days + 1
+        self.duration = (self.period_end - self.period_start).days + 1
         if not self.entry_date:
             self.entry_date = timezone.now()
             self.entry_by = get_current_user().username
@@ -504,11 +596,21 @@ class IncrementalSales(models.Model):
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
     product = models.CharField(max_length=50)
     swop_carton = models.IntegerField(default=0)
+    swop_nom_carton = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
     swop_nom = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
+        max_digits=12, decimal_places=0, default=0)
     swp_carton = models.IntegerField(default=0)
+    swp_nom_carton = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
     swp_nom = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
+        max_digits=12, decimal_places=0, default=0)
+    incrp_carton = models.IntegerField(default=0)
+    incrp_nom = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    incpst_carton = models.DecimalField(
+        max_digits=5, decimal_places=1, default=0)
+    incpst_nom = models.DecimalField(max_digits=5, decimal_places=1, default=0)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True, blank=True)
@@ -521,6 +623,13 @@ class IncrementalSales(models.Model):
         ]
 
     def save(self, *args, **kwargs):
+        self.swop_nom = self.swop_carton * self.swop_nom_carton
+        self.swp_nom = self.swp_carton * self.swp_nom_carton
+        self.incrp_carton = self.swp_carton - self.swop_carton
+        self.incrp_nom = self.swp_nom - self.swop_nom
+        self.incpst_carton = self.incrp_carton / \
+            self.swop_carton * 100 if self.swop_carton > 0 else 0
+        self.incpst_nom = self.incrp_nom / self.swop_nom * 100 if self.swop_nom > 0 else 0
         if not self.entry_date:
             self.entry_date = timezone.now()
             self.entry_by = get_current_user().username
@@ -533,7 +642,7 @@ class ProjectedCost(models.Model):
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
     activities = models.CharField(max_length=200)
     cost = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0)
+        max_digits=12, decimal_places=0, default=0)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True, blank=True)

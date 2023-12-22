@@ -19,15 +19,15 @@
   <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
   <!-- Page plugins -->
   <!-- Soft UI Dashboard -->
-  <link id="pagestyle" href="/apps/static/css/soft-ui-dashboard.css" rel="stylesheet" />
-  <link id="pagestyle_dark" href="/apps/static/css/dark-theme-core.css" rel="stylesheet" />
+  <link id="pagestyle" href="https://ksisolusi.com/apps/static/css/soft-ui-dashboard.css" rel="stylesheet" />
+  <link id="pagestyle_dark" href="https://ksisolusi.com/apps/static/css/dark-theme-core.css" rel="stylesheet" />
   <!-- DataTables -->
   <link rel="stylesheet" href="//cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css" type="text/css">
   <!-- CSS jQuery UI -->
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
   <!-- Select2 -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
+  
   <!-- Specific CSS goes HERE -->
   {% block stylesheets %}{% endblock stylesheets %}
 
@@ -65,11 +65,11 @@
 
     let crud = "{{ crud }}";
     if (crud == 'update' || crud == 'add') {
-        my_button = document.getElementsByClassName('button');
-        for (let i = 0; i < my_button.length; i++) {
-            my_button[i].addEventListener('click', function() {
-                alert('Save your data before leaving this page');
-            });
+        let my_button = document.getElementsByClassName('button');
+        for (const button of my_button) {
+          button.addEventListener('click', function() {
+            alert('Save your data before leaving this page');
+          });
         }
     }
   </script>
