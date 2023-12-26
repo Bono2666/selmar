@@ -524,7 +524,7 @@ class Closing(models.Model):
     update_by = models.CharField(max_length=50, null=True)
 
     def save(self, *args, **kwargs):
-        self.document = self.document.upper()
+        self.document = self.document.upper().replace(' ', '_')
         if not self.entry_date:
             self.entry_date = timezone.now()
             self.entry_by = get_current_user().user_id

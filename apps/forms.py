@@ -15,6 +15,7 @@ class FormUser(UserCreationForm):
         self.fields['email'].label = 'Email'
         self.fields['position'].label = 'Position'
         self.fields['signature'].label = 'Signature'
+        self.fields['signature'].required = False
         self.fields['password1'].label = 'Password'
         self.fields['password2'].label = 'Confirm Password'
         self.fields['user_id'].widget = forms.TextInput(

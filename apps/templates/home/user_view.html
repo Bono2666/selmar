@@ -77,7 +77,7 @@
                                     </div>
                                     <div class="input-group input-group-alternative">
                                         <a {% if data.signature %}href="{{ data.signature.url }}"{% endif %} target="_blank" class="form-control form-control-sm border">{% if data.signature %}{{ data.signature }}{% else %}No signature available for this user{% endif %}</a>
-                                        <span class="input-group-text bg-transparent end-0 pe-3 py-2 {% if crud == 'update' %}cursor-pointer{% endif %} text-body {% if crud == 'view' %}disabled{% endif %}" data-bs-toggle="modal" {% if crud == 'update' %}data-bs-target="#delete-sign"{% endif %}><i class="fas fa-times-circle"></i></span>
+                                        <span class="input-group-text bg-transparent end-0 pe-3 py-2 {% if crud == 'update' %}cursor-pointer{% endif %} text-body {% if crud == 'view' %}disabled{% endif %} z-index-0" data-bs-toggle="modal" {% if crud == 'update' %}data-bs-target="#delete-sign"{% endif %}><i class="fas fa-times-circle"></i></span>
                                     </div>
                                 </div>
                                 <div class="col-md-4">

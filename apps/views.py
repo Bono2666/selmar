@@ -27,6 +27,12 @@ from django.db.models import Count
 from PyPDF2 import PdfReader
 from PyPDF2 import PdfFileMerger
 from PyPDF2 import PdfMerger
+import requests
+import os
+import requests
+import requests
+import base64
+from django.conf import settings
 
 
 @login_required(login_url='/login/')
@@ -66,6 +72,14 @@ def user_add(request):
         form = FormUser(request.POST, request.FILES)
         if form.is_valid():
             form.save()
+            if not settings.DEBUG:
+                user = User.objects.get(user_id=form.instance.user_id)
+                my_file = user.signature
+                filename = '../../www/selmar/apps/media/' + my_file.name
+                with open(filename, 'wb+') as temp_file:
+                    for chunk in my_file.chunks():
+                        temp_file.write(chunk)
+
             return HttpResponseRedirect(reverse('user-view', args=[form.instance.user_id, ]))
         else:
             message = form.errors
@@ -255,6 +269,12 @@ def user_update(request, _id):
         form = FormUserUpdate(request.POST, request.FILES, instance=users)
         if form.is_valid():
             form.save()
+            if not settings.DEBUG:
+                my_file = users.signature
+                filename = '../../www/selmar/apps/media/' + my_file.name
+                with open(filename, 'wb+') as temp_file:
+                    for chunk in my_file.chunks():
+                        temp_file.write(chunk)
             return HttpResponseRedirect(reverse('user-view', args=[_id, ]))
     else:
         form = FormUserUpdate(instance=users)
@@ -1115,6 +1135,7 @@ def channel_view(request, _id):
 def budget_add(request, _area):
     period = Closing.objects.all()
     closing = 'True'
+    closing_period = 'True'
     message = ''
     area = AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', 'area__area_name')
@@ -1141,55 +1162,58 @@ def budget_add(request, _area):
             message = "No budget's approver found for this area."
             no_save = True
 
-    if period[0].month_open == str(datetime.datetime.now().month) and period[0].year_open == str(datetime.datetime.now().year):
-        if request.POST:
-            form = FormBudget(request.POST, request.FILES)
-            if form.is_valid():
-                _id = 'UBS/' + \
-                    request.POST.get('budget_area') + '/' + \
-                    request.POST.get('budget_distributor') + '/' + \
-                    month + '/' + request.POST.get('budget_year')
-                try:
-                    budget = Budget.objects.get(budget_id=_id)
-                    if budget:
-                        message = 'Budget already exist'
-                except Budget.DoesNotExist:
-                    parent = form.save(commit=False)
-                    if parent.budget_amount == 0:
-                        message = 'Beginning Budget is required'
-                    else:
-                        parent.budget_id = _id
-                        parent.budget_balance = int(request.POST.get(
-                            'budget_amount'))
-                        parent.budget_status = 'DRAFT'
-                        parent.budget_new = True
-                        area = parent.budget_area.area_id
-                        parent.save()
-                        with connection.cursor() as cursor:
-                            cursor.execute(
-                                "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
-                            area_channels = cursor.fetchall()
-                            for i in area_channels:
-                                child = BudgetDetail(
-                                    budget=parent, budget_channel_id=i[0])
-                                child.save()
-
-                        for j in approvers:
-                            release = BudgetRelease(
-                                budget=parent, budget_approval_id=j.approver_id, budget_approval_name=j.approver.username, budget_approval_email=j.approver.email, budget_approval_position=j.approver.position.position_name, sequence=j.sequence)
-                            release.save()
-
-                        email = User.objects.filter(
-                            position_id='TMM', areauser__area_id=_area).values_list('email', flat=True)
-                        recipient_list = list(email)
-                        subject = 'Budget Percentages Input'
-                        message = 'Dear All,\n\nPlease note that Budget No. ' + _id + ' needs to be inputted as a budget percentage for each channel.\n\nClick the following link to upload some budget percentage at once.\n' + host.url + 'budget_upload/\n\nOr click the following link to change this budget channel percentage only.\n' + \
-                            host.url + 'budget/view/draft/' + _id + '/NONE/' + '\n\nThank you.'
-                        send_email(subject, message, recipient_list)
-
-                        return HttpResponseRedirect(reverse('budget-view', args=['draft', parent.budget_id, 'NONE']))
+    if period.count() == 0:
+        closing_period = 'False'
     else:
-        closing = 'False'
+        if period[0].month_open == str(datetime.datetime.now().month) and period[0].year_open == str(datetime.datetime.now().year):
+            if request.POST:
+                form = FormBudget(request.POST, request.FILES)
+                if form.is_valid():
+                    _id = 'UBS/' + \
+                        request.POST.get('budget_area') + '/' + \
+                        request.POST.get('budget_distributor') + '/' + \
+                        month + '/' + request.POST.get('budget_year')
+                    try:
+                        budget = Budget.objects.get(budget_id=_id)
+                        if budget:
+                            message = 'Budget already exist'
+                    except Budget.DoesNotExist:
+                        parent = form.save(commit=False)
+                        if parent.budget_amount == 0:
+                            message = 'Beginning Budget is required'
+                        else:
+                            parent.budget_id = _id
+                            parent.budget_balance = int(request.POST.get(
+                                'budget_amount'))
+                            parent.budget_status = 'DRAFT'
+                            parent.budget_new = True
+                            area = parent.budget_area.area_id
+                            parent.save()
+                            with connection.cursor() as cursor:
+                                cursor.execute(
+                                    "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
+                                area_channels = cursor.fetchall()
+                                for i in area_channels:
+                                    child = BudgetDetail(
+                                        budget=parent, budget_channel_id=i[0])
+                                    child.save()
+
+                            for j in approvers:
+                                release = BudgetRelease(
+                                    budget=parent, budget_approval_id=j.approver_id, budget_approval_name=j.approver.username, budget_approval_email=j.approver.email, budget_approval_position=j.approver.position.position_name, sequence=j.sequence)
+                                release.save()
+
+                            email = User.objects.filter(
+                                position_id='TMM', areauser__area_id=_area).values_list('email', flat=True)
+                            recipient_list = list(email)
+                            subject = 'Budget Percentages Input'
+                            _message = 'Dear All,\n\nPlease note that Budget No. ' + _id + ' needs to be inputted as a budget percentage for each channel.\n\nClick the following link to upload some budget percentage at once.\n' + host.url + 'budget_upload/\n\nOr click the following link to change this budget channel percentage only.\n' + \
+                                host.url + 'budget/view/draft/' + _id + '/NONE/' + '\n\nThank you.'
+                            send_email(subject, _message, recipient_list)
+
+                            return HttpResponseRedirect(reverse('budget-view', args=['draft', parent.budget_id, 'NONE']))
+        else:
+            closing = 'False'
 
     form = FormBudget(
         initial={'budget_year': datetime.datetime.now().year, 'budget_month': month, 'budget_amount': 0, 'budget_upping': 0, 'budget_total': 0})
@@ -1203,6 +1227,7 @@ def budget_add(request, _area):
         'distributor': distributor,
         'selected_area': selected_area,
         'closing': closing,
+        'closing_period': closing_period,
         'name': name,
         'no_save': no_save,
         'segment': 'budget',
@@ -1592,6 +1617,12 @@ def export_uploadlog(request):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET-PERCENTAGE')
 def export_budget_to_excel(request):
+    channel = 'True'
+    channel_ids = Channel.objects.values_list('channel_id', flat=True)
+    if channel_ids.count() == 0:
+        channel = 'False'
+        return render(request, 'home/budget_upload  .html', {'channel': channel})
+
     # Retrieve budget data from the database
     budget_data = Budget.objects.filter(budget_status='DRAFT')
 
@@ -1602,7 +1633,6 @@ def export_budget_to_excel(request):
     # Define column headers
     headers = ['Year', 'Month',
                'Area', 'Distributor', 'Budget ID']
-    channel_ids = Channel.objects.values_list('channel_id', flat=True)
     headers.extend([f"{channel_id} (%)" for channel_id in channel_ids])
     headers.append('Check')
 
@@ -2937,12 +2967,12 @@ def proposal_release_approve(request, _id):
     release.proposal_approval_date = timezone.now()
     release.save()
     highest_approval = ProposalRelease.objects.filter(
-        proposal_id=_id, limit__gte=proposal.total_cost).aggregate(Min('sequence')) if ProposalRelease.objects.filter(proposal_id=_id, limit__gte=proposal.total_cost).exists() else ProposalRelease.objects.filter(proposal_id=_id).aggregate(Max('sequence'))
+        proposal_id=_id, limit__gt=proposal.total_cost).aggregate(Min('sequence')) if ProposalRelease.objects.filter(proposal_id=_id, limit__gt=proposal.total_cost).exists() else ProposalRelease.objects.filter(proposal_id=_id).aggregate(Max('sequence'))
     highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
-        'sequence__min') else highest_approval.get('sequence__max')
+        'sequence__min') else highest_approval.get('sequence__max') + 1
     if highest_sequence:
         approval = ProposalRelease.objects.filter(
-            proposal_id=_id, sequence__lte=highest_sequence).order_by('sequence').last()
+            proposal_id=_id, sequence__lt=highest_sequence).order_by('sequence').last()
     else:
         approval = ProposalRelease.objects.filter(
             proposal_id=_id).order_by('sequence').last()
@@ -3790,6 +3820,15 @@ def proposal_add(request, _area, _budget, _channel):
                 parent.entry_pos = request.user.position.position_id
                 parent.save()
 
+                if not settings.DEBUG:
+                    proposal = Proposal.objects.get(
+                        proposal_id=parent.proposal_id)
+                    my_file = proposal.attachment
+                    filename = '../../www/selmar/apps/media/' + my_file.name
+                    with open(filename, 'wb+') as temp_file:
+                        for chunk in my_file.chunks():
+                            temp_file.write(chunk)
+
                 for approver in approvers:
                     release = ProposalRelease(
                         proposal_id=parent.proposal_id,
@@ -3868,12 +3907,12 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
     add_cost = True if budget.budget_balance > 0 else False
 
     highest_approval = ProposalRelease.objects.filter(
-        proposal_id=_id, limit__gte=proposal.total_cost).aggregate(Min('sequence')) if ProposalRelease.objects.filter(proposal_id=_id, limit__gte=proposal.total_cost).exists() else ProposalRelease.objects.filter(proposal_id=_id).aggregate(Max('sequence'))
+        proposal_id=_id, limit__gt=proposal.total_cost).aggregate(Min('sequence')) if ProposalRelease.objects.filter(proposal_id=_id, limit__gt=proposal.total_cost).exists() else ProposalRelease.objects.filter(proposal_id=_id).aggregate(Max('sequence'))
     highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
-        'sequence__min') else highest_approval.get('sequence__max')
+        'sequence__min') else highest_approval.get('sequence__max') + 1
     if highest_sequence:
         approval = ProposalRelease.objects.filter(
-            proposal_id=_id, sequence__lte=highest_sequence).order_by('sequence')
+            proposal_id=_id, sequence__lt=highest_sequence).order_by('sequence')
     else:
         approval = ProposalRelease.objects.filter(
             proposal_id=_id).order_by('sequence')
@@ -4160,7 +4199,13 @@ def proposal_update(request, _tab, _id):
             if parent.duration.days < 0:
                 message = 'Period end must be greater than period start.'
             else:
-                form.save()
+                parent.save()
+                if not settings.DEBUG:
+                    my_file = proposal.attachment
+                    filename = '../../www/selmar/apps/media/' + my_file.name
+                    with open(filename, 'wb+') as temp_file:
+                        for chunk in my_file.chunks():
+                            temp_file.write(chunk)
                 return HttpResponseRedirect(reverse('proposal-view', args=[_tab, _id, '0', '0', '0']))
     else:
         form = FormProposalUpdate(instance=proposal)

@@ -50,8 +50,11 @@
       </div>
       <div class="modal-footer border-0">
         <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
-        <a href="{% url 'logout' %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Yes
-        </a>
+        <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+          <button type="submit" role="button" class="btn btn-sm bg-gradient-danger text-white">Yes
+          </button>
+        </form>
       </div>
     </div>
   </div>
