@@ -3294,7 +3294,7 @@ def proposal_matrix_view(request, _id, _channel):
     approvers = ProposalMatrix.objects.filter(area_id=_id, channel_id=_channel)
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT user_id, username, position_name, q_proposalmatrix.approver_id FROM apps_user INNER JOIN apps_position ON apps_user.position_id = apps_position.position_id LEFT JOIN (SELECT * FROM apps_proposalmatrix WHERE area_id = '" + str(_id) + "') AS q_proposalmatrix ON apps_user.user_id = q_proposalmatrix.approver_id WHERE q_proposalmatrix.approver_id IS NULL")
+            "SELECT user_id, username, position_name, q_proposalmatrix.approver_id FROM apps_user INNER JOIN apps_position ON apps_user.position_id = apps_position.position_id LEFT JOIN (SELECT * FROM apps_proposalmatrix WHERE area_id = '" + str(_id) + "' AND channel_id = '" + str(_channel) + "') AS q_proposalmatrix ON apps_user.user_id = q_proposalmatrix.approver_id WHERE q_proposalmatrix.approver_id IS NULL")
         users = cursor.fetchall()
 
     if request.POST:
