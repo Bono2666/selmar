@@ -4118,7 +4118,7 @@ def remove_release_attachment(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     proposal.attachment = None
     proposal.save()
-    return HttpResponseRedirect(reverse('proposal-release-view', args=[_id, '0', '0', '0', 0]))
+    return render(request, 'home/proposal_release_view.html')
 
 
 @login_required(login_url='/login/')
