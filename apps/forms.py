@@ -805,8 +805,8 @@ class FormProposalView(ModelForm):
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['attachment'].label = 'Attachment'
-        self.fields['attachment'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['attachment'].widget = forms.FileInput(
+            attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'})
 
     class Meta:
         model = Proposal
@@ -861,5 +861,5 @@ class FormProposalUpdate(ModelForm):
             'division': forms.Select(attrs={'class': 'form-control form-select-sm'}),
             'period_start': DateInput(attrs={'class': 'form-control form-control-sm'}),
             'period_end': DateInput(attrs={'class': 'form-control form-control-sm'}),
-            'attachment': forms.ClearableFileInput(attrs={'class': 'form-control form-control-sm'}),
+            'attachment': forms.FileInput(attrs={'class': 'form-control form-control-sm'}),
         }

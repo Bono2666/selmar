@@ -4105,6 +4105,24 @@ def proposal_cost_delete(request, _tab, _id, _activities):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='PROPOSAL')
+def remove_attachment(request, _tab, _id):
+    proposal = Proposal.objects.get(proposal_id=_id)
+    proposal.attachment = None
+    proposal.save()
+    return HttpResponseRedirect(reverse('proposal-view', args=[_tab, _id, '0', '0', '0']))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL-RELEASE')
+def remove_release_attachment(request, _id):
+    proposal = Proposal.objects.get(proposal_id=_id)
+    proposal.attachment = None
+    proposal.save()
+    return HttpResponseRedirect(reverse('proposal-release-view', args=[_id, '0', '0', '0', 0]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL')
 def proposal_incremental_update(request, _tab, _id, _product):
     proposal = Proposal.objects.get(proposal_id=_id)
     update = IncrementalSales.objects.get(proposal_id=_id, id=_product)
@@ -4187,6 +4205,22 @@ def proposal_cost_update(request, _tab, _id, _activities):
 def proposal_update(request, _tab, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     divs = Division.objects.all()
+    incremental = IncrementalSales.objects.filter(proposal_id=_id)
+    cost = ProjectedCost.objects.filter(proposal_id=_id)
+    total = IncrementalSales.objects.filter(proposal_id=_id).aggregate(
+        swop_carton__sum=Sum('swop_carton'),
+        swop_nom__sum=Sum('swop_nom'),
+        swp_carton__sum=Sum('swp_carton'),
+        swp_nom__sum=Sum('swp_nom'),
+        incrp_carton__sum=Sum('incrp_carton'),
+        incrp_nom__sum=Sum('incrp_nom'),
+        incpst_carton__ratio=(Sum('incrp_carton') /
+                              Sum('swop_carton')) * 100 if Sum('swop_carton') else 0,
+        incpst_nom__ratio=(Sum('incrp_nom') /
+                           Sum('swop_nom')) * 100 if Sum('swop_nom') else 0,
+    )
+    total_cost = ProjectedCost.objects.filter(
+        proposal_id=_id).aggregate(Sum('cost'))
     message = '0'
 
     if request.POST:
@@ -4214,6 +4248,11 @@ def proposal_update(request, _tab, _id):
         'form': form,
         'data': proposal,
         'divs': divs,
+        'incremental': incremental,
+        'cost': cost,
+        'total': total,
+        'total_inc': total['incrp_nom__sum'] if total['incrp_nom__sum'] else 0,
+        'total_cost': total_cost['cost__sum'] if total_cost['cost__sum'] else 0,
         'tab': _tab,
         'message': message,
         'segment': 'proposal',

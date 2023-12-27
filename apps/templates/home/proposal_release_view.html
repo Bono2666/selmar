@@ -228,18 +228,45 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     {{ form.remarks.label_tag }}
                                     {{ form.remarks }}
                                     <div class="text-sm text-danger">
                                         {{ form.remarks.errors }}
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-5">
                                     {{ form.attachment.label_tag }}
-                                    {{ form.attachment }}
-                                    <div class="text-sm text-danger">
+                                    <div class="input-group input-group-alternative">
+                                        <a {% if data.attachment %}href="{{ data.attachment.url }}"{% endif %} target="_blank" class="form-control form-control-sm border">{% if data.attachment %}{{ data.attachment }}{% else %}No attachment available for this proposal{% endif %}</a>
+                                        <span class="input-group-text bg-transparent end-0 pe-3 py-2 {% if crud == 'update' %}cursor-pointer{% endif %} text-body {% if crud == 'view' %}disabled{% endif %} z-index-0" data-bs-toggle="modal" {% if crud == 'update' %}data-bs-target="#delete-attch"{% endif %}><i class="fas fa-times-circle"></i></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="shadow-none">
+                                        <label class="pb-3"></label>
+                                        {{ form.attachment }}
+                                        <div class="text-danger text-sm">
                                         {{ form.attachment.errors }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal fade" id="delete-attch" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                                    aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                            </div>
+                                            <div class="modal-body border-bottom-0">
+                                                Are you sure you want to remove this attachment?
+                                            </div>
+                                            <div class="modal-footer border-0">
+                                                <button role="button" class="btn bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                                <a href="{% url 'remove-release-attachment' data.proposal_id %}" role="button" class="btn bg-gradient-danger text-white">Remove
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
