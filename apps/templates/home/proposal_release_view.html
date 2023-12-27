@@ -142,7 +142,7 @@
                             {% endif %}
                             <div class="row">
                                 {{ form.area }}
-                                <div class="col-md-12">
+                                <div class="{% if crud == 'view' %}col-md-10{% else %}col-md-12{% endif %}">
                                     <div class="shadow-none">
                                         {{ form.program_name.label_tag }}
                                         {{ form.program_name }}
@@ -151,8 +151,7 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row">
+                                {% if crud == 'view' %}
                                 <div class="col-md-2">
                                     <div class="shadow-none">
                                         {{ form.proposal_date.label_tag }}
@@ -162,6 +161,20 @@
                                         </div>
                                     </div>
                                 </div>
+                                {% endif %}
+                            </div>
+                            <div class="row">
+                                {% if crud == 'update' %}
+                                <div class="col-md-2">
+                                    <div class="shadow-none">
+                                        {{ form.proposal_date.label_tag }}
+                                        {{ form.proposal_date }}
+                                        <div class="text-sm text-danger">
+                                            {{ form.proposal_date.errors }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
                                 <div class="col-md-1">    
                                     <div class="shadow-none">
                                         {{ form.type.label_tag }}
@@ -208,6 +221,14 @@
                                         {{ form.period_end.errors }}
                                     </div>
                                 </div>
+                                {% if crud == 'view' %}
+                                <div class="col-md-2">
+                                    <div class="shadow-none">
+                                        {{ form.duration.label_tag }}
+                                        {{ form.duration }}
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
                             <div class="row">
                                 <div class="col-md-12">
