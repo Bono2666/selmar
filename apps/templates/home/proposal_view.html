@@ -204,7 +204,14 @@
                                 {% endif %}
                             </div>
                             <div class="row">
-                                <div class="col-md-12">
+                                <div class="col-md-6">
+                                    {{ form.background.label_tag }}
+                                    {{ form.background }}
+                                    <div class="text-sm text-danger">
+                                        {{ form.background.errors }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
                                     {{ form.objectives.label_tag }}
                                     {{ form.objectives }}
                                     <div class="text-sm text-danger">

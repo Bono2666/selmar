@@ -566,6 +566,7 @@ class Proposal(models.Model):
     period_start = models.DateTimeField(null=True)
     period_end = models.DateTimeField(null=True)
     duration = models.IntegerField(default=0)
+    background = models.TextField(null=True)
     objectives = models.TextField()
     mechanism = models.TextField()
     remarks = models.CharField(max_length=200, null=True)

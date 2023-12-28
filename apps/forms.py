@@ -701,6 +701,9 @@ class FormProposal(ModelForm):
             attrs={'class': 'd-none', })
         self.fields['period_start'].label = 'Period (Start)'
         self.fields['period_end'].label = 'Period (End)'
+        self.fields['background'].label = 'Background'
+        self.fields['background'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 3})
         self.fields['objectives'].label = 'Objectives'
         self.fields['objectives'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 3})
@@ -795,6 +798,9 @@ class FormProposalView(ModelForm):
         self.fields['duration'].label = 'Duration'
         self.fields['duration'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['background'].label = 'Background'
+        self.fields['background'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 3, 'readonly': 'readonly'})
         self.fields['objectives'].label = 'Objectives'
         self.fields['objectives'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 3, 'readonly': 'readonly'})
@@ -811,7 +817,7 @@ class FormProposalView(ModelForm):
     class Meta:
         model = Proposal
         fields = ['proposal_id', 'proposal_date', 'channel', 'type', 'division', 'program_name', 'products', 'area',
-                  'period_start', 'period_end', 'duration', 'objectives', 'mechanism', 'remarks', 'attachment']
+                  'period_start', 'period_end', 'duration', 'background', 'objectives', 'mechanism', 'remarks', 'attachment']
 
         widgets = {
             'proposal_date': DateInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
@@ -840,6 +846,9 @@ class FormProposalUpdate(ModelForm):
             attrs={'class': 'form-control-sm'})
         self.fields['period_start'].label = 'Period (Start)'
         self.fields['period_end'].label = 'Period (End)'
+        self.fields['background'].label = 'Background'
+        self.fields['background'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 3})
         self.fields['objectives'].label = 'Objectives'
         self.fields['objectives'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 3})

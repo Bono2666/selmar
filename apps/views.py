@@ -1971,6 +1971,7 @@ def proposal_release_update(request, _id):
     _prod = proposal.products
     _start = proposal.period_start.strftime('%d %b %Y')
     _end = proposal.period_end.strftime('%d %b %Y')
+    _bck = proposal.background
     _obj = proposal.objectives
     _mech = proposal.mechanism
     _rem = proposal.remarks
@@ -1993,6 +1994,7 @@ def proposal_release_update(request, _id):
                     '%d %b %Y') != _start else None
                 end = _end if form.cleaned_data['period_end'].strftime(
                     '%d %b %Y') != _end else None
+                background = _bck if form.cleaned_data['background'] != _bck else None
                 objectives = _obj if form.cleaned_data['objectives'] != _obj else None
                 mechanism = _mech if form.cleaned_data['mechanism'] != _mech else None
                 remarks = _rem if form.cleaned_data['remarks'] != _rem else None
@@ -2050,10 +2052,12 @@ def proposal_release_update(request, _id):
                     msg += 'Period Start: ' + start + '\n'
                 if end:
                     msg += 'Period End: ' + end + '\n'
+                if background:
+                    msg += 'Background:\n' + str(background) + '\n'
                 if objectives:
-                    msg += 'Objectives: ' + str(objectives) + '\n'
+                    msg += 'Objectives:\n' + str(objectives) + '\n'
                 if mechanism:
-                    msg += 'Mechanism: ' + str(mechanism) + '\n'
+                    msg += 'Mechanism:\n' + str(mechanism) + '\n'
                 if remarks:
                     msg += 'Remarks: ' + str(remarks) + '\n'
                 if attachment:
@@ -2076,11 +2080,14 @@ def proposal_release_update(request, _id):
                     msg += 'Period End: ' + \
                         str(form.cleaned_data['period_end'].strftime(
                             '%d %b %Y')) + '\n'
+                if background:
+                    msg += 'Background:\n' + \
+                        str(form.cleaned_data['background']) + '\n'
                 if objectives:
-                    msg += 'Objectives: ' + \
+                    msg += 'Objectives:\n' + \
                         str(form.cleaned_data['objectives']) + '\n'
                 if mechanism:
-                    msg += 'Mechanism: ' + \
+                    msg += 'Mechanism:\n' + \
                         str(form.cleaned_data['mechanism']) + '\n'
                 if remarks:
                     msg += 'Remarks: ' + \
