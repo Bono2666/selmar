@@ -58,7 +58,7 @@
                     {% for approver in approvers %}
                     <!-- <div class="col-md-3"> -->
                         <!-- <img class="w-sm-50" src="http://127.0.0.1:8000/apps/media/{{ approver.0 }}" alt="Signature"/> -->
-                        <img height="70" width="100" style="flex: 0 0 auto; width: 25%;" src="http://127.0.0.1:8000/apps/media/{{ approver.0 }}" alt="Signature"/>
+                        <img height="70" width="100" style="flex: 0 0 auto; width: 25%;" src="{{ host }}apps/media/{{ approver.0 }}" alt="Signature"/>
                         <!-- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
                     <!-- </div> -->
                     {% endfor %}
