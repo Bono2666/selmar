@@ -523,7 +523,7 @@
                                                 <div class="modal-footer border-0">
                                                     <a href="{% url 'proposal-view' tab item.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                                     <button type="submit"
-                                                        class="btn btn-sm bg-gradient-danger text-white {% if status == 'CLOSED' or status == 'REJECTED' %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}">Save</button>
+                                                        class="btn btn-sm bg-gradient-danger text-white {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}">Save</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -723,7 +723,7 @@
                                                 <div class="modal-footer border-0">
                                                     <a href="{% url 'proposal-view' tab item.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                                     <button type="submit"
-                                                        class="btn btn-sm bg-gradient-danger text-white {% if status == 'CLOSED' or status == 'REJECTED' %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}">Save</button>
+                                                        class="btn btn-sm bg-gradient-danger text-white {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}">Save</button>
                                                 </div>
                                             </form>
                                         </div>
