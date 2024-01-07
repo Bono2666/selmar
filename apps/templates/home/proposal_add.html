@@ -153,137 +153,143 @@
         </div>
     </div>
 </div>
-<div class="modal fade" id="dialog-popup1" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-body border-bottom-0">
-                <div class="table-responsive p-0">
-                    <table class="table hover cursor-pointer align-items-center mb-3" id="areaTable">
-                        <thead>
-                            <tr>
-                                <th
-                                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                    Select Area</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in area %}
-                            <tr data-href="{% url 'proposal-add' item.0 '0' '0' %}" class="cursor-pointer">
-                                <td>
-                                    <div class="d-flex pe-2 py-0">
-                                        <div class="d-flex flex-column justify-content-center">
-                                            <h6 class="mb-0 text-sm">{{ item.1 }}</h6>
+<div class="container">
+    <div class="modal fade" id="dialog-popup1" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-body border-bottom-0">
+                    <div class="table-responsive p-0">
+                        <table class="table hover cursor-pointer align-items-center mb-3" id="areaTable">
+                            <thead>
+                                <tr>
+                                    <th
+                                        class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Select Area</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in area %}
+                                <tr data-href="{% url 'proposal-add' item.0 '0' '0' %}" class="cursor-pointer">
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.1 }}</h6>
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+                <div class="modal-footer border-top-0 d-flex">
+                    <a href="{% url 'proposal-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
+                </div>             
             </div>
-            <div class="modal-footer border-top-0 d-flex">
-                <a href="{% url 'proposal-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
-            </div>             
         </div>
     </div>
 </div>
-<div class="modal fade" id="dialog-popup2" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header border-bottom-0">
-                <h6 class="modal-title" id="exampleModalLabel">Select Budget - Area: {{ selected_area }}</h6>
-            </div>
-            <div class="modal-body border-bottom-0">
-                <div class="table-responsive p-0">
-                    <table class="table hover cursor-pointer align-items-center mb-3" id="budgetTable">
-                        <thead>
-                            <tr>
-                                <th
-                                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                    Distributor</th>
-                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                    Budget</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in budgets %}
-                            <tr data-href="{% url 'proposal-add' selected_area item.budget_id '0' %}" class="cursor-pointer">
-                                <td>
-                                    <div class="d-flex pe-2 py-0">
-                                        <div class="d-flex flex-column justify-content-center">
-                                            <h6 class="mb-0 text-sm">{{ item.budget_distributor.distributor_name }}</h6>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex pe-2 py-0">
-                                        <div class="d-flex flex-column justify-content-center">
-                                            <h6 class="mb-0 text-sm">{{ item.budget_id }}</h6>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+<div class="container">
+    <div class="modal fade" id="dialog-popup2" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header border-bottom-0">
+                    <h6 class="modal-title" id="exampleModalLabel">Select Budget - Area: {{ selected_area }}</h6>
                 </div>
+                <div class="modal-body border-bottom-0">
+                    <div class="table-responsive p-0">
+                        <table class="table hover cursor-pointer align-items-center mb-3" id="budgetTable">
+                            <thead>
+                                <tr>
+                                    <th
+                                        class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Distributor</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Budget</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in budgets %}
+                                <tr data-href="{% url 'proposal-add' selected_area item.budget_id '0' %}" class="cursor-pointer">
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.budget_distributor.distributor_name }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.budget_id }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 d-flex">
+                    <a href="{% url 'proposal-add' '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
+                    <a href="{% url 'proposal-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
+                </div>             
             </div>
-            <div class="modal-footer border-top-0 d-flex">
-                <a href="{% url 'proposal-add' '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
-                <a href="{% url 'proposal-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
-            </div>             
         </div>
     </div>
 </div>
-<div class="modal fade" id="dialog-popup3" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header border-bottom-0">
-                <h6 class="modal-title" id="exampleModalLabel">Select Channel - Budget No.: {{ selected_budget }}</h6>
-            </div>
-            <div class="modal-body border-bottom-0">
-                <div class="table-responsive p-0">
-                    <table class="table hover align-items-center mb-0" id="channelTable">
-                        <thead>
-                            <tr>
-                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                    Channel</th>
-                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
-                                    Percent</th>
-                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
-                                    Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in budget_detail %}
-                            <tr data-href="{% if item.budget_balance > 0 %}{% url 'proposal-add' selected_area item.budget_id item.budget_channel_id %}{% else %}#{% endif %}" {% if item.budget_balance > 0 %}class="cursor-pointer"{% endif %}>
-                                <td>
-                                    <div class="d-flex pe-2 py-0">
-                                        <div class="d-flex flex-column justify-content-center">
-                                            <h6 class="mb-0 text-sm">{{ item.budget_channel_id }}</h6>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <h6 class="mb-0 text-sm text-end">{{ item.budget_percent }}%</h6>
-                                </td>
-                                <td>
-                                    <h6 class="mb-0 text-sm text-end">{{ item.budget_balance|intcomma }}</h6>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+<div class="container">
+    <div class="modal fade" id="dialog-popup3" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header border-bottom-0">
+                    <h6 class="modal-title" id="exampleModalLabel">Select Channel - Budget No.: {{ selected_budget }}</h6>
                 </div>
+                <div class="modal-body border-bottom-0">
+                    <div class="table-responsive p-0">
+                        <table class="table hover align-items-center mb-0" id="channelTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Channel</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
+                                        Percent</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
+                                        Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in budget_detail %}
+                                <tr data-href="{% if item.budget_balance > 0 %}{% url 'proposal-add' selected_area item.budget_id item.budget_channel_id %}{% else %}#{% endif %}" {% if item.budget_balance > 0 %}class="cursor-pointer"{% endif %}>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.budget_channel_id }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_percent }}%</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_balance|intcomma }}</h6>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 d-flex">
+                    <a href="{% url 'proposal-add' selected_area '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
+                    <a href="{% url 'proposal-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
+                </div>             
             </div>
-            <div class="modal-footer border-top-0 d-flex">
-                <a href="{% url 'proposal-add' selected_area '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
-                <a href="{% url 'proposal-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
-            </div>             
         </div>
     </div>
 </div>

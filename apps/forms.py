@@ -4,6 +4,7 @@ from apps.models import *
 from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm, UserCreationForm
 import datetime
 from django.forms import DateInput
+from tinymce.widgets import TinyMCE
 
 
 class FormUser(UserCreationForm):
@@ -718,7 +719,7 @@ class FormProposal(ModelForm):
 
     class Meta:
         model = Proposal
-        exclude = ['budget', 'channel', 'duration', 'total_cost', 'roi', 'status', 'seq_number', 'proposal_status', 'entry_date',
+        exclude = ['budget', 'channel', 'duration', 'total_cost', 'roi', 'claim', 'balance', 'status', 'seq_number', 'proposal_status', 'entry_date',
                    'entry_by', 'update_date', 'update_by', 'entry_pos']
 
         widgets = {
@@ -740,20 +741,20 @@ class FormIncrementalSales(ModelForm):
         self.fields['swop_carton'].label = 'Carton'
         self.fields['swop_carton'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
-        self.fields['swop_nom_carton'].label = 'Rp (per Carton)'
-        self.fields['swop_nom_carton'].widget = forms.NumberInput(
+        self.fields['swop_nom'].label = 'Rp'
+        self.fields['swop_nom'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
         self.fields['swp_carton'].label = 'Carton'
         self.fields['swp_carton'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
-        self.fields['swp_nom_carton'].label = 'Rp (per Carton)'
-        self.fields['swp_nom_carton'].widget = forms.NumberInput(
+        self.fields['swp_nom'].label = 'Rp'
+        self.fields['swp_nom'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
 
     class Meta:
         model = IncrementalSales
         fields = ['product', 'swop_carton',
-                  'swop_nom_carton', 'swp_carton', 'swp_nom_carton']
+                  'swop_nom', 'swp_carton', 'swp_nom']
 
 
 class FormProjectedCost(ModelForm):
@@ -863,7 +864,7 @@ class FormProposalUpdate(ModelForm):
 
     class Meta:
         model = Proposal
-        exclude = ['proposal_id', 'budget', 'channel', 'duration', 'total_cost', 'roi', 'status', 'seq_number', 'entry_date', 'entry_pos',
+        exclude = ['proposal_id', 'budget', 'channel', 'duration', 'total_cost', 'roi', 'claim', 'balance', 'status', 'seq_number', 'entry_date', 'entry_pos',
                    'entry_by', 'update_date', 'update_by']
 
         widgets = {
@@ -872,3 +873,175 @@ class FormProposalUpdate(ModelForm):
             'period_end': DateInput(attrs={'class': 'form-control form-control-sm'}),
             'attachment': forms.FileInput(attrs={'class': 'form-control form-control-sm'}),
         }
+
+
+class FormProgram(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormProgram, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['area'].widget = forms.TextInput(
+            attrs={'class': 'd-none'})
+        self.fields['deadline'].label = 'Claim Deadline'
+
+    class Meta:
+        model = Program
+        fields = ['area', 'deadline', 'content']
+
+        widgets = {
+            'deadline': DateInput(attrs={'class': 'form-control form-control-sm'}),
+            'content': TinyMCE(attrs={'cols': 80, 'rows': 30}),
+        }
+
+
+class FormProgramView(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormProgramView, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['deadline'].label = 'Claim Deadline'
+
+    class Meta:
+        model = Program
+        fields = ['deadline', 'content']
+
+        widgets = {
+            'deadline': DateInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
+            'content': TinyMCE(attrs={'cols': 80, 'rows': 30, 'readonly': 'readonly'}),
+        }
+
+
+class FormProgramUpdate(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormProgramUpdate, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['deadline'].label = 'Claim Deadline'
+
+    class Meta:
+        model = Program
+        fields = ['deadline', 'content']
+
+        widgets = {
+            'deadline': DateInput(attrs={'class': 'form-control form-control-sm'}),
+            'content': TinyMCE(attrs={'cols': 80, 'rows': 30}),
+        }
+
+
+class FormProgramMatrix(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormProgramMatrix, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+
+    class Meta:
+        model = ProgramMatrix
+        exclude = ['entry_date', 'entry_by', 'update_date', 'update_by']
+
+
+class FormClaim(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormClaim, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['claim_id'].widget = forms.TextInput(
+            attrs={'class': 'd-none'})
+        self.fields['claim_date'].label = 'Date'
+        self.fields['claim_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['claim_date'].input_formats = ['%d/%m/%Y']
+        self.fields['claim_date'].initial = datetime.date.today().strftime(
+            '%d/%m/%Y')
+        self.fields['area'].widget = forms.TextInput(
+            attrs={'class': 'd-none'})
+        self.fields['invoice'].label = 'Invoice No.'
+        self.fields['invoice'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['invoice_date'].label = 'Invoice Date'
+        self.fields['invoice_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['invoice_date'].input_formats = ['%d/%m/%Y']
+        self.fields['due_date'].label = 'Due Date'
+        self.fields['due_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['due_date'].input_formats = ['%d/%m/%Y']
+        self.fields['amount'].label = 'Amount'
+        self.fields['amount'].widget = forms.NumberInput(
+            attrs={'class': 'form-control-sm no-spinners'})
+        self.fields['remarks'].label = 'Remarks'
+
+        class Meta:
+            model = Claim
+            exclude = ['proposal', 'program', 'status', 'entry_date',
+                       'entry_by', 'update_date', 'update_by']
+
+            widgets = {
+                'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3}),
+            }
+
+
+class FormClaimView(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormClaimView, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['claim_date'].label = 'Date'
+        self.fields['claim_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['claim_date'].input_formats = ['%d/%m/%Y']
+        self.fields['claim_date'].initial = datetime.date.today().strftime(
+            '%d/%m/%Y')
+        self.fields['invoice'].label = 'Invoice No.'
+        self.fields['invoice'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['invoice_date'].label = 'Invoice Date'
+        self.fields['invoice_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['invoice_date'].input_formats = ['%d/%m/%Y']
+        self.fields['due_date'].label = 'Due Date'
+        self.fields['due_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['due_date'].input_formats = ['%d/%m/%Y']
+        self.fields['amount'].label = 'Amount'
+        self.fields['amount'].widget = forms.NumberInput(
+            attrs={'class': 'form-control-sm no-spinners', 'readonly': 'readonly'})
+        self.fields['remarks'].label = 'Remarks'
+
+        class Meta:
+            model = Claim
+            exclude = ['proposal', 'program', 'status', 'entry_date',
+                       'entry_by', 'update_date', 'update_by']
+
+            widgets = {
+                'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3, 'readonly': 'readonly'}),
+            }
+
+
+class FormClaimUpdate(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormClaimUpdate, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['claim_date'].label = 'Date'
+        self.fields['claim_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['claim_date'].input_formats = ['%d/%m/%Y']
+        self.fields['claim_date'].initial = datetime.date.today().strftime(
+            '%d/%m/%Y')
+        self.fields['invoice'].label = 'Invoice No.'
+        self.fields['invoice'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['invoice_date'].label = 'Invoice Date'
+        self.fields['invoice_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['invoice_date'].input_formats = ['%d/%m/%Y']
+        self.fields['due_date'].label = 'Due Date'
+        self.fields['due_date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['due_date'].input_formats = ['%d/%m/%Y']
+        self.fields['amount'].label = 'Amount'
+        self.fields['amount'].widget = forms.NumberInput(
+            attrs={'class': 'form-control-sm no-spinners'})
+        self.fields['remarks'].label = 'Remarks'
+
+        class Meta:
+            model = Claim
+            exclude = ['proposal', 'program', 'status', 'entry_date',
+                       'entry_by', 'update_date', 'update_by']
+
+            widgets = {
+                'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3}),
+            }

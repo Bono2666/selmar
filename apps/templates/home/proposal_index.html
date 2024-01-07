@@ -50,9 +50,9 @@
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Channel</th>
-                                            <th class="text-uppercase text-Usecondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                                Division</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Total Cost</th>
+                                            <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Claim</th>
+                                            <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Balance</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
                                         </tr>
                                     </thead>
@@ -73,10 +73,13 @@
                                                 <h6 class="mb-0 text-sm">{{ item.channel }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm">{{ item.division }}</h6>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.total_cost|floatformat:0|intcomma }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm text-end">{{ item.total_cost|floatformat:0|intcomma }}</h6>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.claim|floatformat:0|intcomma }}</h6>
+                                            </td>
+                                            <td>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.balance|floatformat:0|intcomma }}</h6>
                                             </td>
                                             <td>
                                                 <h6 class="mb-0 text-sm">{{ item.status }}</h6>
@@ -100,9 +103,9 @@
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Channel</th>
-                                            <th class="text-uppercase text-Usecondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                                Division</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Total Cost</th>
+                                            <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Claim</th>
+                                            <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Balance</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
                                         </tr>
                                     </thead>
@@ -123,10 +126,13 @@
                                                 <h6 class="mb-0 text-sm">{{ item.channel }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm">{{ item.division }}</h6>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.total_cost|floatformat:0|intcomma }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm text-end">{{ item.total_cost|floatformat:0|intcomma }}</h6>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.claim|floatformat:0|intcomma }}</h6>
+                                            </td>
+                                            <td>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.balance|floatformat:0|intcomma }}</h6>
                                             </td>
                                             <td>
                                                 <h6 class="mb-0 text-sm">{{ item.status }}</h6>
@@ -150,9 +156,9 @@
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Channel</th>
-                                            <th class="text-uppercase text-Usecondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                                Division</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Total Cost</th>
+                                            <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Claim</th>
+                                            <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Balance</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
                                         </tr>
                                     </thead>
@@ -173,10 +179,13 @@
                                                 <h6 class="mb-0 text-sm">{{ item.channel }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm">{{ item.division }}</h6>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.total_cost|floatformat:0|intcomma }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm text-end">{{ item.total_cost|floatformat:0|intcomma }}</h6>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.claim|floatformat:0|intcomma }}</h6>
+                                            </td>
+                                            <td>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.balance|floatformat:0|intcomma }}</h6>
                                             </td>
                                             <td>
                                                 <h6 class="mb-0 text-sm">{{ item.status }}</h6>
@@ -200,9 +209,9 @@
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Channel</th>
-                                            <th class="text-uppercase text-Usecondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                                Division</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Total Cost</th>
+                                            <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Claim</th>
+                                            <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Balance</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
                                         </tr>
                                     </thead>
@@ -223,10 +232,13 @@
                                                 <h6 class="mb-0 text-sm">{{ item.channel }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm">{{ item.division }}</h6>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.total_cost|floatformat:0|intcomma }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm text-end">{{ item.total_cost|floatformat:0|intcomma }}</h6>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.claim|floatformat:0|intcomma }}</h6>
+                                            </td>
+                                            <td>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.balance|floatformat:0|intcomma }}</h6>
                                             </td>
                                             <td>
                                                 <h6 class="mb-0 text-sm">{{ item.status }}</h6>

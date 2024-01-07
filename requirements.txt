@@ -18,6 +18,8 @@ django-mathfilters
 reportlab
 pypdf2
 requests
+django-tinymce
+xhtml2pdf
 # djangorestframework
 
 # psycopg2-binary

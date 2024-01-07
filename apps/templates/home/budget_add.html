@@ -140,33 +140,37 @@
     </div>
 </div>
 </div>
-<div class="modal fade" id="closing-period" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="ModalLabel">Warning</h5>
+<div class="container">
+    <div class="modal fade" id="closing-period" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalLabel">Warning</h5>
+                </div>
+                <div class="modal-body border-bottom-0">
+                    No closing period found. Please create closing period first.
+                </div>
+                <div class="modal-footer border-0">
+                    <a href="{% url 'budget-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-check"></i>&nbsp;&nbsp;Ok</a>
             </div>
-            <div class="modal-body border-bottom-0">
-                No closing period found. Please create closing period first.
-            </div>
-            <div class="modal-footer border-0">
-                <a href="{% url 'budget-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-check"></i>&nbsp;&nbsp;Ok</a>
         </div>
     </div>
 </div>
-<div class="modal fade" id="closing-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="ModalLabel">Warning</h5>
+<div class="container">
+    <div class="modal fade" id="closing-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalLabel">Warning</h5>
+                </div>
+                <div class="modal-body border-bottom-0">
+                    Last month budget is not closed yet. Please close the last month budget first.
+                </div>
+                <div class="modal-footer border-0">
+                    <a href="{% url 'budget-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-check"></i>&nbsp;&nbsp;Ok</a>
             </div>
-            <div class="modal-body border-bottom-0">
-                Last month budget is not closed yet. Please close the last month budget first.
-            </div>
-            <div class="modal-footer border-0">
-                <a href="{% url 'budget-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-check"></i>&nbsp;&nbsp;Ok</a>
         </div>
     </div>
 </div>

@@ -22,17 +22,47 @@ from reportlab.pdfgen import canvas
 from django.http import FileResponse
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import landscape, A4
+from reportlab.lib.pagesizes import portrait, landscape, A4
 from django.db.models import Count
-from PyPDF2 import PdfReader
-from PyPDF2 import PdfFileMerger
 from PyPDF2 import PdfMerger
-import requests
-import os
-import requests
-import requests
-import base64
 from django.conf import settings
+from django.http import FileResponse
+from django.http import HttpResponse
+from xhtml2pdf import pisa
+from django.template.loader import get_template
+from reportlab.pdfgen import canvas
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from xhtml2pdf import pisa
+from django.template.loader import get_template
+from django.http import HttpResponse
+from io import BytesIO
+from django.http import HttpResponse
+from django.template.loader import get_template
+from reportlab.pdfgen import canvas
+from xhtml2pdf import pisa
+from reportlab.pdfgen import canvas
+from django.http import HttpResponse
+from io import BytesIO
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
+from django.http import HttpResponse
+from django.template.loader import get_template
+from reportlab.pdfgen import canvas
+from io import BytesIO
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from reportlab.pdfgen import canvas
+from io import BytesIO
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from reportlab.pdfgen import canvas
 
 
 @login_required(login_url='/login/')
@@ -1810,11 +1840,11 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
         swp_nom__sum=Sum('swp_nom'),
         incrp_carton__sum=Sum('incrp_carton'),
         incrp_nom__sum=Sum('incrp_nom'),
-        incpst_carton__ratio=(
-            Sum('incpst_carton') / Sum('swop_carton')) * 100 if Sum('swop_carton') else 0,
-        incpst_nom__ratio=(Sum('incpst_nom') / Sum('swop_nom')
-                           ) * 100 if Sum('swop_nom') else 0,
     )
+    incpst_carton = (total['incrp_carton__sum'] / total['swop_carton__sum']
+                     ) * 100 if total['swop_carton__sum'] else 0
+    incpst_nom = (total['incrp_nom__sum'] / total['swop_nom__sum']
+                  ) * 100 if total['swop_nom__sum'] else 0
     form_cost = FormProjectedCost()
     cost = ProjectedCost.objects.filter(proposal_id=_id)
     total_cost = ProjectedCost.objects.filter(
@@ -1833,6 +1863,8 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
         'formCost': form_cost,
         'cost': cost,
         'total': total,
+        'incpst_carton': incpst_carton,
+        'incpst_nom': incpst_nom,
         'total_inc': total['incrp_nom__sum'] if total['incrp_nom__sum'] else 0,
         'total_cost': total_cost['cost__sum'] if total_cost['cost__sum'] else 0,
         'sub_id': _sub_id,
@@ -1999,7 +2031,7 @@ def proposal_release_update(request, _id):
                 mechanism = _mech if form.cleaned_data['mechanism'] != _mech else None
                 remarks = _rem if form.cleaned_data['remarks'] != _rem else None
                 attachment = _att if form.cleaned_data['attachment'] != _att else None
-                form.save()
+                parent.save()
 
                 recipients = []
 
@@ -2226,14 +2258,6 @@ def proposal_release_incremental_add(request, _id):
             else:
                 incremental = form.save(commit=False)
                 incremental.proposal_id = _id
-                incremental.swop_nom_carton = int(
-                    request.POST.get('swop_nom_carton'))
-                incremental.swp_nom_carton = int(
-                    request.POST.get('swp_nom_carton'))
-                incremental.swop_nom = int(
-                    request.POST.get('swop_nom_carton')) * swop_carton
-                incremental.swp_nom = int(
-                    request.POST.get('swp_nom_carton')) * swp_carton
                 incremental.save()
                 if incremental.incrp_nom < 0:
                     message = 'Incremental Sales must be greater than 0'
@@ -2264,19 +2288,19 @@ def proposal_release_incremental_update(request, _id, _product):
         else:
             swop_carton = update.swop_carton
             swp_carton = update.swp_carton
-            swop_nom_carton = update.swop_nom_carton
-            swp_nom_carton = update.swp_nom_carton
+            swop_nom = update.swop_nom
+            swp_nom = update.swp_nom
             update.swop_carton = int(request.POST.get('swop_carton'))
             update.swp_carton = int(request.POST.get('swp_carton'))
-            update.swop_nom_carton = int(request.POST.get('swop_nom_carton'))
-            update.swp_nom_carton = int(request.POST.get('swp_nom_carton'))
+            update.swop_nom = int(request.POST.get('swop_nom'))
+            update.swp_nom = int(request.POST.get('swp_nom'))
             update.save()
             if update.incrp_nom < 0:
                 message = 'Incremental Sales must be greater than 0'
                 update.swop_carton = swop_carton
                 update.swp_carton = swp_carton
-                update.swop_nom_carton = swop_nom_carton
-                update.swp_nom_carton = swp_nom_carton
+                update.swop_nom = swop_nom
+                update.swp_nom = swp_nom
                 update.save()
             else:
                 total_inc = IncrementalSales.objects.filter(
@@ -2336,6 +2360,7 @@ def proposal_release_cost_add(request, _id):
                 proposal.roi = (total_cost / total_inc) * \
                     100 if total_inc != 0 else 0
                 proposal.total_cost = total_cost
+                proposal.balance = total_cost
                 proposal.status = 'PENDING'
                 proposal.save()
                 sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))[
@@ -2366,6 +2391,7 @@ def proposal_release_cost_delete(request, _id, _activities):
     proposal.roi = (total_cost / total_inc) * \
         100 if total_inc != 0 else 0
     proposal.total_cost = total_cost
+    proposal.balance = total_cost
     proposal.save()
     sum_cost = Proposal.objects.filter(
         budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))['total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
@@ -2404,6 +2430,7 @@ def proposal_release_cost_update(request, _id, _activities):
             proposal.roi = (total_cost / total_inc) * \
                 100 if total_inc != 0 else 0
             proposal.total_cost = total_cost
+            proposal.balance = total_cost
             proposal.save()
             sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))[
                 'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
@@ -2415,7 +2442,7 @@ def proposal_release_cost_update(request, _id, _activities):
             budget.budget_balance = sum_balance
             budget.save()
 
-    return HttpResponseRedirect(reverse('proposal-view', args=[_id, _activities, 'upd-cost', message, 0]))
+    return HttpResponseRedirect(reverse('proposal-release-view', args=[_id, _activities, 'upd-cost', message, 0]))
 
 
 @login_required(login_url='/login/')
@@ -2821,21 +2848,21 @@ def proposal_print(request, _id):
     pdf_file.setFont("Helvetica", 8)
     pdf_file.rect(
         25, y - 5, (col_width * (proposer_count + 1)), 15, stroke=True)
-    title = 'Proposed By'
+    title = 'Proposed By' if proposer_count > 0 else ''
     title_width = pdf_file.stringWidth(title, "Helvetica", 8)
     title_x = 25 + ((col_width * (proposer_count + 1)) - title_width) / 2
     pdf_file.drawString(title_x, y, title)
 
     pdf_file.rect(
         25 + (col_width * (proposer_count + 1)), y - 5, col_width * checker_count, 15, stroke=True)
-    title = 'Checked By'
+    title = 'Checked By' if checker_count > 0 else ''
     title_x = 25 + (col_width * (proposer_count + 1)) + \
         ((col_width * checker_count) - title_width) / 2
     pdf_file.drawString(title_x, y, title)
 
     pdf_file.rect(
         25 + (col_width * (proposer_count + 1)) + (col_width * checker_count), y - 5, col_width * approvers_count, 15, stroke=True)
-    title = 'Approved By'
+    title = 'Approved By' if approvers_count > 0 else ''
     title_x = 25 + (col_width * (proposer_count + 1)) + \
         (col_width * checker_count) + \
         ((col_width * approvers_count) - title_width) / 2
@@ -2843,7 +2870,7 @@ def proposal_print(request, _id):
 
     pdf_file.rect(
         25 + (col_width * (proposer_count + 1)) + (col_width * checker_count) + (col_width * approvers_count), y - 5, col_width * validator_count, 15, stroke=True)
-    title = 'Validated By'
+    title = 'Validated By' if validator_count > 0 else ''
     title_x = 25 + (col_width * (proposer_count + 1)) + (col_width * checker_count) + \
         (col_width * approvers_count) + \
         ((col_width * validator_count) - title_width) / 2
@@ -2851,7 +2878,7 @@ def proposal_print(request, _id):
 
     pdf_file.rect(
         25 + (col_width * (proposer_count + 1)) + (col_width * checker_count) + (col_width * approvers_count) + (col_width * validator_count), y - 5, col_width * finalizer_count, 15, stroke=True)
-    title = 'Approved By'
+    title = 'Approved By' if finalizer_count > 0 else ''
     title_x = 25 + (col_width * (proposer_count + 1)) + (col_width * checker_count) + (col_width * approvers_count) + \
         (col_width * validator_count) + \
         ((col_width * finalizer_count) - title_width) / 2
@@ -2984,7 +3011,6 @@ def proposal_release_approve(request, _id):
         approval = ProposalRelease.objects.filter(
             proposal_id=_id).order_by('sequence').last()
 
-    proposal = Proposal.objects.get(proposal_id=_id)
     if release.sequence == approval.sequence:
         proposal.status = 'OPEN'
 
@@ -3099,7 +3125,7 @@ def proposal_release_return(request, _id):
                 proposal_id=_id, sequence__gte=ProposalRelease.objects.get(proposal_id=_id, return_to=True).sequence, sequence__lt=ProposalRelease.objects.get(proposal_id=_id, proposal_approval_id=request.user.user_id).sequence)
     except ProposalRelease.DoesNotExist:
         approvers = ProposalRelease.objects.filter(
-            proposal_id=_id, sequence__lt=ProposalRelease.objects.get(proposal_id=_id, proposal_approval_id=request.user.user_id).sequence)
+            proposal_id=_id, sequence__lte=ProposalRelease.objects.get(proposal_id=_id, proposal_approval_id=request.user.user_id).sequence)
         draft = True
 
     for i in approvers:
@@ -3214,7 +3240,19 @@ def proposal_release_reject(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     proposal.status = 'REJECTED'
     proposal.save()
-    msg += host.url + 'proposal_archive/view/reject/' + str(_id) + \
+    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
+        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
+    budget_detail = BudgetDetail.objects.get(
+        budget=proposal.budget, budget_channel=proposal.channel)
+    budget_detail.budget_proposed = sum_cost
+    budget_detail.save()
+    sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
+        'budget_balance__sum'] if BudgetDetail.objects.filter(budget=proposal.budget).exists() else 0
+    budget = Budget.objects.get(budget_id=proposal.budget)
+    budget.budget_balance = sum_balance
+    budget.save()
+
+    msg += host.url + 'proposal/view/reject/' + str(_id) + '/0/0/0/' + \
         '\n\nThank you.'
     recipient_list = list(dict.fromkeys(recipients))
     send_email(subject, msg, recipient_list)
@@ -3316,7 +3354,7 @@ def proposal_matrix_view(request, _id, _channel):
                     continue
             else:
                 ProposalMatrix.objects.filter(
-                    area_id=_id, approver_id=i[0]).delete()
+                    area_id=_id, channel_id=_channel, approver_id=i[0]).delete()
 
         return HttpResponseRedirect(reverse('proposal-matrix-view', args=[_id, _channel]))
 
@@ -3353,7 +3391,8 @@ def budget_approval_update(request, _id, _approver):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='PROPOSAL-APPROVAL')
 def proposal_matrix_update(request, _id, _channel, _approver):
-    approvers = ProposalMatrix.objects.get(area=_id, approver_id=_approver)
+    approvers = ProposalMatrix.objects.get(
+        area=_id, channel_id=_channel, approver_id=_approver)
 
     if request.POST:
         approvers.sequence = int(request.POST.get('sequence'))
@@ -3385,7 +3424,8 @@ def budget_approval_delete(request, _id, _arg):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='PROPOSAL-APPROVAL')
 def proposal_matrix_delete(request, _id, _channel, _arg):
-    approvers = ProposalMatrix.objects.get(area=_id, approver_id=_arg)
+    approvers = ProposalMatrix.objects.get(
+        area=_id, channel_id=_channel, approver_id=_arg)
     approvers.delete()
 
     return HttpResponseRedirect(reverse('proposal-matrix-view', args=[_id, _channel]))
@@ -3516,69 +3556,75 @@ def closing_view(request, _id):
 def closing(request):
     period = Closing.objects.get(document='BUDGET')
     budgets = Budget.objects.filter(budget_status='OPEN')
+    proposals = Proposal.objects.filter(status__in=['PENDING', 'IN APPROVAL'])
+    message = '0'
 
     if request.POST:
-        period.year_closed = request.POST.get('year_closed')
-        period.month_closed = request.POST.get('month_closed')
-        next_month = (datetime.datetime(int(period.year_closed),
-                      int(period.month_closed), 1) + datetime.timedelta(days=32)).month
-        next_year = (datetime.datetime(int(period.year_closed),
-                     int(period.month_closed), 1) + datetime.timedelta(days=32)).year
-        period.year_open = next_year
-        period.month_open = next_month
-        period.save()
-        for budget in budgets:
-            detail = BudgetDetail.objects.filter(budget_id=budget.budget_id)
-            total_amount = 0
-            for i in detail:
-                total_amount += i.budget_balance
+        if proposals:
+            message = 'There are still proposals in approval process. Please approve or reject them first.'
+        else:
+            period.year_closed = request.POST.get('year_closed')
+            period.month_closed = request.POST.get('month_closed')
+            next_month = (datetime.datetime(int(period.year_closed),
+                                            int(period.month_closed), 1) + datetime.timedelta(days=32)).month
+            next_year = (datetime.datetime(int(period.year_closed),
+                                           int(period.month_closed), 1) + datetime.timedelta(days=32)).year
+            period.year_open = next_year
+            period.month_open = next_month
+            period.save()
+            for budget in budgets:
+                detail = BudgetDetail.objects.filter(
+                    budget_id=budget.budget_id)
+                total_amount = 0
+                for i in detail:
+                    total_amount += i.budget_balance
 
-            new_budget = Budget(
-                budget_year=str(next_year),
-                budget_month='{:02d}'.format(next_month),
-                budget_area=budget.budget_area,
-                budget_distributor=budget.budget_distributor,
-                budget_amount=total_amount,
-                budget_upping=0,
-                budget_status='DRAFT')
-            new_budget.save()
+                new_budget = Budget(
+                    budget_year=str(next_year),
+                    budget_month='{:02d}'.format(next_month),
+                    budget_area=budget.budget_area,
+                    budget_distributor=budget.budget_distributor,
+                    budget_amount=total_amount,
+                    budget_upping=0,
+                    budget_status='DRAFT')
+                new_budget.save()
 
-            for i in detail:
-                new_detail = BudgetDetail(
-                    budget_id=new_budget.budget_id,
-                    budget_channel=i.budget_channel,
-                    budget_amount=i.budget_balance)
-                new_detail.save()
+                for i in detail:
+                    new_detail = BudgetDetail(
+                        budget_id=new_budget.budget_id,
+                        budget_channel=i.budget_channel,
+                        budget_amount=i.budget_balance)
+                    new_detail.save()
 
-            approvers = BudgetApproval.objects.filter(
-                area_id=new_budget.budget_area).order_by('sequence')
-            for approver in approvers:
-                new_release = BudgetRelease(
-                    budget_id=new_budget.budget_id,
-                    budget_approval_id=approver.approver_id,
-                    budget_approval_name=approver.approver.username,
-                    budget_approval_email=approver.approver.email,
-                    budget_approval_position=approver.approver.position.position_name,
-                    sequence=approver.sequence)
-                new_release.save()
+                approvers = BudgetApproval.objects.filter(
+                    area_id=new_budget.budget_area).order_by('sequence')
+                for approver in approvers:
+                    new_release = BudgetRelease(
+                        budget_id=new_budget.budget_id,
+                        budget_approval_id=approver.approver_id,
+                        budget_approval_name=approver.approver.username,
+                        budget_approval_email=approver.approver.email,
+                        budget_approval_position=approver.approver.position.position_name,
+                        sequence=approver.sequence)
+                    new_release.save()
 
-            budget.budget_status = 'CLOSED'
-            budget.save()
+                budget.budget_status = 'CLOSED'
+                budget.save()
 
-        context = {
-            'data': period,
-            'month': period.month_closed,
-            'year': period.year_closed,
-            'next_month': next_month,
-            'next_year': next_year,
-            'total': budgets.count(),
-            'segment': 'closing',
-            'group_segment': 'budget',
-            'crud': 'index',
-            'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-            'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLOSING') if not request.user.is_superuser else Auth.objects.all(),
-        }
-        return render(request, 'home/budget_closingreport.html', context)
+            context = {
+                'data': period,
+                'month': period.month_closed,
+                'year': period.year_closed,
+                'next_month': next_month,
+                'next_year': next_year,
+                'total': budgets.count(),
+                'segment': 'closing',
+                'group_segment': 'budget',
+                'crud': 'index',
+                'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+                'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLOSING') if not request.user.is_superuser else Auth.objects.all(),
+            }
+            return render(request, 'home/budget_closingreport.html', context)
 
     YEAR_CHOICES = []
     for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
@@ -3590,6 +3636,7 @@ def closing(request):
 
     context = {
         'data': period,
+        'message': message,
         'segment': 'closing',
         'years': YEAR_CHOICES,
         'months': MONTH_CHOICES,
@@ -3902,11 +3949,11 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         swp_nom__sum=Sum('swp_nom'),
         incrp_carton__sum=Sum('incrp_carton'),
         incrp_nom__sum=Sum('incrp_nom'),
-        incpst_carton__ratio=(Sum('incrp_carton') /
-                              Sum('swop_carton')) * 100 if Sum('swop_carton') else 0,
-        incpst_nom__ratio=(Sum('incrp_nom') /
-                           Sum('swop_nom')) * 100 if Sum('swop_nom') else 0,
     )
+    incpst_carton = (total['incrp_carton__sum'] / total['swop_carton__sum']
+                     ) * 100 if total['swop_carton__sum'] else 0
+    incpst_nom = (total['incrp_nom__sum'] / total['swop_nom__sum']
+                  ) * 100 if total['swop_nom__sum'] else 0
     form_cost = FormProjectedCost()
     cost = ProjectedCost.objects.filter(proposal_id=_id)
     total_cost = ProjectedCost.objects.filter(
@@ -3934,6 +3981,8 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         'formCost': form_cost,
         'cost': cost,
         'total': total,
+        'incpst_carton': incpst_carton,
+        'incpst_nom': incpst_nom,
         'total_inc': total['incrp_nom__sum'] if total['incrp_nom__sum'] else 0,
         'total_cost': total_cost['cost__sum'] if total_cost['cost__sum'] else 0,
         'tab': _tab,
@@ -3974,14 +4023,6 @@ def proposal_incremental_add(request, _tab, _id):
             else:
                 incremental = form.save(commit=False)
                 incremental.proposal_id = _id
-                incremental.swop_nom_carton = int(
-                    request.POST.get('swop_nom_carton'))
-                incremental.swp_nom_carton = int(
-                    request.POST.get('swp_nom_carton'))
-                incremental.swop_nom = int(
-                    request.POST.get('swop_nom_carton')) * swop_carton
-                incremental.swp_nom = int(
-                    request.POST.get('swp_nom_carton')) * swp_carton
                 incremental.save()
                 if incremental.incrp_nom < 0:
                     message = 'Incremental Sales must be greater than 0'
@@ -4026,10 +4067,11 @@ def proposal_cost_add(request, _tab, _id):
                 proposal.roi = (total_cost / total_inc) * \
                     100 if total_inc != 0 else 0
                 proposal.total_cost = total_cost
+                proposal.balance = total_cost
                 proposal.status = 'PENDING' if proposal.status == 'DRAFT' else proposal.status
                 proposal.save()
-                sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))[
-                    'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
+                sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
+                    'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
                 budget_detail.budget_proposed = sum_cost
                 budget_detail.save()
                 sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -4096,6 +4138,7 @@ def proposal_cost_delete(request, _tab, _id, _activities):
     proposal.roi = (total_cost / total_inc) * \
         100 if total_inc != 0 else 0
     proposal.total_cost = total_cost
+    proposal.balance = total_cost
     proposal.save()
     sum_cost = Proposal.objects.filter(
         budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))['total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
@@ -4142,19 +4185,19 @@ def proposal_incremental_update(request, _tab, _id, _product):
         else:
             swop_carton = update.swop_carton
             swp_carton = update.swp_carton
-            swop_nom_carton = update.swop_nom_carton
-            swp_nom_carton = update.swp_nom_carton
+            swop_nom = update.swop_nom
+            swp_nom = update.swp_nom
             update.swop_carton = int(request.POST.get('swop_carton'))
             update.swp_carton = int(request.POST.get('swp_carton'))
-            update.swop_nom_carton = int(request.POST.get('swop_nom_carton'))
-            update.swp_nom_carton = int(request.POST.get('swp_nom_carton'))
+            update.swop_nom = int(request.POST.get('swop_nom'))
+            update.swp_nom = int(request.POST.get('swp_nom'))
             update.save()
             if update.incrp_nom < 0:
                 message = 'Incremental Sales must be greater than 0'
                 update.swop_carton = swop_carton
                 update.swp_carton = swp_carton
-                update.swop_nom_carton = swop_nom_carton
-                update.swp_nom_carton = swp_nom_carton
+                update.swop_nom = swop_nom
+                update.swp_nom = swp_nom
                 update.save()
             else:
                 total_inc = IncrementalSales.objects.filter(
@@ -4192,6 +4235,7 @@ def proposal_cost_update(request, _tab, _id, _activities):
             proposal.roi = (total_cost / total_inc) * \
                 100 if total_inc != 0 else 0
             proposal.total_cost = total_cost
+            proposal.balance = total_cost
             proposal.status = 'PENDING' if proposal.status == 'DRAFT' else proposal.status
             proposal.save()
             sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))[
@@ -4291,3 +4335,795 @@ def proposal_delete(request, _tab, _id):
     budget.save()
 
     return HttpResponseRedirect(reverse('proposal-index', args=[_tab, ]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM')
+def program_index(request, _tab):
+    programs = Program.objects.all()
+    drafts = Program.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
+    draft_count = Program.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
+    pendings = Program.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
+    pending_count = Program.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
+    inapprovals = Program.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
+    inapproval_count = Program.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
+    opens = Program.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
+    open_count = Program.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
+
+    context = {
+        'data': programs,
+        'drafts': drafts,
+        'draft_count': draft_count,
+        'pendings': pendings,
+        'pending_count': pending_count,
+        'inapprovals': inapprovals,
+        'inapproval_count': inapproval_count,
+        'opens': opens,
+        'open_count': open_count,
+        'tab': _tab,
+        'segment': 'program',
+        'group_segment': 'program',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='PROGRAM') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/program_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM')
+def program_add(request, _area, _distributor, _proposal):
+    selected_area = _area
+    selected_distributor = _distributor
+    selected_proposal = _proposal
+    proposal = Proposal.objects.get(
+        proposal_id=selected_proposal) if selected_proposal != '0' else None
+    inc_sales = IncrementalSales.objects.filter(
+        proposal_id=selected_proposal) if selected_proposal != '0' else None
+    area = AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', 'area__area_name')
+    distributors = Proposal.objects.filter(
+        status='OPEN', area=selected_area, balance__gt=0).values_list('budget__budget_distributor__distributor_id', 'budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
+    proposals = Proposal.objects.filter(
+        status='OPEN', area=selected_area, balance__gt=0, budget__budget_distributor=selected_distributor).order_by('-proposal_id') if selected_distributor != '0' else None
+
+    message = ''
+    no_save = False
+    if selected_area != '0' and selected_proposal != '0':
+        approvers = ProgramMatrix.objects.filter(
+            area_id=_area, channel_id=proposal.channel).order_by('sequence')
+        if approvers.count() == 0:
+            message = "No program's approver found for this area and channel."
+            no_save = True
+
+    try:
+        _no = Program.objects.all().order_by('seq_number').last()
+    except Program.DoesNotExist:
+        _no = None
+    if _no is None:
+        format_no = '{:04d}'.format(1)
+    else:
+        format_no = '{:04d}'.format(_no.seq_number + 1)
+
+    _id = 'SBS-3' + format_no + '/' + proposal.channel + '/' + selected_area + '/' + \
+        str(proposal.budget.budget_distributor.distributor_id) + '/' + \
+        str(datetime.datetime.now().month) + \
+        '/' + str(datetime.datetime.now().year) if selected_proposal != '0' else 'SBS-3' + format_no + '/' + selected_area + '/0' + \
+        str(datetime.datetime.now().month) + \
+        '/' + str(datetime.datetime.now().year)
+
+    if request.POST:
+        form = FormProgram(request.POST, request.FILES)
+        if form.is_valid():
+            draft = form.save(commit=False)
+            draft.program_id = _id
+            draft.program_date = datetime.datetime.now().date()
+            draft.proposal_id = selected_proposal
+            draft.seq_number = _no.seq_number + 1 if _no else 1
+            draft.status = 'PENDING'
+            draft.entry_pos = request.user.position.position_id
+            draft.save()
+
+            for approver in approvers:
+                release = ProgramRelease(
+                    program_id=draft.program_id,
+                    program_approval_id=approver.approver_id,
+                    program_approval_name=approver.approver.username,
+                    program_approval_email=approver.approver.email,
+                    program_approval_position=approver.approver.position.position_id,
+                    sequence=approver.sequence,
+                    limit=approver.limit,
+                    return_to=approver.return_to,
+                    approve=approver.approve,
+                    revise=approver.revise,
+                    returned=approver.returned,
+                    reject=approver.reject,
+                    notif=approver.notif,
+                    printed=approver.printed,
+                    as_approved=approver.as_approved)
+                release.save()
+
+            mail_sent = ProgramRelease.objects.filter(
+                program_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
+            if mail_sent[0] == False:
+                email = ProgramRelease.objects.filter(
+                    program_id=_id).order_by('sequence').values_list('program_approval_email', flat=True)
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT username FROM apps_programrelease INNER JOIN apps_user ON apps_programrelease.program_approval_id = apps_user.user_id WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                    approver = cursor.fetchone()
+
+                subject = 'Program Approval'
+                msg = 'Dear ' + approver[0] + ',\n\nYou have a new program to approve. Please check your program release list.\n\n' + \
+                    'Click this link to approve, revise, return or reject this program.\n' + host.url + 'program_release/view/' + str(_id) + '/0/' + \
+                    '\n\nThank you.'
+                send_email(subject, msg, [email[0]])
+
+                # update mail sent to true
+                release = ProgramRelease.objects.filter(
+                    program_id=_id).order_by('sequence').first()
+                release.mail_sent = True
+                release.save()
+
+            return HttpResponseRedirect(reverse('program-index', args=['pending', ]))
+    else:
+        prod = ''
+        if selected_proposal != '0':
+            plus4mo = datetime.date(
+                proposal.period_end.year, proposal.period_end.month, 15) + datetime.timedelta(days=120)
+            deadline = datetime.date(
+                plus4mo.year, plus4mo.month, 1) - datetime.timedelta(days=1)
+
+            for i in range(0, inc_sales.count()):
+                prod += inc_sales[i].product
+                if i != inc_sales.count() - 1:
+                    prod += ', '
+
+            len_prog = len(proposal.program_name)
+            if len_prog > 85:
+                _height = 30
+            else:
+                _height = 15
+
+            form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 3;"><b>' + 'Jakarta, ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
+                                        'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3; width: 22%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 3; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Produk</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Periode</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.period_start.strftime("%d %b") + ' - ' + proposal.period_end.strftime("%d %b %Y") + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Detail Qty</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;"></td></tr></table>' +
+                                        # '<table style="width: 100%; height: 15; padding-left: 7; margin-top: 4;"><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40; background-color: red; color: white;">No.</td><td style="text-align: center; border: 1 solid; width: 100; background-color: red; color: white;">Pengambilan</td><td style="text-align: center; border: 1 solid; width: 160; background-color: red; color: white;">Add Diskon (on faktur)</td><td style="border: 0;"></td></tr><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40;">1.</td><td style="padding-left: 2; border: 1 solid; width: 100;">8 karton</td><td style="padding-left: 2; border: 1 solid; width: 160;">3%</td><td style="border: 0;"></td></tr></table>' +
+                                        '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p><b><i>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline.strftime('%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</i></b></p><p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>'})
+        else:
+            form = FormProgram()
+
+    msg = form.errors
+    context = {
+        'form': form,
+        'area': area,
+        'distributors': distributors,
+        'proposals': proposals,
+        'selected_area': selected_area,
+        'selected_distributor': selected_distributor,
+        'selected_proposal': selected_proposal,
+        'msg': msg,
+        'message': message,
+        'no_save': no_save,
+        'segment': 'program',
+        'group_segment': 'program',
+        'crud': 'add',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='PROGRAM') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/program_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM')
+def program_view(request, _tab, _id):
+    program = Program.objects.get(program_id=_id)
+    form = FormProgramView(instance=program)
+
+    highest_approval = ProgramRelease.objects.filter(
+        program_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = ProgramRelease.objects.filter(
+            program_id=_id, sequence__lt=highest_sequence).order_by('sequence')
+    else:
+        approval = ProgramRelease.objects.filter(
+            program_id=_id).order_by('sequence')
+
+    context = {
+        'data': program,
+        'form': form,
+        'tab': _tab,
+        'approval': approval,
+        'status': program.status,
+        'segment': 'program',
+        'group_segment': 'program',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='PROGRAM') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/program_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM')
+def program_update(request, _tab, _id):
+    program = Program.objects.get(program_id=_id)
+    message = '0'
+
+    if request.POST:
+        form = FormProgramUpdate(
+            request.POST, request.FILES, instance=program)
+        if form.is_valid():
+            draft = form.save(commit=False)
+            draft.status = 'PENDING'
+            draft.save()
+
+            mail_sent = ProgramRelease.objects.filter(
+                program_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
+            if mail_sent[0] == False:
+                email = ProgramRelease.objects.filter(
+                    program_id=_id).order_by('sequence').values_list('program_approval_email', flat=True)
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT username FROM apps_programrelease INNER JOIN apps_user ON apps_programrelease.program_approval_id = apps_user.user_id WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                    approver = cursor.fetchone()
+
+                subject = 'Program Approval'
+                msg = 'Dear ' + approver[0] + ',\n\nYou have a new program to approve. Please check your program release list.\n\n' + \
+                    'Click this link to approve, revise, return or reject this program.\n' + host.url + 'program_release/view/' + str(_id) + '/0/' + \
+                    '\n\nThank you.'
+                send_email(subject, msg, [email[0]])
+
+                # update mail sent to true
+                release = ProgramRelease.objects.filter(
+                    program_id=_id).order_by('sequence').first()
+                release.mail_sent = True
+                release.save()
+
+            return HttpResponseRedirect(reverse('program-view', args=[_tab, _id]))
+    else:
+        form = FormProgramUpdate(instance=program)
+
+    context = {
+        'form': form,
+        'data': program,
+        'tab': _tab,
+        'message': message,
+        'segment': 'program',
+        'group_segment': 'program',
+        'crud': 'update',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='PROGRAM') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/program_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM')
+def program_delete(request, _tab, _id):
+    program = Program.objects.get(program_id=_id)
+    program.delete()
+
+    return HttpResponseRedirect(reverse('program-index', args=[_tab, ]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-RELEASE')
+def program_release_index(request):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_program.program_id, apps_program.program_date, apps_distributor.distributor_name, apps_proposal.channel, apps_program.status, apps_programrelease.sequence FROM apps_distributor INNER JOIN apps_budget ON apps_distributor.distributor_id = apps_budget.budget_distributor_id INNER JOIN apps_proposal ON apps_budget.budget_id = apps_proposal.budget_id INNER JOIN apps_program ON apps_proposal.proposal_id = apps_program.proposal_id INNER JOIN apps_programrelease ON apps_program.program_id = apps_programrelease.program_id INNER JOIN (SELECT program_id, MIN(sequence) AS seq FROM apps_programrelease WHERE program_approval_status = 'N' GROUP BY program_id ORDER BY sequence ASC) AS q_group ON apps_programrelease.program_id = q_group.program_id AND apps_programrelease.sequence = q_group.seq WHERE (apps_program.status = 'PENDING' OR apps_program.status = 'IN APPROVAL') AND apps_programrelease.program_approval_id = '" + str(request.user.user_id) + "'")
+        release = cursor.fetchall()
+
+    context = {
+        'data': release,
+        'segment': 'program_release',
+        'group_segment': 'program',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='PROGRAM-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/program_release_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-RELEASE')
+def program_release_view(request, _id, _is_revise):
+    program = Program.objects.get(program_id=_id)
+    form = FormProgramView(instance=program)
+    approved = ProgramRelease.objects.get(
+        program_id=_id, program_approval_id=request.user.user_id).program_approval_status
+
+    context = {
+        'form': form,
+        'data': program,
+        'approved': approved,
+        'is_revise': _is_revise,
+        'status': program.status,
+        'segment': 'program_release',
+        'group_segment': 'program',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='PROGRAM-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+        'btn_release': ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id),
+    }
+    return render(request, 'home/program_release_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-RELEASE')
+def program_release_update(request, _id):
+    program = Program.objects.get(program_id=_id)
+    message = '0'
+    _deadline = program.deadline
+    _content = program.content
+
+    if request.POST:
+        form = FormProgramUpdate(
+            request.POST, request.FILES, instance=program)
+        if form.is_valid():
+            parent = form.save(commit=False)
+            deadline = _deadline if form.cleaned_data['deadline'] != _deadline else None
+            content = _content if form.cleaned_data['content'] != _content else None
+            parent.save()
+
+            recipients = []
+
+            release = ProgramRelease.objects.get(
+                program_id=_id, program_approval_id=request.user.user_id)
+            release.revise_note = request.POST.get('revise_note')
+            release.save()
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT program_id, email FROM apps_program INNER JOIN apps_user ON apps_program.entry_by = apps_user.user_id WHERE program_id = '" + str(_id) + "'")
+                entry_mail = cursor.fetchone()
+                if entry_mail:
+                    recipients.append(entry_mail[1])
+
+                cursor.execute(
+                    "SELECT program_id, email FROM apps_program INNER JOIN apps_user ON apps_program.update_by = apps_user.user_id WHERE program_id = '" + str(_id) + "'")
+                update_mail = cursor.fetchone()
+                if update_mail:
+                    recipients.append(update_mail[1])
+
+                cursor.execute(
+                    "SELECT program_id, program_approval_email FROM apps_programrelease WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'Y'")
+                approver_mail = cursor.fetchall()
+                for mail in approver_mail:
+                    recipients.append(mail[1])
+
+            subject = 'Program Revised'
+            msg = 'Dear All,\n\nThe following is revised program for Program No. ' + \
+                str(_id) + ':\n'
+            if deadline:
+                msg += '\nBEFORE\n'
+                msg += 'Claim Deadline: ' + \
+                    deadline.strftime('%d %b %Y') + '\n'
+                msg += '\nAFTER\n'
+                msg += 'Claim Deadline: ' + \
+                    form.cleaned_data['deadline'].strftime('%d %b %Y') + '\n'
+
+            if content:
+                msg += '\nCONTENT: Content has been revised. View the program for more details.\n'
+
+            msg += '\nNote: ' + \
+                str(release.revise_note) + '\n\nClick the following link to view the program.\n' + host.url + 'program/view/inapproval/' + str(_id) + '/' + \
+                '\n\nThank you.'
+
+            recipient_list = list(dict.fromkeys(recipients))
+            send_email(subject, msg, recipient_list)
+
+            return HttpResponseRedirect(reverse('program-release-view', args=[_id, 0]))
+    else:
+        form = FormProgramUpdate(instance=program)
+
+    # msg = form.errors
+    context = {
+        'form': form,
+        'data': program,
+        'message': message,
+        'segment': 'program',
+        'group_segment': 'program',
+        'crud': 'update',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='PROGRAM-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/program_release_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-RELEASE')
+def program_release_approve(request, _id):
+    program = Program.objects.get(program_id=_id)
+    release = ProgramRelease.objects.get(
+        program_id=_id, program_approval_id=request.user.user_id)
+    release.program_approval_status = 'Y'
+    release.program_approval_date = timezone.now()
+    release.save()
+    highest_approval = ProgramRelease.objects.filter(
+        program_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = ProgramRelease.objects.filter(
+            program_id=_id, sequence__lt=highest_sequence).order_by('sequence').last()
+    else:
+        approval = ProgramRelease.objects.filter(
+            program_id=_id).order_by('sequence').last()
+
+    if release.sequence == approval.sequence:
+        program.status = 'OPEN'
+
+        recipients = []
+
+        maker = program.entry_by
+        maker_mail = User.objects.get(user_id=maker).email
+        recipients.append(maker_mail)
+
+        approvers = ProgramRelease.objects.filter(
+            program_id=_id, notif=True, program_approval_status='Y')
+        for i in approvers:
+            recipients.append(i.program_approval_email)
+
+        subject = 'Program Approved'
+        msg = 'Dear All,\n\nProgram No. ' + str(_id) + ' has been approved.\n\nClick the following link to view the program.\n' + host.url + 'program/view/open/' + str(_id) + \
+            '\n\nThank you.'
+        recipient_list = list(dict.fromkeys(recipients))
+        send_email(subject, msg, recipient_list)
+    else:
+        program.status = 'IN APPROVAL'
+
+        email = ProgramRelease.objects.filter(program_id=_id, program_approval_status='N').order_by(
+            'sequence').values_list('program_approval_email', flat=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT program_approval_name FROM apps_programrelease WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'N' ORDER BY sequence LIMIT 1")
+            approver = cursor.fetchone()
+
+        subject = 'Program Approval'
+        msg = 'Dear ' + approver[0] + ',\n\nYou have a new program to approve. Please check your program release list.\n\n' + \
+            'Click this link to approve, revise, return or reject this program.\n' + host.url + 'program_release/view/' + str(_id) + '/0/' + \
+            '\n\nThank you.'
+        send_email(subject, msg, [email[0]])
+
+    program.save()
+
+    return HttpResponseRedirect(reverse('program-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-RELEASE')
+def program_release_return(request, _id):
+    recipients = []
+    draft = False
+
+    try:
+        return_to = ProgramRelease.objects.get(
+            program_id=_id, return_to=True, sequence__lt=ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id).sequence)
+
+        if return_to:
+            approvers = ProgramRelease.objects.filter(
+                program_id=_id, sequence__gte=ProgramRelease.objects.get(program_id=_id, return_to=True).sequence, sequence__lt=ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id).sequence)
+    except ProgramRelease.DoesNotExist:
+        approvers = ProgramRelease.objects.filter(
+            program_id=_id, sequence__lte=ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id).sequence)
+        draft = True
+
+    for i in approvers:
+        recipients.append(i.program_approval_email)
+        i.program_approval_status = 'N'
+        i.program_approval_date = None
+        i.revise_note = ''
+        i.return_note = ''
+        i.reject_note = ''
+        i.mail_sent = False
+        i.save()
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT program_id, email FROM apps_program INNER JOIN apps_user ON apps_program.entry_by = apps_user.user_id WHERE program_id = '" + str(_id) + "'")
+        entry_mail = cursor.fetchone()
+        if entry_mail:
+            recipients.append(entry_mail[1])
+
+        cursor.execute(
+            "SELECT program_id, email FROM apps_program INNER JOIN apps_user ON apps_program.update_by = apps_user.user_id WHERE program_id = '" + str(_id) + "'")
+        update_mail = cursor.fetchone()
+        if update_mail:
+            recipients.append(update_mail[1])
+
+    note = ProgramRelease.objects.get(
+        program_id=_id, program_approval_id=request.user.user_id)
+    note.return_note = request.POST.get('return_note')
+    note.save()
+
+    subject = 'Program Returned'
+    msg = 'Dear All,\n\nProgram No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
+        str(note.return_note) + \
+        '\n\nClick the following link to revise the program.\n'
+
+    if draft:
+        program = Program.objects.get(program_id=_id)
+        program.status = 'DRAFT'
+        program.save()
+        msg += host.url + 'program/view/pending/' + str(_id) + \
+            '\n\nThank you.'
+    else:
+        msg += host.url + 'program_release/view/' + \
+            str(_id) + '/0/\n\nThank you.'
+    recipient_list = list(dict.fromkeys(recipients))
+    send_email(subject, msg, recipient_list)
+
+    return HttpResponseRedirect(reverse('program-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-RELEASE')
+def program_release_reject(request, _id):
+    recipients = []
+
+    try:
+        approvers = ProgramRelease.objects.filter(
+            program_id=_id, sequence__lt=ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id).sequence)
+    except ProgramRelease.DoesNotExist:
+        pass
+
+    for i in approvers:
+        recipients.append(i.program_approval_email)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT program_id, email FROM apps_program INNER JOIN apps_user ON apps_program.entry_by = apps_user.user_id WHERE program_id = '" + str(_id) + "'")
+        entry_mail = cursor.fetchone()
+        if entry_mail:
+            recipients.append(entry_mail[1])
+
+        cursor.execute(
+            "SELECT program_id, email FROM apps_program INNER JOIN apps_user ON apps_program.update_by = apps_user.user_id WHERE program_id = '" + str(_id) + "'")
+        update_mail = cursor.fetchone()
+        if update_mail:
+            recipients.append(update_mail[1])
+
+    note = ProgramRelease.objects.get(
+        program_id=_id, program_approval_id=request.user.user_id)
+    note.reject_note = request.POST.get('reject_note')
+    note.save()
+
+    subject = 'Program Rejected'
+    msg = 'Dear All,\n\nProgram No. ' + str(_id) + ' has been rejected.\n\nNote: ' + \
+        str(note.reject_note) + \
+        '\n\nClick the following link to see the program.\n'
+
+    program = Program.objects.get(program_id=_id)
+    program.status = 'REJECTED'
+    program.save()
+    msg += host.url + 'program/view/reject/' + str(_id) + \
+        '\n\nThank you.'
+    recipient_list = list(dict.fromkeys(recipients))
+    send_email(subject, msg, recipient_list)
+
+    return HttpResponseRedirect(reverse('program-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-ARCHIVE')
+def program_archive_index(request, _tab):
+    closes = Program.objects.filter(status='CLOSED', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
+    close_count = Program.objects.filter(status='CLOSED', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
+    rejects = Program.objects.filter(status='REJECTED', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
+    reject_count = Program.objects.filter(status='REJECTED', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
+
+    context = {
+        'closes': closes,
+        'close_count': close_count,
+        'rejects': rejects,
+        'reject_count': reject_count,
+        'tab': _tab,
+        'segment': 'program_archive',
+        'group_segment': 'program',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='PROGRAM-ARCHIVE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/program_archive.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM')
+def program_print(request, _id):
+    program = Program.objects.get(program_id=_id)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT signature, program_approval_name, position_name FROM apps_user INNER JOIN apps_programrelease ON user_id = program_approval_id INNER JOIN apps_position ON program_approval_position = apps_position.position_id WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'Y' AND printed = True ORDER BY sequence")
+        approvers = cursor.fetchall()
+
+    html_file = 'home/program_print.html'
+    context = {'data': program, 'approvers': approvers, 'host': host.url}
+    template = get_template(html_file)
+    html = template.render(context)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'filename="' + _id + '.pdf"'
+
+    # Draw the HTML content on the PDF canvas
+    pisa.CreatePDF(html, dest=response)
+
+    return response
+    # return render(request, html_file, context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-APPROVAL')
+def program_matrix_index(request):
+    areas = AreaSales.objects.all()
+
+    context = {
+        'data': areas,
+        'segment': 'program_matrix',
+        'group_segment': 'approval',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='PROGRAM-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/program_matrix_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-APPROVAL')
+def program_matrix_view(request, _id, _channel):
+    area = AreaSales.objects.get(area_id=_id)
+    channels = AreaChannelDetail.objects.filter(area_id=_id, status=1)
+    approvers = ProgramMatrix.objects.filter(area_id=_id, channel_id=_channel)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT user_id, username, position_name, q_programmatrix.approver_id FROM apps_user INNER JOIN apps_position ON apps_user.position_id = apps_position.position_id LEFT JOIN (SELECT * FROM apps_programmatrix WHERE area_id = '" + str(_id) + "' AND channel_id = '" + str(_channel) + "') AS q_programmatrix ON apps_user.user_id = q_programmatrix.approver_id WHERE q_programmatrix.approver_id IS NULL")
+        users = cursor.fetchall()
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        for i in users:
+            if str(i[0]) in check:
+                try:
+                    approver = ProgramMatrix(
+                        area_id=_id, channel_id=_channel, approver_id=i[0])
+                    approver.save()
+                except IntegrityError:
+                    continue
+            else:
+                ProgramMatrix.objects.filter(
+                    area_id=_id, channel_id=_channel, approver_id=i[0]).delete()
+
+        return HttpResponseRedirect(reverse('program-matrix-view', args=[_id, _channel]))
+
+    context = {
+        'data': area,
+        'channels': channels,
+        'users': users,
+        'approvers': approvers,
+        'channel': _channel,
+        'segment': 'program_matrix',
+        'group_segment': 'approval',
+        'tab': 'auth',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='PROGRAM-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/program_matrix_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-APPROVAL')
+def program_matrix_update(request, _id, _channel, _approver):
+    approvers = ProgramMatrix.objects.get(
+        area=_id, channel_id=_channel, approver_id=_approver)
+
+    if request.POST:
+        approvers.sequence = int(request.POST.get('sequence'))
+        approvers.limit = int(request.POST.get('limit'))
+        approvers.return_to = True if request.POST.get('return') else False
+        approvers.approve = True if request.POST.get('approve') else False
+        approvers.revise = True if request.POST.get('revise') else False
+        approvers.returned = True if request.POST.get('returned') else False
+        approvers.reject = True if request.POST.get('reject') else False
+        approvers.notif = True if request.POST.get('notif') else False
+        approvers.printed = True if request.POST.get('printed') else False
+        approvers.as_approved = request.POST.get('as_approved')
+        approvers.save()
+
+        return HttpResponseRedirect(reverse('program-matrix-view', args=[_id, _channel]))
+
+    return render(request, 'home/program_matrix_view.html')
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM-APPROVAL')
+def program_matrix_delete(request, _id, _channel, _arg):
+    approvers = ProgramMatrix.objects.get(
+        area=_id, channel_id=_channel, approver_id=_arg)
+    approvers.delete()
+
+    return HttpResponseRedirect(reverse('program-matrix-view', args=[_id, _channel]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM')
+def claim_index(request, _tab):
+    claims = Claim.objects.all().order_by('-claim_id')
+    drafts = Claim.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
+    draft_count = Claim.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
+    pendings = Claim.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
+    pending_count = Claim.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
+    inapprovals = Claim.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
+    inapproval_count = Claim.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
+    opens = Claim.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
+    open_count = Claim.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
+
+    context = {
+        'data': claims,
+        'drafts': drafts,
+        'draft_count': draft_count,
+        'pendings': pendings,
+        'pending_count': pending_count,
+        'inapprovals': inapprovals,
+        'inapproval_count': inapproval_count,
+        'opens': opens,
+        'open_count': open_count,
+        'tab': _tab,
+        'segment': 'claim',
+        'group_segment': 'claim',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLAIM') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/claim_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM')
+def claim_add(request, _area, _distributor, _program):
+    selected_area = _area
+    selected_distributor = _distributor
+    selected_program = _program
+    program = Program.objects.get(
+        program_id=selected_program) if selected_program != '0' else None
+    area = AreaUser.objects.filter(user_id=request.user.user_id)
+
+    no_save = False
+    message = '0'

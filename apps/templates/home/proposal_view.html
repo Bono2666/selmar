@@ -329,10 +329,10 @@
                                             </div>
                                             <div class="col-md-7">
                                                 <div class="shadow-none">
-                                                    {{ formInc.swop_nom_carton.label_tag }}
-                                                    {{ formInc.swop_nom_carton }}
+                                                    {{ formInc.swop_nom.label_tag }}
+                                                    {{ formInc.swop_nom }}
                                                     <div class="text-sm text-danger">
-                                                        {{ formInc.swop_nom_carton.errors }}
+                                                        {{ formInc.swop_nom.errors }}
                                                     </div>
                                                 </div>
                                             </div>
@@ -350,10 +350,10 @@
                                             </div>
                                             <div class="col-md-7">
                                                 <div class="shadow-none">
-                                                    {{ formInc.swp_nom_carton.label_tag }}
-                                                    {{ formInc.swp_nom_carton }}
+                                                    {{ formInc.swp_nom.label_tag }}
+                                                    {{ formInc.swp_nom }}
                                                     <div class="text-sm text-danger">
-                                                        {{ formInc.swp_nom_carton.errors }}
+                                                        {{ formInc.swp_nom.errors }}
                                                     </div>
                                                 </div>
                                             </div>
@@ -489,10 +489,10 @@
                                                             </div>
                                                             <div class="col-md-7">
                                                                 <div class="shadow-none">
-                                                                    {{ formInc.swop_nom_carton.label_tag }}
-                                                                    <input type="text" name="swop_nom_carton" id="swop_nom_carton" class="form-control form-control-sm" value="{{ item.swop_nom_carton }}">
+                                                                    {{ formInc.swop_nom.label_tag }}
+                                                                    <input type="text" name="swop_nom" id="swop_nom" class="form-control form-control-sm" value="{{ item.swop_nom }}">
                                                                     <div class="text-sm text-danger">
-                                                                        {{ item.swop_nom_carton.errors }}
+                                                                        {{ item.swop_nom.errors }}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -510,10 +510,10 @@
                                                             </div>
                                                             <div class="col-md-7">
                                                                 <div class="shadow-none">
-                                                                    {{ formInc.swp_nom_carton.label_tag }}
-                                                                    <input type="text" name="swp_nom_carton" id="swp_nom_carton" class="form-control form-control-sm" value="{{ item.swp_nom_carton }}">
+                                                                    {{ formInc.swp_nom.label_tag }}
+                                                                    <input type="text" name="swp_nom" id="swp_nom" class="form-control form-control-sm" value="{{ item.swp_nom }}">
                                                                     <div class="text-sm text-danger">
-                                                                        {{ item.swp_nom_carton.errors }}
+                                                                        {{ item.swp_nom.errors }}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -556,10 +556,10 @@
                                         <h6 class="mb-0 text-xs text-end font-weight-bolder">{{ total.incrp_nom__sum|floatformat:0|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-xs text-end font-weight-bolder">{{ total.incpst_carton__ratio|floatformat:1|intcomma }}%</h6>
+                                        <h6 class="mb-0 text-xs text-end font-weight-bolder">{{ incpst_carton|floatformat:1|intcomma }}%</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-xs text-end font-weight-bolder">{{ total.incpst_nom__ratio|floatformat:1|intcomma }}%</h6>
+                                        <h6 class="mb-0 text-xs text-end font-weight-bolder">{{ incpst_nom|floatformat:1|intcomma }}%</h6>
                                     </td>
                                     <td class="border-0"></td>
                                 </tr>
@@ -596,7 +596,7 @@
                                     <div class="pl-lg-0">
                                         {% if message != '0' %}
                                         <div class="alert text-danger text-bg-light" role="alert">
-                                            {{ message }}
+                                            {{ message|to_space }}
                                         </div>
                                         {% endif %}
                                         <h6>Available balance: {{ budget.budget_balance|intcomma }}</h6>
@@ -692,7 +692,7 @@
                                                     <div class="pl-lg-0">
                                                         {% if message != '0' %}
                                                         <div class="alert text-danger text-bg-light" role="alert">
-                                                            {{ message }}
+                                                            {{ message|to_space }}
                                                         </div>
                                                         {% endif %}
                                                         <h6>Available balance: {{ budget.budget_balance|add:item.cost|intcomma }}</h6>          

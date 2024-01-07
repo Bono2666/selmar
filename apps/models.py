@@ -5,6 +5,7 @@ from crum import get_current_user
 from decimal import Decimal
 from re import sub
 from django.db import models
+from tinymce.models import HTMLField
 
 
 class User(AbstractUser):
@@ -573,6 +574,7 @@ class Proposal(models.Model):
     attachment = models.FileField(upload_to='proposal/', null=True)
     total_cost = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
+    balance = models.DecimalField(max_digits=12, decimal_places=0, default=0)
     roi = models.DecimalField(
         max_digits=10, decimal_places=0, default=0)
     status = models.CharField(max_length=15, default='DRAFT')
@@ -600,12 +602,12 @@ class IncrementalSales(models.Model):
     swop_nom_carton = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     swop_nom = models.DecimalField(
-        max_digits=12, decimal_places=0, default=0)
+        max_digits=14, decimal_places=0, default=0)
     swp_carton = models.IntegerField(default=0)
     swp_nom_carton = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     swp_nom = models.DecimalField(
-        max_digits=12, decimal_places=0, default=0)
+        max_digits=14, decimal_places=0, default=0)
     incrp_carton = models.IntegerField(default=0)
     incrp_nom = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
@@ -624,13 +626,12 @@ class IncrementalSales(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        self.swop_nom = self.swop_carton * self.swop_nom_carton
-        self.swp_nom = self.swp_carton * self.swp_nom_carton
         self.incrp_carton = self.swp_carton - self.swop_carton
         self.incrp_nom = self.swp_nom - self.swop_nom
-        self.incpst_carton = self.incrp_carton / \
-            self.swop_carton * 100 if self.swop_carton > 0 else 0
-        self.incpst_nom = self.incrp_nom / self.swop_nom * 100 if self.swop_nom > 0 else 0
+        self.incpst_carton = (self.incrp_carton /
+                              self.swop_carton) * 100 if self.swop_carton > 0 else 0
+        self.incpst_nom = (self.incrp_nom / self.swop_nom) * \
+            100 if self.swop_nom > 0 else 0
         if not self.entry_date:
             self.entry_date = timezone.now()
             self.entry_by = get_current_user().username
@@ -662,3 +663,221 @@ class ProjectedCost(models.Model):
         self.update_date = timezone.now()
         self.update_by = get_current_user().username
         super(ProjectedCost, self).save(*args, **kwargs)
+
+
+class Program(models.Model):
+    program_id = models.CharField(max_length=50, primary_key=True)
+    program_date = models.DateTimeField(null=True)
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE, null=True)
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, null=True)
+    deadline = models.DateTimeField(null=True)
+    content = HTMLField()
+    seq_number = models.IntegerField(default=0)
+    status = models.CharField(max_length=15, default='PENDING')
+    entry_pos = models.CharField(max_length=5, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(Program, self).save(*args, **kwargs)
+
+
+class ProgramMatrix(models.Model):
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
+    channel = models.ForeignKey(Channel, on_delete=models.CASCADE, null=True)
+    approver = models.ForeignKey(User, on_delete=models.CASCADE)
+    sequence = models.IntegerField(default=0)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, null=True)
+    return_to = models.BooleanField(default=False)
+    limit = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    approve = models.BooleanField(default=False)
+    revise = models.BooleanField(default=False)
+    returned = models.BooleanField(default=False)
+    reject = models.BooleanField(default=False)
+    printed = models.BooleanField(default=False)
+    notif = models.BooleanField(default=False)
+    as_approved = models.CharField(max_length=15, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['area', 'channel', 'approver'], name='unique_program_approver')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(ProgramMatrix, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.area.area_name
+
+
+class ProgramRelease(models.Model):
+    program = models.ForeignKey('Program', on_delete=models.CASCADE)
+    program_approval_id = models.CharField(max_length=50, null=True)
+    program_approval_name = models.CharField(max_length=50, null=True)
+    program_approval_email = models.CharField(max_length=50, null=True)
+    program_approval_position = models.CharField(max_length=50, null=True)
+    program_approval_date = models.DateTimeField(null=True)
+    program_approval_status = models.CharField(max_length=1, default='N')
+    sequence = models.IntegerField(default=0)
+    limit = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    return_to = models.BooleanField(default=False)
+    revise_note = models.CharField(max_length=200, null=True)
+    return_note = models.CharField(max_length=200, null=True)
+    reject_note = models.CharField(max_length=200, null=True)
+    mail_sent = models.BooleanField(default=False)
+    approve = models.BooleanField(default=False)
+    revise = models.BooleanField(default=False)
+    returned = models.BooleanField(default=False)
+    reject = models.BooleanField(default=False)
+    printed = models.BooleanField(default=False)
+    notif = models.BooleanField(default=False)
+    as_approved = models.CharField(max_length=15, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['program', 'program_approval_id'], name='unique_program_approval')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(ProgramRelease, self).save(*args, **kwargs)
+
+
+class Claim(models.Model):
+    claim_id = models.CharField(max_length=50, primary_key=True)
+    claim_date = models.DateTimeField(null=True)
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE, null=True)
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, null=True)
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, null=True)
+    invoice = models.CharField(max_length=50, null=True)
+    invoice_date = models.DateTimeField(null=True)
+    due_date = models.DateTimeField(null=True)
+    amount = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    tax = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    total = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    remarks = models.TextField(null=True)
+    status = models.CharField(max_length=15, default='PENDING')
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.tax = self.amount * 0.11
+        self.total = self.amount + self.tax
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(Claim, self).save(*args, **kwargs)
+
+
+class ClaimMatrix(models.Model):
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
+    channel = models.ForeignKey(Channel, on_delete=models.CASCADE, null=True)
+    approver = models.ForeignKey(User, on_delete=models.CASCADE)
+    sequence = models.IntegerField(default=0)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, null=True)
+    return_to = models.BooleanField(default=False)
+    limit = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    approve = models.BooleanField(default=False)
+    revise = models.BooleanField(default=False)
+    returned = models.BooleanField(default=False)
+    reject = models.BooleanField(default=False)
+    printed = models.BooleanField(default=False)
+    notif = models.BooleanField(default=False)
+    as_approved = models.CharField(max_length=15, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['area', 'channel', 'approver'], name='unique_claim_approver')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(ClaimMatrix, self).save(*args, **kwargs)
+
+
+class ClaimRelease(models.Model):
+    claim = models.ForeignKey('Claim', on_delete=models.CASCADE)
+    claim_approval_id = models.CharField(max_length=50, null=True)
+    claim_approval_name = models.CharField(max_length=50, null=True)
+    claim_approval_email = models.CharField(max_length=50, null=True)
+    claim_approval_position = models.CharField(max_length=50, null=True)
+    claim_approval_date = models.DateTimeField(null=True)
+    claim_approval_status = models.CharField(max_length=1, default='N')
+    sequence = models.IntegerField(default=0)
+    limit = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    return_to = models.BooleanField(default=False)
+    revise_note = models.CharField(max_length=200, null=True)
+    return_note = models.CharField(max_length=200, null=True)
+    reject_note = models.CharField(max_length=200, null=True)
+    mail_sent = models.BooleanField(default=False)
+    approve = models.BooleanField(default=False)
+    revise = models.BooleanField(default=False)
+    returned = models.BooleanField(default=False)
+    reject = models.BooleanField(default=False)
+    printed = models.BooleanField(default=False)
+    notif = models.BooleanField(default=False)
+    as_approved = models.CharField(max_length=15, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['claim', 'claim_approval_id'], name='unique_claim_approval')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(ClaimRelease, self).save(*args, **kwargs)
