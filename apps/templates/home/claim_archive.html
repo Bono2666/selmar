@@ -1,6 +1,6 @@
 {% extends 'layouts/base.html' %}
 
-{% block title %} Proposal List Awaiting Approval {% endblock title %}
+{% block title %} Claim List {% endblock title %}
 
 {% block content %}
 
@@ -13,50 +13,49 @@
             <div class="card mb-4 p-4">
                 <div class="row mb-4">
                     <div class="col-6 d-flex align-items-center">
-                        <h4 class="mb-2">Proposal List Awaiting Approval</h4>
+                        <h4 class="mb-2">Claim Archive</h4>
                     </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
                     <div class="table-responsive p-0">
-                        <table class="table hover align-items-center mb-0" id="openTable">
+                        <table class="table hover align-items-center mb-0" id="rejectTable">
                             <thead>
                                 <tr>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Proposal No.
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Claim No.
                                     </th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Date</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                        Channel</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                        Division</th>
-                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Total Cost</th>
+                                        Distributor</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Channel</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">Amount</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in data %}
-                                <tr data-href="{% url 'proposal-release-view' item.0 '0' '0' '0' '0' %}" class="cursor-pointer">
+                                {% for item in rejects %}
+                                <tr data-href="{% url 'claim-view' 'reject' item.claim_id %}" class="cursor-pointer">
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.0 }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.claim_id }}</h6>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.1|date:"d M Y" }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.claim_date|date:"d M Y" }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.2 }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.proposal.budget.budget_distributor }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.3 }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.proposal.channel }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.4|floatformat:0|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.total_claim|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.5 }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.status }}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -75,7 +74,7 @@
 
 <script>
     $(document).ready( function () {
-        $('#openTable').DataTable();
+        $('#rejectTable').DataTable();
         
         $(document).on('click', 'tbody tr', function() {
             window.location = $(this).data('href');

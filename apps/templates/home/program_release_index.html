@@ -18,7 +18,7 @@
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
                     <div class="table-responsive p-0">
-                        <table class="table hover align-items-center mb-0" id="releaseTable">
+                        <table class="table hover align-items-center mb-0" id="relTable">
                             <thead>
                                 <tr>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Program No.
@@ -27,7 +27,7 @@
                                         Date</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Distributor</th>
-                                    <th class="text-uppercase text-Usecondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Channel</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
                                 </tr>
@@ -71,7 +71,7 @@
 
 <script>
     $(document).ready( function () {
-        $('#releaseTable').DataTable();
+        $('#relTable').DataTable();
         
         $(document).on('click', 'tbody tr', function() {
             window.location = $(this).data('href');

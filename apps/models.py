@@ -574,6 +574,8 @@ class Proposal(models.Model):
     attachment = models.FileField(upload_to='proposal/', null=True)
     total_cost = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
+    proposal_claim = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
     balance = models.DecimalField(max_digits=12, decimal_places=0, default=0)
     roi = models.DecimalField(
         max_digits=10, decimal_places=0, default=0)
@@ -776,26 +778,33 @@ class Claim(models.Model):
     claim_date = models.DateTimeField(null=True)
     area = models.ForeignKey(AreaSales, on_delete=models.CASCADE, null=True)
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, null=True)
+    additional_proposal = models.CharField(max_length=50, null=True)
     program = models.ForeignKey(Program, on_delete=models.CASCADE, null=True)
     invoice = models.CharField(max_length=50, null=True)
     invoice_date = models.DateTimeField(null=True)
     due_date = models.DateTimeField(null=True)
     amount = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
+    additional_amount = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
     tax = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     total = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
+    total_claim = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
     remarks = models.TextField(null=True)
     status = models.CharField(max_length=15, default='PENDING')
+    seq_number = models.IntegerField(default=0)
+    entry_pos = models.CharField(max_length=5, null=True)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True, blank=True)
     update_by = models.CharField(max_length=50, null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        self.tax = self.amount * 0.11
-        self.total = self.amount + self.tax
+        self.tax = self.total_claim * Decimal(0.11)
+        self.total = self.total_claim + self.tax
         if not self.entry_date:
             self.entry_date = timezone.now()
             self.entry_by = get_current_user().username
@@ -881,3 +890,132 @@ class ClaimRelease(models.Model):
         self.update_date = timezone.now()
         self.update_by = get_current_user().username
         super(ClaimRelease, self).save(*args, **kwargs)
+
+
+class CL(models.Model):
+    cl_id = models.CharField(max_length=50, primary_key=True)
+    cl_date = models.DateTimeField(null=True)
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE, null=True)
+    distributor = models.ForeignKey(
+        Distributor, on_delete=models.CASCADE, null=True)
+    channel = models.ForeignKey(Channel, on_delete=models.CASCADE, null=True)
+    status = models.CharField(max_length=15, default='DRAFT')
+    seq_number = models.IntegerField(default=0)
+    entry_pos = models.CharField(max_length=5, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(CL, self).save(*args, **kwargs)
+
+
+class CLDetail(models.Model):
+    cl_id = models.ForeignKey(CL, on_delete=models.CASCADE)
+    claim = models.ForeignKey('Claim', on_delete=models.CASCADE)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['claim', 'cl_id'], name='unique_claim_list')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(CLDetail, self).save(*args, **kwargs)
+
+
+class CLMatrix(models.Model):
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
+    channel = models.ForeignKey(Channel, on_delete=models.CASCADE, null=True)
+    approver = models.ForeignKey(User, on_delete=models.CASCADE)
+    sequence = models.IntegerField(default=0)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, null=True)
+    return_to = models.BooleanField(default=False)
+    limit = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    approve = models.BooleanField(default=False)
+    revise = models.BooleanField(default=False)
+    returned = models.BooleanField(default=False)
+    reject = models.BooleanField(default=False)
+    printed = models.BooleanField(default=False)
+    notif = models.BooleanField(default=False)
+    as_approved = models.CharField(max_length=15, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(
+        null=True, blank=True, auto_now=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['area', 'channel', 'approver'], name='unique_cl_approver')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.update_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(CLMatrix, self).save(*args, **kwargs)
+
+
+class CLRelease(models.Model):
+    cl_id = models.ForeignKey(CL, on_delete=models.CASCADE)
+    cl_approval_id = models.CharField(max_length=50, null=True)
+    cl_approval_name = models.CharField(max_length=50, null=True)
+    cl_approval_email = models.CharField(max_length=50, null=True)
+    cl_approval_position = models.CharField(max_length=50, null=True)
+    cl_approval_date = models.DateTimeField(null=True)
+    cl_approval_status = models.CharField(max_length=1, default='N')
+    sequence = models.IntegerField(default=0)
+    limit = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    return_to = models.BooleanField(default=False)
+    revise_note = models.CharField(max_length=200, null=True)
+    return_note = models.CharField(max_length=200, null=True)
+    reject_note = models.CharField(max_length=200, null=True)
+    mail_sent = models.BooleanField(default=False)
+    approve = models.BooleanField(default=False)
+    revise = models.BooleanField(default=False)
+    returned = models.BooleanField(default=False)
+    reject = models.BooleanField(default=False)
+    printed = models.BooleanField(default=False)
+    notif = models.BooleanField(default=False)
+    as_approved = models.CharField(max_length=15, null=True)
+    entry_date = models.DateTimeField(
+        null=True, blank=True, auto_now_add=True)
+    entry_by = models.CharField(max_length=50, null=True, blank=True)
+    update_date = models.DateTimeField(
+        null=True, blank=True, auto_now=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cl_id', 'cl_approval_id'], name='unique_cl_approval')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.update_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(CLRelease, self).save(*args, **kwargs)

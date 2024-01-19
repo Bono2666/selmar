@@ -175,8 +175,103 @@
               </a>
             </li>
             <li class="nav-item {% if 'program_archive' in segment %}active{% endif %} list-unstyled">
-              <a class="nav-link button cursor-pointer {% if 'PROGRAM-ARCHIVE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'program-archive-index' 'close' %}"{% endif %}>
+              <a class="nav-link button cursor-pointer {% if 'PROGRAM-ARCHIVE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'program-archive-index' %}"{% endif %}>
                 <span class="nav-link-text ms-1 {% if 'PROGRAM-ARCHIVE' not in role and not request.user.is_superuser %}disabled{% endif %}">Archive</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if 'claim' in group_segment %}active{% endif %} {% if 'claim' not in group_segment %}collapsed{% endif %}" href="" data-bs-toggle="collapse" data-bs-target="#claim-menu">
+          <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+            {% if 'claim' in group_segment %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+              <title>contactless-card</title>
+              <g fill="#F7F7F7" stroke="#F7F7F7">
+                <path d="M24.865,16.814a6.976,6.976,0,0,0,0-7.628" fill="none" stroke="inherit" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></path>
+                <path d="M21.34,14.856a2.94,2.94,0,0,0,0-3.712" fill="none" stroke="inherit" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></path>
+                <path d="M1,25V7A2,2,0,0,1,3,5H29a2,2,0,0,1,2,2V25a2,2,0,0,1-2,2H3A2,2,0,0,1,1,25Z" fill="none" stroke="#F7F7F7" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></path>
+                <line x1="6" y1="22" x2="18" y2="22" fill="none" stroke="#F7F7F7" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></line>
+                <line x1="22" y1="22" x2="26" y2="22" fill="none" stroke="#F7F7F7" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></line>
+                <rect x="6" y="10" width="5" height="4" fill="none" stroke="#F7F7F7" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></rect>
+                <circle cx="18" cy="13" r="1" data-stroke="none" stroke="none"></circle>
+              </g>
+            </svg>
+            {% else %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+              <title>contactless-card</title>
+              <g fill="#212121" stroke="#212121">
+                <path d="M24.865,16.814a6.976,6.976,0,0,0,0-7.628" fill="none" stroke="inherit" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></path>
+                <path d="M21.34,14.856a2.94,2.94,0,0,0,0-3.712" fill="none" stroke="inherit" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></path>
+                <path d="M1,25V7A2,2,0,0,1,3,5H29a2,2,0,0,1,2,2V25a2,2,0,0,1-2,2H3A2,2,0,0,1,1,25Z" fill="none" stroke="#212121" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></path>
+                <line x1="6" y1="22" x2="18" y2="22" fill="none" stroke="#212121" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></line>
+                <line x1="22" y1="22" x2="26" y2="22" fill="none" stroke="#212121" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></line>
+                <rect x="6" y="10" width="5" height="4" fill="none" stroke="#212121" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></rect>
+                <circle cx="18" cy="13" r="1" data-stroke="none" stroke="none"></circle>
+              </g>
+            </svg>
+            {% endif %}
+          </div>
+          <span class="nav-link-text ms-1">Claim</span>
+        </a>
+
+        <div class="multi-level ms-5 collapse {% if 'claim' in group_segment %}show{% endif %}" role="list" id="claim-menu" aria-expanded="{% if 'claim' in group_segment %}true{% else %}false{% endif %}">
+          <ul class="flex-column nav">
+            <li class="nav-item {% if segment == 'claim' %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'CLAIM' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'claim-index' 'open' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'CLAIM' not in role and not request.user.is_superuser %}disabled{% endif %}">List</span>
+              </a>
+            </li>
+            <li class="nav-item {% if segment == 'claim_release' %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'CLAIM-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'claim-release-index' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'CLAIM-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Release</span>
+              </a>
+            </li>
+            <li class="nav-item {% if 'claim_archive' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'CLAIM-ARCHIVE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'claim-archive-index' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'CLAIM-ARCHIVE' not in role and not request.user.is_superuser %}disabled{% endif %}">Archive</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if group_segment == 'cl' %}active{% endif %} {% if group_segment != 'cl' %}collapsed{% endif %}" href="" data-bs-toggle="collapse" data-bs-target="#cl-menu">
+          <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+            {% if group_segment == 'cl' %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+              <title>menu</title>
+              <g fill="#F7F7F7">
+                <path d="M23,13H1c-0.552,0-1-0.447-1-1s0.448-1,1-1h22c0.552,0,1,0.447,1,1S23.552,13,23,13z"></path> 
+                <path fill="#F7F7F7" d="M23,6H12c-0.552,0-1-0.447-1-1s0.448-1,1-1h11c0.552,0,1,0.447,1,1S23.552,6,23,6z"></path> 
+                <path fill="#F7F7F7" d="M12,20H1c-0.552,0-1-0.447-1-1s0.448-1,1-1h11c0.552,0,1,0.447,1,1S12.552,20,12,20z"></path>
+              </g>
+            </svg>
+            {% else %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+              <title>menu</title>
+              <g fill="#212121">
+                <path d="M23,13H1c-0.552,0-1-0.447-1-1s0.448-1,1-1h22c0.552,0,1,0.447,1,1S23.552,13,23,13z"></path> 
+                <path fill="#212121" d="M23,6H12c-0.552,0-1-0.447-1-1s0.448-1,1-1h11c0.552,0,1,0.447,1,1S23.552,6,23,6z"></path> 
+                <path fill="#212121" d="M12,20H1c-0.552,0-1-0.447-1-1s0.448-1,1-1h11c0.552,0,1,0.447,1,1S12.552,20,12,20z"></path>
+              </g>
+            </svg>
+            {% endif %}
+          </div>
+          <span class="nav-link-text ms-1">CL</span>
+        </a>
+
+        <div class="multi-level ms-5 collapse {% if group_segment == 'cl' %}show{% endif %}" role="list" id="cl-menu" aria-expanded="{% if group_segment == 'cl' %}true{% else %}false{% endif %}">
+          <ul class="flex-column nav">
+            <li class="nav-item {% if segment == 'cl' %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'CL' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'cl-index' 'open' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'CL' not in role and not request.user.is_superuser %}disabled{% endif %}">List</span>
+              </a>
+            </li>
+            <li class="nav-item {% if segment == 'cl_release' %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'CL-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'cl-release-index' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'CL-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Release</span>
               </a>
             </li>
           </ul>
@@ -211,8 +306,8 @@
         <div class="multi-level ms-5 collapse {% if 'master' in group_segment %}show{% endif %}" role="list" id="user-menu" aria-expanded="{% if 'budget' in group_segment %}true{% else %}false{% endif %}">
           <ul class="flex-column nav">
             <li class="nav-item {% if 'user' in segment %}active{% endif %} list-unstyled">
-              <a class="nav-link button cursor-pointer {% if 'USER' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'user-index' %}"{% endif %}>
-                <span class="nav-link-text ms-1 {% if 'USER' not in role and not request.user.is_superuser %}disabled{% endif %}">User</span>
+              <a class="nav-link button cursor-pointer {% if 'USER' not in role and not request.user.is_superuser %}d-none{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'user-index' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'USER' not in role and not request.user.is_superuser %}d-none{% endif %}">User</span>
               </a>
             </li>
             <li class="nav-item {% if 'distributor' in segment %}active{% endif %} list-unstyled">
@@ -295,6 +390,16 @@
             <li class="nav-item {% if 'program_matrix' in segment %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'PROGRAM-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'program-matrix-index' %}"{% endif %}>
                 <span class="nav-link-text ms-1 {% if 'PROGRAM-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}">Program Approval</span>
+              </a>
+            </li>
+            <li class="nav-item {% if 'claim_matrix' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'CLAIM-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'claim-matrix-index' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'CLAIM-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}">Claim Approval</span>
+              </a>
+            </li>
+            <li class="nav-item {% if 'cl_matrix' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'CL-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'cl-matrix-index' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'CL-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}">CL Approval</span>
               </a>
             </li>
           </ul>

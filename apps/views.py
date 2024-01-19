@@ -63,6 +63,7 @@ from django.http import HttpResponse
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from reportlab.pdfgen import canvas
+import math
 
 
 @login_required(login_url='/login/')
@@ -4070,6 +4071,7 @@ def proposal_cost_add(request, _tab, _id):
                 proposal.balance = total_cost
                 proposal.status = 'PENDING' if proposal.status == 'DRAFT' else proposal.status
                 proposal.save()
+
                 sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
                     'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
                 budget_detail.budget_proposed = sum_cost
@@ -4930,22 +4932,15 @@ def program_release_reject(request, _id):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='PROGRAM-ARCHIVE')
-def program_archive_index(request, _tab):
-    closes = Program.objects.filter(status='CLOSED', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
-    close_count = Program.objects.filter(status='CLOSED', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
+def program_archive_index(request):
     rejects = Program.objects.filter(status='REJECTED', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
     reject_count = Program.objects.filter(status='REJECTED', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
 
     context = {
-        'closes': closes,
-        'close_count': close_count,
         'rejects': rejects,
         'reject_count': reject_count,
-        'tab': _tab,
         'segment': 'program_archive',
         'group_segment': 'program',
         'crud': 'index',
@@ -5123,7 +5118,1607 @@ def claim_add(request, _area, _distributor, _program):
     selected_program = _program
     program = Program.objects.get(
         program_id=selected_program) if selected_program != '0' else None
-    area = AreaUser.objects.filter(user_id=request.user.user_id)
+    area = AreaUser.objects.filter(user_id=request.user.user_id).values_list(
+        'area_id', 'area__area_name')
+    distributors = Program.objects.filter(status='OPEN', area=selected_area).values_list(
+        'proposal__budget__budget_distributor__distributor_id', 'proposal__budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
+    programs = Program.objects.filter(status='OPEN', deadline__gte=datetime.datetime.now().date(
+    ), area=selected_area, proposal__budget__budget_distributor__distributor_id=selected_distributor, proposal__balance__gt=0).distinct() if selected_distributor != '0' else None
+    proposal = Proposal.objects.get(
+        proposal_id=program.proposal.proposal_id) if selected_program != '0' else None
+    proposals = Proposal.objects.filter(
+        status='OPEN', area=selected_area, balance__gt=0, budget__budget_distributor=selected_distributor).order_by('-proposal_id') if selected_distributor != '0' else None
 
     no_save = False
+    add_prop = '0'
+    message = ''
+    difference = 0
+    add_proposals = None
+
+    if selected_area != '0' and selected_program != '0':
+        approvers = ClaimMatrix.objects.filter(
+            area_id=selected_area, channel=program.proposal.channel).order_by('sequence')
+        if approvers.count() == 0:
+            no_save = True
+            message = "No claim's approver found for this area and channel."
+
+    try:
+        _no = Claim.objects.all().order_by('seq_number').last()
+    except Claim.DoesNotExist:
+        _no = None
+    if _no is None:
+        format_no = '{:04d}'.format(1)
+    else:
+        format_no = '{:04d}'.format(_no.seq_number + 1)
+
+    _id = 'CBS-4' + format_no + '/' + program.proposal.channel + '/' + selected_area + '/' + \
+        program.proposal.budget.budget_distributor.distributor_id + '/' + \
+        str(datetime.datetime.now().month) + '/' + \
+        str(datetime.datetime.now().year) if selected_program != '0' else 'CBS-4' + format_no + '/' + selected_area + '/0' + \
+        '/' + str(datetime.datetime.now().month) + '/' + \
+        str(datetime.datetime.now().year)
+
+    if request.POST:
+        form = FormClaim(request.POST, request.FILES)
+        difference = int(request.POST.get('amount')) - int(proposal.balance)
+        if int(request.POST.get('amount')) > int(proposal.balance) and request.POST.get('additional_proposal') == '':
+            add_prop = '1'
+            message = 'Claim amount is greater than proposal balance.'
+            add_proposals = Proposal.objects.filter(status='OPEN', area=selected_area, channel=proposal.channel, balance__gte=difference, budget__budget_distributor=selected_distributor).exclude(
+                proposal_id=proposal.proposal_id).order_by('-proposal_id') if selected_program != '0' else None
+        else:
+            if form.is_valid():
+                draft = form.save(commit=False)
+                draft.program_id = selected_program
+                draft.seq_number = _no.seq_number + 1 if _no else 1
+                draft.entry_pos = request.user.position.position_id
+                draft.total_claim = Decimal(request.POST.get('amount'))
+                draft.amount = proposal.balance if request.POST.get(
+                    'additional_proposal') else Decimal(request.POST.get('amount'))
+                draft.additional_proposal_id = request.POST.get(
+                    'additional_proposal')
+                draft.additional_amount = request.POST.get('additional_amount') if request.POST.get(
+                    'additional_proposal') else 0
+                draft.save()
+
+                sum_amount = Claim.objects.filter(
+                    proposal_id=draft.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                sum_add_amount = Claim.objects.filter(additional_proposal=draft.proposal_id).exclude(
+                    status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+
+                sum_amount2 = Claim.objects.filter(
+                    proposal_id=draft.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                sum_add_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
+                    Sum('additional_amount'))
+
+                amount = sum_amount.get('amount__sum') if sum_amount.get(
+                    'amount__sum') else 0
+                additional_amount = sum_add_amount.get(
+                    'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+
+                amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+                    'amount__sum') else 0
+                additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+                    'additional_amount__sum') else 0
+
+                proposal.proposal_claim = amount + additional_amount
+                proposal.balance = proposal.total_cost - proposal.proposal_claim
+                proposal.save()
+
+                proposal2 = Proposal.objects.get(
+                    proposal_id=draft.additional_proposal_id) if draft.additional_proposal else None
+                if proposal2:
+                    proposal2.proposal_claim = amount2 + additional_amount2
+                    proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+                    proposal2.save()
+
+                for approver in approvers:
+                    release = ClaimRelease(
+                        claim_id=draft.claim_id,
+                        claim_approval_id=approver.approver_id,
+                        claim_approval_name=approver.approver.username,
+                        claim_approval_email=approver.approver.email,
+                        claim_approval_position=approver.approver.position.position_id,
+                        sequence=approver.sequence,
+                        limit=approver.limit,
+                        return_to=approver.return_to,
+                        approve=approver.approve,
+                        revise=approver.revise,
+                        returned=approver.returned,
+                        reject=approver.reject,
+                        notif=approver.notif,
+                        printed=approver.printed,
+                        as_approved=approver.as_approved)
+                    release.save()
+
+                mail_sent = ClaimRelease.objects.filter(
+                    claim_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
+                if mail_sent[0] == False:
+                    email = ClaimRelease.objects.filter(
+                        claim_id=_id).order_by('sequence').values_list('claim_approval_email', flat=True)
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            "SELECT username FROM apps_claimrelease INNER JOIN apps_user ON apps_claimrelease.claim_approval_id = apps_user.user_id WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                        approver = cursor.fetchone()
+
+                    subject = 'Claim Approval'
+                    msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
+                        'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
+                        '\n\nThank you.'
+                    send_email(subject, msg, [email[0]])
+
+                    # update mail sent to true
+                    release = ClaimRelease.objects.filter(
+                        claim_id=_id).order_by('sequence').first()
+                    release.mail_sent = True
+                    release.save()
+
+                return HttpResponseRedirect(reverse('claim-index', args=['pending', ]))
+    else:
+        form = FormClaim(initial={'area': selected_area, 'claim_id': _id})
+
+    msg = form.errors
+    context = {
+        'form': form,
+        'area': area,
+        'distributors': distributors,
+        'program': program,
+        'programs': programs,
+        'proposals': proposals,
+        'add_proposals': add_proposals,
+        'selected_area': selected_area,
+        'selected_distributor': selected_distributor,
+        'selected_program': selected_program,
+        'msg': msg,
+        'message': message,
+        'no_save': no_save,
+        'add_prop': add_prop,
+        'difference': difference,
+        'segment': 'claim',
+        'group_segment': 'claim',
+        'crud': 'add',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='CLAIM') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/claim_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM')
+def claim_view(request, _tab, _id):
+    claim = Claim.objects.get(claim_id=_id)
+    form = FormClaimView(instance=claim)
+    program = Program.objects.get(program_id=claim.program_id)
+
+    highest_approval = ClaimRelease.objects.filter(
+        claim_id=_id, limit__gt=claim.total_claim).aggregate(Min('sequence')) if ClaimRelease.objects.filter(claim_id=_id, limit__gt=claim.total_claim).count() > 0 else ClaimRelease.objects.filter(claim_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = ClaimRelease.objects.filter(
+            claim_id=_id, sequence__lt=highest_sequence).order_by('sequence')
+    else:
+        approval = ClaimRelease.objects.filter(
+            claim_id=_id).order_by('sequence')
+
+    context = {
+        'data': claim,
+        'form': form,
+        'tab': _tab,
+        'program': program,
+        'approval': approval,
+        'status': claim.status,
+        'segment': 'claim',
+        'group_segment': 'claim',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='CLAIM') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/claim_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM')
+def claim_update(request, _tab, _id):
+    claim = Claim.objects.get(claim_id=_id)
+    proposals = Proposal.objects.filter(
+        status='OPEN', area=claim.area, balance__gt=0, budget__budget_distributor=claim.proposal.budget.budget_distributor).order_by('-proposal_id')
+    program = Program.objects.get(program_id=claim.program_id)
+    proposal = Proposal.objects.get(proposal_id=program.proposal.proposal_id)
+
     message = '0'
+    add_prop = '0'
+    difference = 0
+    add_proposals = None
+    add_prop_before = claim.additional_proposal
+    amount_before = claim.amount
+
+    if request.POST:
+        form = FormClaimUpdate(request.POST, request.FILES, instance=claim)
+        difference = int(request.POST.get('amount')) - \
+            (int(proposal.balance) + int(claim.amount))
+        if int(request.POST.get('amount')) > (int(program.proposal.balance) + int(claim.amount)) and request.POST.get('additional_proposal') == '':
+            add_prop = '1'
+            message = 'Claim amount is greater than proposal balance.'
+            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
+                proposal_id=proposal.proposal_id)
+        else:
+            if form.is_valid():
+                draft = form.save(commit=False)
+                draft.status = 'PENDING'
+                draft.total_claim = Decimal(request.POST.get('amount'))
+                draft.amount = proposal.balance + amount_before if request.POST.get(
+                    'additional_proposal') else Decimal(request.POST.get('amount'))
+                if int(request.POST.get('amount')) > (int(proposal.balance) + int(amount_before)):
+                    draft.additional_proposal = request.POST.get(
+                        'additional_proposal')
+                else:
+                    draft.additional_proposal = None
+                draft.additional_amount = request.POST.get('additional_amount') if request.POST.get(
+                    'additional_proposal') else 0
+                draft.save()
+
+                sum_amount = Claim.objects.filter(
+                    proposal_id=draft.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                sum_add_amount = Claim.objects.filter(additional_proposal=draft.proposal_id).exclude(
+                    status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+
+                sum_amount2 = Claim.objects.filter(
+                    proposal_id=draft.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                sum_add_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
+                    Sum('additional_amount'))
+
+                amount = sum_amount.get('amount__sum') if sum_amount.get(
+                    'amount__sum') else 0
+                additional_amount = sum_add_amount.get(
+                    'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+
+                amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+                    'amount__sum') else 0
+                additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+                    'additional_amount__sum') else 0
+
+                proposal.proposal_claim = amount + additional_amount
+                proposal.balance = proposal.total_cost - proposal.proposal_claim
+                proposal.save()
+
+                proposal2 = Proposal.objects.get(
+                    proposal_id=draft.additional_proposal) if draft.additional_proposal else None
+                if proposal2:
+                    proposal2.proposal_claim = amount2 + additional_amount2
+                    proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+                    proposal2.save()
+                else:
+                    proposal3 = Proposal.objects.get(
+                        proposal_id=add_prop_before) if add_prop_before else None
+                    if proposal3:
+                        proposal3.proposal_claim = amount2 + additional_amount2
+                        proposal3.balance = proposal3.total_cost - proposal3.proposal_claim
+                        proposal3.save()
+
+                mail_sent = ClaimRelease.objects.filter(
+                    claim_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
+                if mail_sent[0] == False:
+                    email = ClaimRelease.objects.filter(
+                        claim_id=_id).order_by('sequence').values_list('claim_approval_email', flat=True)
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            "SELECT username FROM apps_claimrelease INNER JOIN apps_user ON apps_claimrelease.claim_approval_id = apps_user.user_id WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                        approver = cursor.fetchone()
+
+                    subject = 'Claim Approval'
+                    msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
+                        'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
+                        '\n\nThank you.'
+                    send_email(subject, msg, [email[0]])
+
+                    # update mail sent to true
+                    release = ClaimRelease.objects.filter(
+                        claim_id=_id).order_by('sequence').first()
+                    release.mail_sent = True
+                    release.save()
+
+                return HttpResponseRedirect(reverse('claim-view', args=[_tab, _id]))
+    else:
+        form = FormClaimUpdate(instance=claim)
+
+    err = form.errors
+    context = {
+        'form': form,
+        'data': claim,
+        'program': program,
+        'proposals': proposals,
+        'add_proposals': add_proposals,
+        'add_prop': add_prop,
+        'difference': difference,
+        'tab': _tab,
+        'message': message,
+        'err': err,
+        'segment': 'claim',
+        'group_segment': 'claim',
+        'crud': 'update',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='CLAIM') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/claim_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM')
+def claim_delete(request, _tab, _id):
+    claim = Claim.objects.get(claim_id=_id)
+    proposal = Proposal.objects.get(proposal_id=claim.proposal.proposal_id)
+    claim.delete()
+
+    sum_amount = Claim.objects.filter(
+        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+    sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
+        status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+
+    sum_amount2 = Claim.objects.filter(
+        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
+        Sum('additional_amount'))
+
+    amount = sum_amount.get('amount__sum') if sum_amount.get(
+        'amount__sum') else 0
+    additional_amount = sum_add_amount.get(
+        'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+
+    amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+        'amount__sum') else 0
+    additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+        'additional_amount__sum') else 0
+
+    proposal.proposal_claim = amount + additional_amount
+    proposal.balance = proposal.total_cost - proposal.proposal_claim
+    proposal.save()
+
+    proposal2 = Proposal.objects.get(
+        proposal_id=claim.additional_proposal) if claim.additional_proposal else None
+    if proposal2:
+        proposal2.proposal_claim = amount2 + additional_amount2
+        proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+        proposal2.save()
+
+    return HttpResponseRedirect(reverse('claim-index', args=[_tab, ]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-RELEASE')
+def claim_release_index(request):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_claim.claim_id, apps_claim.claim_date, apps_distributor.distributor_name, apps_proposal.channel, apps_claim.total_claim, apps_claim.status, apps_claimrelease.sequence FROM apps_distributor INNER JOIN apps_budget ON apps_distributor.distributor_id = apps_budget.budget_distributor_id INNER JOIN apps_proposal ON apps_budget.budget_id = apps_proposal.budget_id INNER JOIN apps_claim ON apps_proposal.proposal_id = apps_claim.proposal_id INNER JOIN apps_claimrelease ON apps_claim.claim_id = apps_claimrelease.claim_id INNER JOIN (SELECT claim_id, MIN(sequence) AS seq FROM apps_claimrelease WHERE claim_approval_status = 'N' GROUP BY claim_id ORDER BY sequence ASC) AS q_group ON apps_claimrelease.claim_id = q_group.claim_id AND apps_claimrelease.sequence = q_group.seq WHERE (apps_claim.status = 'PENDING' OR apps_claim.status = 'IN APPROVAL') AND apps_claimrelease.claim_approval_id = '" + str(request.user.user_id) + "'")
+        release = cursor.fetchall()
+
+    context = {
+        'data': release,
+        'segment': 'claim_release',
+        'group_segment': 'claim',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLAIM-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/claim_release_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-RELEASE')
+def claim_release_view(request, _id, _is_revise):
+    claim = Claim.objects.get(claim_id=_id)
+    form = FormClaimView(instance=claim)
+    approved = ClaimRelease.objects.get(
+        claim_id=_id, claim_approval_id=request.user.user_id).claim_approval_status
+    program = Program.objects.get(program_id=claim.program_id)
+
+    context = {
+        'form': form,
+        'data': claim,
+        'approved': approved,
+        'program': program,
+        'is_revise': _is_revise,
+        'status': claim.status,
+        'segment': 'claim_release',
+        'group_segment': 'claim',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLAIM-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+        'btn_release': ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id),
+    }
+    return render(request, 'home/claim_release_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-RELEASE')
+def claim_release_update(request, _id):
+    claim = Claim.objects.get(claim_id=_id)
+    program = Program.objects.get(program_id=claim.program_id)
+    proposal = Proposal.objects.get(proposal_id=claim.proposal.proposal_id)
+    proposals = Proposal.objects.filter(
+        status='OPEN', area=claim.area, balance__gt=0, budget__budget_distributor=claim.proposal.budget.budget_distributor).order_by('-proposal_id')
+    message = '0'
+    add_prop = '0'
+    difference = 0
+    add_proposals = None
+    add_prop_before = claim.additional_proposal
+    amount_before = claim.amount
+    _invoice = claim.invoice
+    _invoice_date = claim.invoice_date
+    _due_date = claim.due_date
+    _amount = claim.amount
+    _remarks = claim.remarks
+    _additional_proposal = claim.additional_proposal
+    _additional_amount = claim.additional_amount
+
+    if request.POST:
+        form = FormClaimUpdate(
+            request.POST, request.FILES, instance=claim)
+        difference = int(request.POST.get('amount')) - \
+            (int(proposal.balance) + int(claim.amount))
+        if int(request.POST.get('amount')) > (int(proposal.balance) + int(claim.amount)) and request.POST.get('additional_proposal') == '':
+            add_prop = '1'
+            message = 'Claim amount is greater than proposal balance.'
+            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
+                proposal_id=proposal.proposal_id).order_by('-proposal_id')
+        else:
+            if form.is_valid():
+                parent = form.save(commit=False)
+                invoice = _invoice if form.cleaned_data['invoice'] != _invoice else None
+                invoice_date = _invoice_date if form.cleaned_data[
+                    'invoice_date'] != _invoice_date else None
+                due_date = _due_date if form.cleaned_data['due_date'] != _due_date else None
+                claim_amount = _amount if form.cleaned_data['amount'] != _amount else None
+                remarks = _remarks if form.cleaned_data['remarks'] != _remarks else None
+                additional_proposal = _additional_proposal if request.POST.get(
+                    'additional_proposal') != _additional_proposal else None
+                add_amount = _additional_amount if request.POST.get(
+                    'additional_amount') != _additional_amount else None
+                parent.total_claim = Decimal(request.POST.get('amount'))
+                parent.amount = proposal.balance + amount_before if request.POST.get(
+                    'additional_proposal') else Decimal(request.POST.get('amount'))
+                if int(request.POST.get('amount')) > (int(proposal.balance) + int(amount_before)):
+                    parent.additional_proposal_id = request.POST.get(
+                        'additional_proposal')
+                else:
+                    parent.additional_proposal_id = None
+                parent.additional_amount = request.POST.get('additional_amount') if request.POST.get(
+                    'additional_proposal') else 0
+                parent.save()
+
+                sum_amount = Claim.objects.filter(
+                    proposal_id=parent.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                sum_add_amount = Claim.objects.filter(additional_proposal=parent.proposal_id).exclude(
+                    status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+
+                sum_amount2 = Claim.objects.filter(
+                    proposal_id=parent.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                sum_add_amount2 = Claim.objects.filter(additional_proposal=parent.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
+                    Sum('additional_amount'))
+
+                amount = sum_amount.get('amount__sum') if sum_amount.get(
+                    'amount__sum') else 0
+                additional_amount = sum_add_amount.get(
+                    'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+
+                amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+                    'amount__sum') else 0
+                additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+                    'additional_amount__sum') else 0
+
+                proposal.proposal_claim = amount + additional_amount
+                proposal.balance = proposal.total_cost - proposal.proposal_claim
+                proposal.save()
+
+                proposal2 = Proposal.objects.get(
+                    proposal_id=parent.additional_proposal) if parent.additional_proposal else None
+                if proposal2:
+                    proposal2.proposal_claim = amount2 + additional_amount2
+                    proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+                    proposal2.save()
+                else:
+                    proposal3 = Proposal.objects.get(
+                        proposal_id=add_prop_before) if add_prop_before else None
+                    if proposal3:
+                        proposal3.proposal_claim = amount2 + additional_amount2
+                        proposal3.balance = proposal3.total_cost - proposal3.proposal_claim
+                        proposal3.save()
+
+                recipients = []
+
+                release = ClaimRelease.objects.get(
+                    claim_id=_id, claim_approval_id=request.user.user_id)
+                release.revise_note = request.POST.get('revise_note')
+                release.save()
+
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT claim_id, email FROM apps_claim INNER JOIN apps_user ON apps_claim.entry_by = apps_user.user_id WHERE claim_id = '" + str(_id) + "'")
+                    entry_mail = cursor.fetchone()
+                    if entry_mail:
+                        recipients.append(entry_mail[1])
+
+                    cursor.execute(
+                        "SELECT claim_id, email FROM apps_claim INNER JOIN apps_user ON apps_claim.update_by = apps_user.user_id WHERE claim_id = '" + str(_id) + "'")
+                    update_mail = cursor.fetchone()
+                    if update_mail:
+                        recipients.append(update_mail[1])
+
+                    cursor.execute(
+                        "SELECT claim_id, claim_approval_email FROM apps_claimrelease WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'Y'")
+                    approver_mail = cursor.fetchall()
+                    for mail in approver_mail:
+                        recipients.append(mail[1])
+
+                subject = 'Claim Revised'
+                msg = 'Dear All,\n\nThe following is revised claim for Claim No. ' + \
+                    str(_id) + ':\n'
+                if invoice:
+                    msg += '\nBEFORE\n'
+                    msg += 'Invoice: ' + str(invoice) + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Invoice: ' + \
+                        form.cleaned_data['invoice'] + '\n'
+
+                if invoice_date:
+                    msg += '\nBEFORE\n'
+                    msg += 'Invoice Date: ' + \
+                        invoice_date.strftime('%d %b %Y') + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Invoice Date: ' + \
+                        form.cleaned_data['invoice_date'].strftime(
+                            '%d %b %Y') + '\n'
+
+                if due_date:
+                    msg += '\nBEFORE\n'
+                    msg += 'Due Date: ' + \
+                        due_date.strftime('%d %b %Y') + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Due Date: ' + \
+                        form.cleaned_data['due_date'].strftime(
+                            '%d %b %Y') + '\n'
+
+                if claim_amount:
+                    msg += '\nBEFORE\n'
+                    msg += 'Amount: ' + str(claim_amount) + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Amount: ' + \
+                        str(form.cleaned_data['amount']) + '\n'
+
+                if remarks:
+                    msg += '\nBEFORE\n'
+                    msg += 'Remarks: ' + str(remarks) + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Remarks: ' + \
+                        form.cleaned_data['remarks'] + '\n'
+
+                if additional_proposal:
+                    msg += '\nBEFORE\n'
+                    msg += 'Additional Proposal: ' + \
+                        str(additional_proposal) + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Additional Proposal: ' + \
+                        request.POST.get('additional_proposal') + '\n'
+
+                if add_amount:
+                    msg += '\nBEFORE\n'
+                    msg += 'Additional Amount: ' + \
+                        str(add_amount) + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Additional Amount: ' + \
+                        request.POST.get('additional_amount') + '\n'
+
+                msg += '\nNote: ' + \
+                    str(release.revise_note) + '\n\nClick the following link to view the claim.\n' + host.url + 'claim/view/inapproval/' + str(_id) + '/' + \
+                    '\n\nThank you.'
+
+                recipient_list = list(dict.fromkeys(recipients))
+                send_email(subject, msg, recipient_list)
+
+                return HttpResponseRedirect(reverse('claim-release-view', args=[_id, 0]))
+    else:
+        form = FormClaimUpdate(instance=claim)
+
+    # msg = form.errors
+    context = {
+        'form': form,
+        'data': claim,
+        'program': program,
+        'message': message,
+        'add_prop': add_prop,
+        'add_proposals': add_proposals,
+        'proposals': proposals,
+        'difference': difference,
+        'segment': 'claim_release',
+        'group_segment': 'claim',
+        'crud': 'update',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id,
+                                menu_id='CLAIM-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/claim_release_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-RELEASE')
+def claim_release_approve(request, _id):
+    claim = Claim.objects.get(claim_id=_id)
+    release = ClaimRelease.objects.get(
+        claim_id=_id, claim_approval_id=request.user.user_id)
+    release.claim_approval_status = 'Y'
+    release.claim_approval_date = timezone.now()
+    release.save()
+
+    highest_approval = ClaimRelease.objects.filter(
+        claim_id=_id, limit__gt=claim.total_claim).aggregate(Min('sequence')) if ClaimRelease.objects.filter(claim_id=_id, limit__gt=claim.total_claim).count() > 0 else ClaimRelease.objects.filter(claim_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = ClaimRelease.objects.filter(
+            claim_id=_id, sequence__lt=highest_sequence).order_by('sequence').last()
+    else:
+        approval = ClaimRelease.objects.filter(
+            claim_id=_id).order_by('sequence').last()
+
+    if release.sequence == approval.sequence:
+        claim.status = 'OPEN'
+
+        recipients = []
+
+        maker = claim.entry_by
+        maker_mail = User.objects.get(user_id=maker).email
+        recipients.append(maker_mail)
+
+        approvers = ClaimRelease.objects.filter(
+            claim_id=_id, notif=True, claim_approval_status='Y')
+        for i in approvers:
+            recipients.append(i.claim_approval_email)
+
+        subject = 'Claim Approved'
+        msg = 'Dear All,\n\nClaim No. ' + str(_id) + ' has been approved.\n\nClick the following link to view the claim.\n' + host.url + 'claim/view/open/' + str(_id) + \
+            '\n\nThank you.'
+        recipient_list = list(dict.fromkeys(recipients))
+        send_email(subject, msg, recipient_list)
+    else:
+        claim.status = 'IN APPROVAL'
+
+        email = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='N').order_by(
+            'sequence').values_list('claim_approval_email', flat=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT claim_approval_name FROM apps_claimrelease WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'N' ORDER BY sequence LIMIT 1")
+            approver = cursor.fetchone()
+
+        subject = 'Claim Approval'
+        msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
+            'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
+            '\n\nThank you.'
+        send_email(subject, msg, [email[0]])
+
+    claim.save()
+
+    return HttpResponseRedirect(reverse('claim-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-RELEASE')
+def claim_release_return(request, _id):
+    recipients = []
+    draft = False
+
+    try:
+        return_to = ClaimRelease.objects.get(
+            claim_id=_id, return_to=True, sequence__lt=ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id).sequence)
+
+        if return_to:
+            approvers = ClaimRelease.objects.filter(
+                claim_id=_id, sequence__gte=ClaimRelease.objects.get(claim_id=_id, return_to=True).sequence, sequence__lt=ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id).sequence)
+    except ClaimRelease.DoesNotExist:
+        approvers = ClaimRelease.objects.filter(
+            claim_id=_id, sequence__lte=ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id).sequence)
+        draft = True
+
+    for i in approvers:
+        recipients.append(i.claim_approval_email)
+        i.claim_approval_status = 'N'
+        i.claim_approval_date = None
+        i.revise_note = ''
+        i.return_note = ''
+        i.reject_note = ''
+        i.mail_sent = False
+        i.save()
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT claim_id, email FROM apps_claim INNER JOIN apps_user ON apps_claim.entry_by = apps_user.user_id WHERE claim_id = '" + str(_id) + "'")
+        entry_mail = cursor.fetchone()
+        if entry_mail:
+            recipients.append(entry_mail[1])
+
+        cursor.execute(
+            "SELECT claim_id, email FROM apps_claim INNER JOIN apps_user ON apps_claim.update_by = apps_user.user_id WHERE claim_id = '" + str(_id) + "'")
+        update_mail = cursor.fetchone()
+        if update_mail:
+            recipients.append(update_mail[1])
+
+    note = ClaimRelease.objects.get(
+        claim_id=_id, claim_approval_id=request.user.user_id)
+    note.return_note = request.POST.get('return_note')
+    note.save()
+
+    subject = 'Claim Returned'
+    msg = 'Dear All,\n\nClaim No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
+        str(note.return_note) + \
+        '\n\nClick the following link to revise the claim.\n'
+
+    if draft:
+        claim = Claim.objects.get(claim_id=_id)
+        claim.status = 'DRAFT'
+        claim.save()
+        msg += host.url + 'claim/view/pending/' + str(_id) + \
+            '\n\nThank you.'
+    else:
+        msg += host.url + 'claim_release/view/' + \
+            str(_id) + '/0/\n\nThank you.'
+    recipient_list = list(dict.fromkeys(recipients))
+    send_email(subject, msg, recipient_list)
+
+    return HttpResponseRedirect(reverse('claim-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-RELEASE')
+def claim_release_reject(request, _id):
+    claim = Claim.objects.get(claim_id=_id)
+    proposal = Proposal.objects.get(proposal_id=claim.proposal.proposal_id)
+    recipients = []
+
+    try:
+        approvers = ClaimRelease.objects.filter(
+            claim_id=_id, sequence__lt=ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id).sequence)
+    except ClaimRelease.DoesNotExist:
+        pass
+
+    for i in approvers:
+        recipients.append(i.claim_approval_email)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT claim_id, email FROM apps_claim INNER JOIN apps_user ON apps_claim.entry_by = apps_user.user_id WHERE claim_id = '" + str(_id) + "'")
+        entry_mail = cursor.fetchone()
+        if entry_mail:
+            recipients.append(entry_mail[1])
+
+        cursor.execute(
+            "SELECT claim_id, email FROM apps_claim INNER JOIN apps_user ON apps_claim.update_by = apps_user.user_id WHERE claim_id = '" + str(_id) + "'")
+        update_mail = cursor.fetchone()
+        if update_mail:
+            recipients.append(update_mail[1])
+
+    note = ClaimRelease.objects.get(
+        claim_id=_id, claim_approval_id=request.user.user_id)
+    note.reject_note = request.POST.get('reject_note')
+    note.save()
+
+    subject = 'Claim Rejected'
+    msg = 'Dear All,\n\nClaim No. ' + str(_id) + ' has been rejected.\n\nNote: ' + \
+        str(note.reject_note) + \
+        '\n\nClick the following link to see the claim.\n'
+
+    claim = Claim.objects.get(claim_id=_id)
+    claim.status = 'REJECTED'
+    claim.save()
+
+    sum_amount = Claim.objects.filter(
+        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+    sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
+        status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+
+    sum_amount2 = Claim.objects.filter(
+        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
+        Sum('additional_amount'))
+
+    amount = sum_amount.get('amount__sum') if sum_amount.get(
+        'amount__sum') else 0
+    additional_amount = sum_add_amount.get(
+        'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+
+    amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+        'amount__sum') else 0
+    additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+        'additional_amount__sum') else 0
+
+    proposal.proposal_claim = amount + additional_amount
+    proposal.balance = proposal.total_cost - proposal.proposal_claim
+    proposal.save()
+
+    proposal2 = Proposal.objects.get(
+        proposal_id=claim.additional_proposal) if claim.additional_proposal else None
+    if proposal2:
+        proposal2.proposal_claim = amount2 + additional_amount2
+        proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+        proposal2.save()
+
+    msg += host.url + 'claim/view/reject/' + str(_id) + \
+        '\n\nThank you.'
+    recipient_list = list(dict.fromkeys(recipients))
+    send_email(subject, msg, recipient_list)
+
+    return HttpResponseRedirect(reverse('claim-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-ARCHIVE')
+def claim_archive_index(request):
+    rejects = Claim.objects.filter(status='REJECTED', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
+
+    context = {
+        'rejects': rejects,
+        'segment': 'claim_archive',
+        'group_segment': 'claim',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='CLAIM-ARCHIVE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/claim_archive.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-APPROVAL')
+def claim_matrix_index(request):
+    areas = AreaSales.objects.all()
+
+    context = {
+        'data': areas,
+        'segment': 'claim_matrix',
+        'group_segment': 'approval',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLAIM-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/claim_matrix_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-APPROVAL')
+def claim_matrix_view(request, _id, _channel):
+    area = AreaSales.objects.get(area_id=_id)
+    channels = AreaChannelDetail.objects.filter(area_id=_id, status=1)
+    approvers = ClaimMatrix.objects.filter(area_id=_id, channel_id=_channel)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT user_id, username, position_name, q_claimmatrix.approver_id FROM apps_user INNER JOIN apps_position ON apps_user.position_id = apps_position.position_id LEFT JOIN (SELECT * FROM apps_claimmatrix WHERE area_id = '" + str(_id) + "' AND channel_id = '" + str(_channel) + "') AS q_claimmatrix ON apps_user.user_id = q_claimmatrix.approver_id WHERE q_claimmatrix.approver_id IS NULL")
+        users = cursor.fetchall()
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        for i in users:
+            if str(i[0]) in check:
+                try:
+                    approver = ClaimMatrix(
+                        area_id=_id, channel_id=_channel, approver_id=i[0])
+                    approver.save()
+                except IntegrityError:
+                    continue
+            else:
+                ClaimMatrix.objects.filter(
+                    area_id=_id, channel_id=_channel, approver_id=i[0]).delete()
+
+        return HttpResponseRedirect(reverse('claim-matrix-view', args=[_id, _channel]))
+
+    context = {
+        'data': area,
+        'channels': channels,
+        'users': users,
+        'approvers': approvers,
+        'channel': _channel,
+        'segment': 'claim_matrix',
+        'group_segment': 'approval',
+        'tab': 'auth',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLAIM-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/claim_matrix_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-APPROVAL')
+def claim_matrix_update(request, _id, _channel, _approver):
+    approvers = ClaimMatrix.objects.get(
+        area=_id, channel_id=_channel, approver_id=_approver)
+
+    if request.POST:
+        approvers.sequence = int(request.POST.get('sequence'))
+        approvers.limit = int(request.POST.get('limit'))
+        approvers.return_to = True if request.POST.get('return') else False
+        approvers.approve = True if request.POST.get('approve') else False
+        approvers.revise = True if request.POST.get('revise') else False
+        approvers.returned = True if request.POST.get('returned') else False
+        approvers.reject = True if request.POST.get('reject') else False
+        approvers.notif = True if request.POST.get('notif') else False
+        approvers.printed = True if request.POST.get('printed') else False
+        approvers.as_approved = request.POST.get('as_approved')
+        approvers.save()
+
+        return HttpResponseRedirect(reverse('claim-matrix-view', args=[_id, _channel]))
+
+    return render(request, 'home/claim_matrix_view.html')
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-APPROVAL')
+def claim_matrix_delete(request, _id, _channel, _arg):
+    approvers = ClaimMatrix.objects.get(
+        area=_id, channel_id=_channel, approver_id=_arg)
+    approvers.delete()
+
+    return HttpResponseRedirect(reverse('claim-matrix-view', args=[_id, _channel]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL')
+def cl_index(request, _tab):
+    cl = CL.objects.all()
+    drafts = CL.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
+    draft_count = CL.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).count
+    pendings = CL.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
+    pending_count = CL.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).count
+    inapprovals = CL.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
+    inapproval_count = CL.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).count
+    opens = CL.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
+    open_count = CL.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).count
+
+    context = {
+        'data': cl,
+        'drafts': drafts,
+        'draft_count': draft_count,
+        'pendings': pendings,
+        'pending_count': pending_count,
+        'inapprovals': inapprovals,
+        'inapproval_count': inapproval_count,
+        'opens': opens,
+        'open_count': open_count,
+        'tab': _tab,
+        'segment': 'cl',
+        'group_segment': 'cl',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/cl_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL')
+def cl_add(request, _area, _channel, _distributor):
+    selected_area = _area
+    selected_channel = _channel
+    selected_distributor = _distributor
+    area = AreaUser.objects.filter(user_id=request.user.user_id).values_list(
+        'area_id', 'area__area_name')
+    channels = AreaChannelDetail.objects.filter(
+        area_id=selected_area, status=1)
+    distributors = Claim.objects.filter(status='OPEN', area=selected_area).values_list(
+        'proposal__budget__budget_distributor', 'proposal__budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
+
+    no_save = False
+    message = ''
+
+    if selected_area != '0' and selected_distributor != '0':
+        approvers = CLMatrix.objects.filter(
+            area_id=selected_area, channel=selected_channel).order_by('sequence')
+        if approvers.count() == 0:
+            no_save = True
+            message = "No communication letter's approver found for this area and channel."
+
+    try:
+        _no = CL.objects.all().order_by('seq_number').last()
+    except CL.DoesNotExist:
+        _no = None
+    if _no is None:
+        format_no = '{:04d}'.format(1)
+    else:
+        format_no = '{:04d}'.format(_no.seq_number + 1)
+
+    _id = 'LBS-5' + format_no + '/' + selected_channel + '/' + selected_area + \
+        '/' + selected_distributor + '/' + datetime.datetime.now().strftime('%m/%Y')
+
+    if selected_area != '0' and selected_distributor != '0' and selected_channel != '0':
+        _channel = Channel.objects.get(channel_id=selected_channel)
+        parent = CL(cl_id=_id, cl_date=datetime.datetime.now(), area_id=selected_area, channel=_channel,
+                    distributor_id=selected_distributor, entry_pos=request.user.position.position_id, seq_number=_no.seq_number + 1 if _no else 1)
+        parent.save()
+
+        for i in approvers:
+            _cl = CL.objects.get(cl_id=_id)
+            release = CLRelease(
+                cl_id=_cl,
+                cl_approval_id=i.approver_id,
+                cl_approval_name=i.approver.username,
+                cl_approval_email=i.approver.email,
+                cl_approval_position=i.approver.position.position_id,
+                sequence=i.sequence,
+                limit=i.limit,
+                return_to=i.return_to,
+                approve=i.approve,
+                revise=i.revise,
+                returned=i.returned,
+                reject=i.reject,
+                notif=i.notif,
+                printed=i.printed,
+                as_approved=i.as_approved)
+            release.save()
+
+        mail_sent = CLRelease.objects.filter(cl_id=_id).order_by(
+            'sequence').values_list('mail_sent', flat=True)
+        if mail_sent[0] == False:
+            email = CLRelease.objects.filter(
+                cl_id=_id).order_by('sequence').values_list('cl_approval_email', flat=True)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT username FROM apps_clrelease INNER JOIN apps_user ON apps_clrelease.cl_approval_id = apps_user.user_id WHERE cl_id_id = '" + str(_id) + "' AND cl_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                approver = cursor.fetchone()
+
+            subject = 'Communication Letter Approval'
+            msg = 'Dear ' + approver[0] + ',\n\nYou have a new communication letter to approve. Please check your communication letter release list.\n\n' + \
+                'Click this link to approve, revise, return or reject this communication letter.\n' + host.url + 'cl_release/view/' + str(_id) + '/0/' + \
+                '\n\nThank you.'
+            send_email(subject, msg, [email[0]])
+
+            # update mail sent to true
+            release = CLRelease.objects.filter(
+                cl_id=_id).order_by('sequence').first()
+            release.mail_sent = True
+            release.save()
+
+        return HttpResponseRedirect(reverse('cl-view', args=['draft', _id]))
+
+    context = {
+        'selected_area': selected_area,
+        'selected_channel': selected_channel,
+        'selected_distributor': selected_distributor,
+        'area': area,
+        'channels': channels,
+        'distributors': distributors,
+        'no_save': no_save,
+        'message': message,
+        'segment': 'cl',
+        'group_segment': 'cl',
+        'crud': 'add',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/cl_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL')
+def cl_view(request, _tab, _id):
+    cl = CL.objects.get(cl_id=_id)
+    cl_detail = CLDetail.objects.filter(cl_id=_id)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_claim.claim_id, remarks, q_detail.claim_id FROM apps_claim LEFT JOIN (SELECT * FROM apps_cldetail WHERE cl_id_id = '" + str(_id) + "') AS q_detail ON apps_claim.claim_id = q_detail.claim_id WHERE q_detail.claim_id IS NULL")
+        claim = cursor.fetchall()
+
+    highest_approval = CLRelease.objects.filter(
+        cl_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = CLRelease.objects.filter(
+            cl_id=_id, sequence__lt=highest_sequence).order_by('sequence')
+    else:
+        approval = CLRelease.objects.filter(cl_id=_id).order_by('sequence')
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        _cl = CL.objects.get(cl_id=_id)
+        for i in claim:
+            if str(i[0]) in check:
+                try:
+                    detail = CLDetail(cl_id=_cl, claim_id=i[0])
+                    detail.save()
+                except IntegrityError:
+                    continue
+            else:
+                CLDetail.objects.filter(cl_id=_id, claim_id=i[0]).delete()
+
+        cl.status = 'PENDING'
+        cl.save()
+
+        mail_sent = CLRelease.objects.filter(
+            cl_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
+        if mail_sent[0] == False:
+            email = CLRelease.objects.filter(
+                cl_id=_id).order_by('sequence').values_list('cl_approval_email', flat=True)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT username FROM apps_clrelease INNER JOIN apps_user ON apps_clrelease.cl_approval_id = apps_user.user_id WHERE cl_id = '" + str(_id) + "' AND cl_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                approver = cursor.fetchone()
+
+            subject = 'CL Approval'
+            msg = 'Dear ' + approver[0] + ',\n\nYou have a new CL to approve. Please check your CL release list.\n\n' + \
+                'Click this link to approve, revise, return or reject this CL.\n' + host.url + 'cl_release/view/' + str(_id) + '/0/' + \
+                '\n\nThank you.'
+            send_email(subject, msg, [email[0]])
+
+            # update mail sent to true
+            release = CLRelease.objects.filter(
+                cl_id=_id).order_by('sequence').first()
+            release.mail_sent = True
+            release.save()
+
+        return HttpResponseRedirect(reverse('cl-view', args=[_tab, _id]))
+
+    context = {
+        'data': cl,
+        'cl_detail': cl_detail,
+        'claim': claim,
+        'tab': _tab,
+        'approval': approval,
+        'segment': 'cl',
+        'group_segment': 'cl',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='CL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/cl_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL')
+def cldetail_delete(request, _tab, _id, _claim):
+    detail = CLDetail.objects.get(cl_id=_id, claim_id=_claim)
+    detail.delete()
+
+    return HttpResponseRedirect(reverse('cl-view', args=[_tab, _id]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL')
+def cl_delete(request, _tab, _id):
+    cl = CL.objects.get(cl_id=_id)
+
+    cl.delete()
+    return HttpResponseRedirect(reverse('cl-index', args=[_tab]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-RELEASE')
+def cl_release_index(request):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_cl.cl_id, apps_cl.cl_date, apps_cl.area_id, apps_cl.channel_id, apps_distributor.distributor_name, apps_cl.status, apps_clrelease.sequence FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id INNER JOIN apps_clrelease ON apps_cl.cl_id = apps_clrelease.cl_id_id INNER JOIN (SELECT cl_id_id, MIN(sequence) AS seq FROM apps_clrelease WHERE cl_approval_status = 'N' GROUP BY cl_id_id ORDER BY sequence ASC) AS q_group ON apps_clrelease.cl_id_id = q_group.cl_id_id AND apps_clrelease.sequence = q_group.seq WHERE (apps_cl.status = 'PENDING' OR apps_cl.status = 'IN APPROVAL') AND apps_clrelease.cl_approval_id = '" + str(request.user.user_id) + "'")
+        release = cursor.fetchall()
+
+    context = {
+        'data': release,
+        'segment': 'cl_release',
+        'group_segment': 'cl',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CL-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/cl_release_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-RELEASE')
+def cl_release_view(request, _id, _is_revise):
+    cl = CL.objects.get(cl_id=_id)
+    cl_detail = CLDetail.objects.filter(cl_id=_id)
+    approved = CLRelease.objects.get(
+        cl_id=_id, cl_approval_id=request.user.user_id).cl_approval_status
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_claim.claim_id, remarks, q_detail.claim_id FROM apps_claim LEFT JOIN (SELECT * FROM apps_cldetail WHERE cl_id_id = '" + str(_id) + "') AS q_detail ON apps_claim.claim_id = q_detail.claim_id WHERE q_detail.claim_id IS NULL")
+        claim = cursor.fetchall()
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        for i in claim:
+            if str(i[0]) in check:
+                try:
+                    detail = CLDetail(cl_id=_id, claim_id=i[0])
+                    detail.save()
+                except IntegrityError:
+                    continue
+            else:
+                CLDetail.objects.filter(cl_id=_id, claim_id=i[0]).delete()
+
+        return HttpResponseRedirect(reverse('cl-release-view', args=[_id, 0]))
+
+    context = {
+        'data': cl,
+        'cl_detail': cl_detail,
+        'claim': claim,
+        'approved': approved,
+        'is_revise': _is_revise,
+        'segment': 'cl_release',
+        'group_segment': 'cl',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='CL-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+        'btn_release': CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id) if not request.user.is_superuser else None,
+    }
+    return render(request, 'home/cl_release_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-RELEASE')
+def cl_release_update(request, _id):
+    cl = CL.objects.get(cl_id=_id)
+    cl_detail = CLDetail.objects.filter(cl_id=_id)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_claim.claim_id, remarks, q_detail.claim_id FROM apps_claim LEFT JOIN (SELECT * FROM apps_cldetail WHERE cl_id = '" + str(_id) + "') AS q_detail ON apps_claim.claim_id = q_detail.claim_id WHERE q_detail.claim_id IS NULL")
+        claim = cursor.fetchall()
+    _add = ''
+    _remove = ''
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        for i in claim:
+            if str(i[0]) in check:
+                try:
+                    detail = CLDetail(cl_id=_id, claim_id=i[0])
+                    detail.save()
+                    _add += i[0] + '\n'
+                except IntegrityError:
+                    continue
+            else:
+                CLDetail.objects.filter(cl_id=_id, claim_id=i[0]).delete()
+                _remove += i[0] + '\n'
+
+        recipients = []
+
+        release = CLRelease.objects.get(
+            cl_id=_id, cl_approval_id=request.user.user_id)
+        release.revise_note = request.POST.get('revise_note')
+        release.save()
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT cl_id, email FROM apps_cl INNER JOIN apps_user ON apps_cl.entry_by = apps_user.user_id WHERE cl_id = '" + str(_id) + "'")
+            entry_mail = cursor.fetchone()
+            if entry_mail:
+                recipients.append(entry_mail[1])
+
+            cursor.execute(
+                "SELECT cl_id, email FROM apps_cl INNER JOIN apps_user ON apps_cl.update_by = apps_user.user_id WHERE cl_id = '" + str(_id) + "'")
+            update_mail = cursor.fetchone()
+            if update_mail:
+                recipients.append(update_mail[1])
+
+            cursor.execute(
+                "SELECT cl_id, cl_approval_email FROM apps_clrelease WHERE cl_id = '" + str(_id) + "' AND cl_approval_status = 'Y'")
+            approver_mail = cursor.fetchall()
+            for mail in approver_mail:
+                recipients.append(mail[1])
+
+        subject = 'CL Revised'
+        msg = 'Dear All,\n\nThe following is revised CL for CL No. ' + \
+            str(_id) + ':\n'
+        msg += '\nCLAIM ADD:\n'
+        msg += _add
+        msg += '\nCLAIM REMOVE\n'
+        msg += _remove
+
+        msg += '\nNote: ' + \
+            str(release.revise_note) + '\n\nClick the following link to view the CL.\n' + host.url + 'cl/view/inapproval/' + str(_id) + '/' + \
+            '\n\nThank you.'
+
+        recipient_list = list(dict.fromkeys(recipients))
+        send_email(subject, msg, recipient_list)
+
+        return HttpResponseRedirect(reverse('cl-release-view', args=[_id, 0]))
+
+    context = {
+        'data': cl,
+        'cl_detail': cl_detail,
+        'claim': claim,
+        'segment': 'cl_release',
+        'group_segment': 'cl',
+        'crud': 'update',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='CL-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/cl_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-RELEASE')
+def cl_release_approve(request, _id):
+    cl = CL.objects.get(cl_id=_id)
+    release = CLRelease.objects.get(
+        cl_id=_id, cl_approval_id=request.user.user_id)
+    release.cl_approval_status = 'Y'
+    release.cl_approval_date = timezone.now()
+    release.save()
+
+    highest_approval = CLRelease.objects.filter(
+        cl_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = CLRelease.objects.filter(
+            cl_id=_id, sequence__lt=highest_sequence).order_by('sequence').last()
+    else:
+        approval = CLRelease.objects.filter(
+            cl_id=_id).order_by('sequence').last()
+
+    if release.sequence == approval.sequence:
+        cl.status = 'OPEN'
+
+        recipients = []
+
+        maker = cl.entry_by
+        maker_mail = User.objects.get(user_id=maker).email
+        recipients.append(maker_mail)
+
+        approvers = CLRelease.objects.filter(
+            cl_id=_id, notif=True, cl_approval_status='Y')
+        for i in approvers:
+            recipients.append(i.cl_approval_email)
+
+        subject = 'CL Approved'
+        msg = 'Dear All,\n\nCL No. ' + str(_id) + ' has been approved.\n\nClick the following link to view the CL.\n' + host.url + 'cl/view/open/' + str(_id) + \
+            '\n\nThank you.'
+        recipient_list = list(dict.fromkeys(recipients))
+        send_email(subject, msg, recipient_list)
+    else:
+        cl.status = 'IN APPROVAL'
+
+        email = CLRelease.objects.filter(cl_id=_id, cl_approval_status='N').order_by(
+            'sequence').values_list('cl_approval_email', flat=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT cl_approval_name FROM apps_clrelease WHERE cl_id_id = '" + str(_id) + "' AND cl_approval_status = 'N' ORDER BY sequence LIMIT 1")
+            approver = cursor.fetchone()
+
+        subject = 'CL Approval'
+        msg = 'Dear ' + approver[0] + ',\n\nYou have a new CL to approve. Please check your CL release list.\n\n' + \
+            'Click this link to approve, revise, return or reject this CL.\n' + host.url + 'cl_release/view/' + str(_id) + '/0/' + \
+            '\n\nThank you.'
+        send_email(subject, msg, [email[0]])
+
+    cl.save()
+
+    return HttpResponseRedirect(reverse('cl-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-RELEASE')
+def cl_release_return(request, _id):
+    recipients = []
+    draft = False
+
+    try:
+        return_to = CLRelease.objects.get(
+            cl_id=_id, return_to=True, sequence__lt=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
+
+        if return_to:
+            approvers = CLRelease.objects.filter(
+                cl_id=_id, sequence__gte=CLRelease.objects.get(cl_id=_id, return_to=True).sequence, sequence__lt=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
+    except CLRelease.DoesNotExist:
+        approvers = CLRelease.objects.filter(
+            claim_id=_id, sequence__lte=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
+        draft = True
+
+    for i in approvers:
+        recipients.append(i.claim_approval_email)
+        i.claim_approval_status = 'N'
+        i.claim_approval_date = None
+        i.revise_note = ''
+        i.return_note = ''
+        i.reject_note = ''
+        i.mail_sent = False
+        i.save()
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT cl_id, email FROM apps_cl INNER JOIN apps_user ON apps_cl.entry_by = apps_user.user_id WHERE cl_id = '" + str(_id) + "'")
+        entry_mail = cursor.fetchone()
+        if entry_mail:
+            recipients.append(entry_mail[1])
+
+        cursor.execute(
+            "SELECT cl_id, email FROM apps_cl INNER JOIN apps_user ON apps_cl.update_by = apps_user.user_id WHERE cl_id = '" + str(_id) + "'")
+        update_mail = cursor.fetchone()
+        if update_mail:
+            recipients.append(update_mail[1])
+
+    note = CLRelease.objects.get(
+        cl_id=_id, cl_approval_id=request.user.user_id)
+    note.return_note = request.POST.get('return_note')
+    note.save()
+
+    subject = 'CL Returned'
+    msg = 'Dear All,\n\nCL No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
+        str(note.return_note) + \
+        '\n\nClick the following link to revise the CL.\n'
+
+    if draft:
+        cl = CL.objects.get(claim_id=_id)
+        cl.status = 'DRAFT'
+        cl.save()
+        msg += host.url + 'cl/view/pending/' + str(_id) + \
+            '\n\nThank you.'
+    else:
+        msg += host.url + 'cl_release/view/' + \
+            str(_id) + '/0/\n\nThank you.'
+    recipient_list = list(dict.fromkeys(recipients))
+    send_email(subject, msg, recipient_list)
+
+    return HttpResponseRedirect(reverse('claim-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-RELEASE')
+def cl_release_reject(request, _id):
+    cl = CL.objects.get(cl_id=_id)
+    recipients = []
+
+    try:
+        approvers = CLRelease.objects.filter(
+            cl_id=_id, sequence__lt=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
+    except CLRelease.DoesNotExist:
+        pass
+
+    for i in approvers:
+        recipients.append(i.cl_approval_email)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT cl_id, email FROM apps_cl INNER JOIN apps_user ON apps_cl.entry_by = apps_user.user_id WHERE cl_id = '" + str(_id) + "'")
+        entry_mail = cursor.fetchone()
+        if entry_mail:
+            recipients.append(entry_mail[1])
+
+        cursor.execute(
+            "SELECT cl_id, email FROM apps_cl INNER JOIN apps_user ON apps_cl.update_by = apps_user.user_id WHERE cl_id = '" + str(_id) + "'")
+        update_mail = cursor.fetchone()
+        if update_mail:
+            recipients.append(update_mail[1])
+
+    note = CLRelease.objects.get(
+        cl_id=_id, cl_approval_id=request.user.user_id)
+    note.reject_note = request.POST.get('reject_note')
+    note.save()
+
+    cl = CL.objects.get(cl_id=_id)
+    cl.status = 'REJECTED'
+    cl.save()
+
+    subject = 'CL Rejected'
+    msg = 'Dear All,\n\nCL No. ' + str(_id) + ' has been rejected.\n\nNote: ' + \
+        str(note.reject_note) + \
+        '\n\nClick the following link to see the CL.\n'
+    msg += host.url + 'cl/view/reject/' + str(_id) + \
+        '\n\nThank you.'
+    recipient_list = list(dict.fromkeys(recipients))
+    send_email(subject, msg, recipient_list)
+
+    return HttpResponseRedirect(reverse('cl-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-APPROVAL')
+def cl_matrix_index(request):
+    areas = AreaSales.objects.all()
+
+    context = {
+        'data': areas,
+        'segment': 'cl_matrix',
+        'group_segment': 'approval',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CL-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/cl_matrix_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-APPROVAL')
+def cl_matrix_view(request, _id, _channel):
+    area = AreaSales.objects.get(area_id=_id)
+    channels = AreaChannelDetail.objects.filter(area_id=_id, status=1)
+    approvers = CLMatrix.objects.filter(area_id=_id, channel_id=_channel)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT user_id, username, position_name, q_clmatrix.approver_id FROM apps_user INNER JOIN apps_position ON apps_user.position_id = apps_position.position_id LEFT JOIN (SELECT * FROM apps_clmatrix WHERE area_id = '" + str(_id) + "' AND channel_id = '" + str(_channel) + "') AS q_clmatrix ON apps_user.user_id = q_clmatrix.approver_id WHERE q_clmatrix.approver_id IS NULL")
+        users = cursor.fetchall()
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        for i in users:
+            if str(i[0]) in check:
+                try:
+                    approver = CLMatrix(
+                        area_id=_id, channel_id=_channel, approver_id=i[0])
+                    approver.save()
+                except IntegrityError:
+                    continue
+            else:
+                CLMatrix.objects.filter(
+                    area_id=_id, channel_id=_channel, approver_id=i[0]).delete()
+
+        return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id, _channel]))
+
+    context = {
+        'data': area,
+        'channels': channels,
+        'users': users,
+        'approvers': approvers,
+        'channel': _channel,
+        'segment': 'cl_matrix',
+        'group_segment': 'approval',
+        'tab': 'auth',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CL-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/cl_matrix_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-APPROVAL')
+def cl_matrix_update(request, _id, _channel, _approver):
+    approvers = CLMatrix.objects.get(
+        area=_id, channel_id=_channel, approver_id=_approver)
+
+    if request.POST:
+        approvers.sequence = int(request.POST.get('sequence'))
+        # approvers.limit = int(request.POST.get('limit'))
+        approvers.return_to = True if request.POST.get('return') else False
+        approvers.approve = True if request.POST.get('approve') else False
+        approvers.revise = True if request.POST.get('revise') else False
+        approvers.returned = True if request.POST.get('returned') else False
+        approvers.reject = True if request.POST.get('reject') else False
+        approvers.notif = True if request.POST.get('notif') else False
+        approvers.printed = True if request.POST.get('printed') else False
+        approvers.as_approved = request.POST.get('as_approved')
+        approvers.save()
+
+        return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id, _channel]))
+
+    return render(request, 'home/cl_matrix_view.html')
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-APPROVAL')
+def cl_matrix_delete(request, _id, _channel, _arg):
+    approvers = CLMatrix.objects.get(
+        area=_id, channel_id=_channel, approver_id=_arg)
+    approvers.delete()
+
+    return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id, _channel]))

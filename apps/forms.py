@@ -719,7 +719,7 @@ class FormProposal(ModelForm):
 
     class Meta:
         model = Proposal
-        exclude = ['budget', 'channel', 'duration', 'total_cost', 'roi', 'claim', 'balance', 'status', 'seq_number', 'proposal_status', 'entry_date',
+        exclude = ['budget', 'channel', 'duration', 'total_cost', 'roi', 'claim', 'balance', 'status', 'seq_number', 'proposal_claim', 'proposal_status', 'entry_date',
                    'entry_by', 'update_date', 'update_by', 'entry_pos']
 
         widgets = {
@@ -953,95 +953,99 @@ class FormClaim(ModelForm):
         self.fields['invoice'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
         self.fields['invoice_date'].label = 'Invoice Date'
-        self.fields['invoice_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm'})
-        self.fields['invoice_date'].input_formats = ['%d/%m/%Y']
         self.fields['due_date'].label = 'Due Date'
-        self.fields['due_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm'})
-        self.fields['due_date'].input_formats = ['%d/%m/%Y']
         self.fields['amount'].label = 'Amount'
         self.fields['amount'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
         self.fields['remarks'].label = 'Remarks'
+        self.fields['remarks'].required = False
+        self.fields['additional_proposal'].label = 'Additional Proposal'
+        self.fields['additional_amount'].label = 'Additional Amount'
+        self.fields['additional_proposal'].required = False
+        self.fields['additional_amount'].required = False
 
-        class Meta:
-            model = Claim
-            exclude = ['proposal', 'program', 'status', 'entry_date',
-                       'entry_by', 'update_date', 'update_by']
+    class Meta:
+        model = Claim
+        exclude = ['program', 'status', 'tax', 'total', 'total_claim', 'seq_number', 'entry_pos', 'entry_date',
+                   'entry_by', 'update_date', 'update_by']
 
-            widgets = {
-                'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3}),
-            }
+        widgets = {
+            'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3}),
+            'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
+            'due_date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
+        }
 
 
 class FormClaimView(ModelForm):
     def __init__(self, *args, **kwargs):
         super(FormClaimView, self).__init__(*args, **kwargs)
         self.label_suffix = ''
+        self.fields['area'].widget = forms.TextInput(
+            attrs={'class': 'd-none'})
         self.fields['claim_date'].label = 'Date'
-        self.fields['claim_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['claim_date'].input_formats = ['%d/%m/%Y']
-        self.fields['claim_date'].initial = datetime.date.today().strftime(
-            '%d/%m/%Y')
         self.fields['invoice'].label = 'Invoice No.'
         self.fields['invoice'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['invoice_date'].label = 'Invoice Date'
-        self.fields['invoice_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['invoice_date'].input_formats = ['%d/%m/%Y']
         self.fields['due_date'].label = 'Due Date'
-        self.fields['due_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['due_date'].input_formats = ['%d/%m/%Y']
         self.fields['amount'].label = 'Amount'
-        self.fields['amount'].widget = forms.NumberInput(
+        self.fields['amount'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['tax'].label = 'Tax'
+        self.fields['tax'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners', 'readonly': 'readonly'})
+        self.fields['total'].label = 'Total'
+        self.fields['total'].widget = forms.NumberInput(
+            attrs={'class': 'form-control-sm no-spinners', 'readonly': 'readonly'})
+        self.fields['additional_proposal'].label = 'Additional Proposal'
+        self.fields['additional_amount'].label = 'Additional Amount'
         self.fields['remarks'].label = 'Remarks'
 
-        class Meta:
-            model = Claim
-            exclude = ['proposal', 'program', 'status', 'entry_date',
-                       'entry_by', 'update_date', 'update_by']
+    class Meta:
+        model = Claim
+        exclude = ['claim_id', 'proposal', 'program', 'status', 'seq_number', 'entry_date',
+                   'entry_by', 'update_date', 'update_by']
 
-            widgets = {
-                'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3, 'readonly': 'readonly'}),
-            }
+        widgets = {
+            'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3, 'readonly': 'readonly'}),
+            'claim_date': DateInput(attrs={'class': 'form-control form-control-sm', 'readonly': 'readonly'}),
+            'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm', 'readonly': 'readonly'}),
+            'due_date': DateInput(attrs={'class': 'form-control form-control-sm', 'readonly': 'readonly'}),
+        }
 
 
 class FormClaimUpdate(ModelForm):
     def __init__(self, *args, **kwargs):
         super(FormClaimUpdate, self).__init__(*args, **kwargs)
         self.label_suffix = ''
+        self.fields['area'].widget = forms.TextInput(
+            attrs={'class': 'd-none'})
         self.fields['claim_date'].label = 'Date'
         self.fields['claim_date'].widget = forms.DateInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['claim_date'].input_formats = ['%d/%m/%Y']
-        self.fields['claim_date'].initial = datetime.date.today().strftime(
-            '%d/%m/%Y')
         self.fields['invoice'].label = 'Invoice No.'
         self.fields['invoice'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
         self.fields['invoice_date'].label = 'Invoice Date'
-        self.fields['invoice_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm'})
-        self.fields['invoice_date'].input_formats = ['%d/%m/%Y']
         self.fields['due_date'].label = 'Due Date'
-        self.fields['due_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm'})
-        self.fields['due_date'].input_formats = ['%d/%m/%Y']
         self.fields['amount'].label = 'Amount'
         self.fields['amount'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
         self.fields['remarks'].label = 'Remarks'
+        self.fields['remarks'].required = False
+        self.fields['additional_proposal'].label = 'Additional Proposal'
+        self.fields['additional_amount'].label = 'Additional Amount'
+        self.fields['additional_proposal'].required = False
+        self.fields['additional_amount'].required = False
 
-        class Meta:
-            model = Claim
-            exclude = ['proposal', 'program', 'status', 'entry_date',
-                       'entry_by', 'update_date', 'update_by']
+    class Meta:
+        model = Claim
+        exclude = ['claim_id', 'proposal', 'program', 'status', 'tax', 'total', 'total_claim', 'seq_number', 'entry_pos', 'entry_date',
+                   'entry_by', 'update_date', 'update_by']
 
-            widgets = {
-                'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3}),
-            }
+        widgets = {
+            'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3}),
+            'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
+            'due_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
+        }
