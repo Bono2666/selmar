@@ -3534,10 +3534,14 @@ def closing_view(request, _id):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET-CLOSING')
 def closing(request):
-    period = Closing.objects.get(document='BUDGET')
+    message = '0'
+    period = None
+    try:
+        period = Closing.objects.get(document='BUDGET')
+    except Closing.DoesNotExist:
+        message = 'Document Budget not found, add document Budget Closing Period first.'
     budgets = Budget.objects.filter(budget_status='OPEN')
     proposals = Proposal.objects.filter(status__in=['PENDING', 'IN APPROVAL'])
-    message = '0'
 
     if request.POST:
         if proposals:
