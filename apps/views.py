@@ -496,7 +496,9 @@ def area_sales_add(request):
             request.POST, queryset=AreaSalesDetail.objects.none())
 
         if form.is_valid():
-            form.save()
+            new = form.save(commit=False)
+            new.area_id = form.cleaned_data.get('area_id').replace(' ', '')
+            new.save()
             return HttpResponseRedirect(reverse('area-sales-view', args=[form.instance.area_id, ]))
         # if all([form.is_valid(), formset.is_valid()]):
         #     try:
