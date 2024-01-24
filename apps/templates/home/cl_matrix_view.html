@@ -20,17 +20,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="col-4">
-                        <label class="form-control-label">Channel</label>
-                        <select class="form-control form-select-sm" name="area" id="area" onchange="location = this.value;">
-                            <option value="">Select Channel</option>
-                            {% for item in channels %}
-                            <option value="{% url 'cl-matrix-view' item.area_id item.channel_id %}" {% if item.channel_id == channel %}selected{% endif %}>{{ item.channel }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
+                <div class="card-body"></div>
             </div>
         </div>
     </div>
@@ -54,7 +44,7 @@
                             <div class="modal-header">
                                 <h5 class="modal-title" id="ModalLabel">Select Approver</h5>
                             </div>
-                            <form method="post" action="{% url 'cl-matrix-view' data.area_id channel %}" enctype="multipart/form-data">
+                            <form method="post" action="{% url 'cl-matrix-view' data.area_id %}" enctype="multipart/form-data">
                                 {% csrf_token %}
                                 <div class="modal-body border-bottom-0">
                                     <div class="table-responsive p-0">
@@ -191,7 +181,7 @@
                                                 </div>
                                                 <div class="modal-footer border-0">
                                                     <button role="button" class="btn bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
-                                                    <a href="{% url 'cl-matrix-delete' item.area_id channel item.approver_id %}" role="button" class="btn bg-gradient-danger text-white">Delete
+                                                    <a href="{% url 'cl-matrix-delete' item.area_id item.approver_id %}" role="button" class="btn bg-gradient-danger text-white">Delete
                                                     </a>
                                                 </div>
                                             </div>
@@ -205,7 +195,7 @@
                                             <div class="modal-header px-4">
                                                 <h5 class="modal-title" id="ModalLabel">Approver: {{ item.approver.username }}</h5>
                                             </div>
-                                            <form method="post" action="{% url 'cl-matrix-update' item.area_id channel item.approver_id %}" enctype="multipart/form-data">
+                                            <form method="post" action="{% url 'cl-matrix-update' item.area_id item.approver_id %}" enctype="multipart/form-data">
                                                 {% csrf_token %}
                                                 <div class="modal-body border-bottom-0 px-4">
                                                     <div class="pl-lg-0">

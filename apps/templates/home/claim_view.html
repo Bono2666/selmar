@@ -27,8 +27,7 @@
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.claim_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
-                                <a href="{% url 'program-print' data.claim_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
-                                <!-- <a href="{% url 'program-print' data.claim_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4" target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a> -->
+                                <a href="{% url 'claim-print' data.claim_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
                             </div>
                         </div>
                     </div>
@@ -57,7 +56,7 @@
                                             <div class="col-md-12">
                                                 <div class="shadow-none">
                                                     <label for="id_amount">Amount</label>
-                                                    <input type="text" name="additional_amount" id="additional_amount" class="form-control form-control-sm" value="{{ difference }}">
+                                                    <input type="text" name="additional_amount" id="additional_amount" class="form-control form-control-sm" value="{{ difference|intcomma }}" readonly>
                                                 </div>
                                             </div>
                                         </div>

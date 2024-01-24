@@ -26,44 +26,9 @@ from reportlab.lib.pagesizes import portrait, landscape, A4
 from django.db.models import Count
 from PyPDF2 import PdfMerger
 from django.conf import settings
-from django.http import FileResponse
-from django.http import HttpResponse
 from xhtml2pdf import pisa
 from django.template.loader import get_template
-from reportlab.pdfgen import canvas
-from io import BytesIO
-from reportlab.pdfgen import canvas
-from xhtml2pdf import pisa
-from django.template.loader import get_template
-from django.http import HttpResponse
-from io import BytesIO
-from django.http import HttpResponse
-from django.template.loader import get_template
-from reportlab.pdfgen import canvas
-from xhtml2pdf import pisa
-from reportlab.pdfgen import canvas
-from django.http import HttpResponse
-from io import BytesIO
-from django.template.loader import get_template
-from xhtml2pdf import pisa
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from io import BytesIO
-from django.http import HttpResponse
-from django.template.loader import get_template
-from reportlab.pdfgen import canvas
-from io import BytesIO
-from django.http import HttpResponse
-from django.template.loader import get_template
-from xhtml2pdf import pisa
-from reportlab.pdfgen import canvas
-from io import BytesIO
-from django.http import HttpResponse
-from django.template.loader import get_template
-from xhtml2pdf import pisa
-from reportlab.pdfgen import canvas
-import math
+from django.utils.text import Truncator
 
 
 @login_required(login_url='/login/')
@@ -1336,16 +1301,18 @@ def budget_update(request, _tab, _id):
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
 
     if request.POST:
-        form = FormBudgetUpdate(
-            request.POST, request.FILES, instance=budgets)
+        form = FormNewBudgetUpdate(
+            request.POST, request.FILES, instance=budgets) if budgets.budget_new else FormBudgetUpdate(request.POST, request.FILES, instance=budgets)
         if form.is_valid():
             update = form.save(commit=False)
             update.budget_year = budgets.budget_year
             update.budget_month = budgets.budget_month
-            update.budget_balance = update.budget_amount + \
+            update.budget_balance = int(request.POST.get('budget_amount')) + \
                 int(request.POST.get('budget_upping'))
             update.save()
             for i in budget_detail:
+                i.budget_amount = (i.budget_percent/100) * \
+                    budgets.budget_amount if budgets.budget_new else i.budget_amount
                 i.budget_upping = (i.budget_percent/100) * \
                     budgets.budget_upping
                 i.save()
@@ -1361,7 +1328,8 @@ def budget_update(request, _tab, _id):
 
             return HttpResponseRedirect(reverse('budget-view', args=[_tab, _id, 'NONE']))
     else:
-        form = FormBudgetUpdate(instance=budgets)
+        form = FormNewBudgetUpdate(instance=budgets) if budgets.budget_new else FormBudgetUpdate(
+            instance=budgets)
 
     YEAR_CHOICES = []
     for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
@@ -1384,6 +1352,7 @@ def budget_update(request, _tab, _id):
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
+        'new': budgets.budget_new,
         'tab': _tab,
         'segment': 'budget',
         'group_segment': 'budget',
@@ -1448,7 +1417,7 @@ def budget_view(request, _tab, _id, _msg):
         'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
         'approval': approval,
-        'message': _msg,
+        'message': 'NONE' if _msg == 'NONE' else 'Total budget percentage you entered is not 100%',
         'tab': _tab,
         'channel': channel,
         'segment': 'budget',
@@ -1811,7 +1780,7 @@ def budget_release_view(request, _id, _msg, _is_revise):
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
-        'message': _msg,
+        'message': 'NONE' if _msg == 'NONE' else 'Total budget percentage you entered is not 100%',
         'channel': channel,
         'is_revise': _is_revise,
         'approved': approved,
@@ -1890,20 +1859,23 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
 @role_required(allowed_roles='BUDGET-RELEASE')
 def budget_release_update(request, _id):
     budgets = Budget.objects.get(budget_id=_id)
-    budgets.budget_amount = '{:,}'.format(budgets.budget_amount)
-    budgets.budget_total = '{:,}'.format(budgets.budget_total)
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
+    amount_before = budgets.budget_amount
     upping_before = budgets.budget_upping
 
     if request.POST:
-        form = FormBudgetUpdate(
-            request.POST, request.FILES, instance=budgets)
+        form = FormNewBudgetUpdate(
+            request.POST, request.FILES, instance=budgets) if budgets.budget_new else FormBudgetUpdate(request.POST, request.FILES, instance=budgets)
         if form.is_valid():
             update = form.save(commit=False)
             update.budget_year = budgets.budget_year
             update.budget_month = budgets.budget_month
+            update.budget_balance = int(request.POST.get('budget_amount')) + \
+                int(request.POST.get('budget_upping'))
             update.save()
             for i in budget_detail:
+                i.budget_amount = (i.budget_percent/100) * \
+                    budgets.budget_amount if budgets.budget_new else i.budget_amount
                 i.budget_upping = (i.budget_percent/100) * \
                     budgets.budget_upping
                 i.save()
@@ -1937,11 +1909,14 @@ def budget_release_update(request, _id):
                 if approver_mail:
                     recipients.append(approver_mail[1])
 
-            subject = 'Upping Price Revised'
-            message = 'Dear All,\n\nThe following is Upping Price update for Budget No. ' + \
+            subject = 'Beginning Balance Revised' if budgets.budget_new else 'Upping Price Revised'
+            update_item = 'Beginning Balance' if budgets.budget_new else 'Upping Price'
+            before_field = amount_before if budgets.budget_new else upping_before
+            update_field = update.budget_amount if budgets.budget_new else update.budget_upping
+            message = 'Dear All,\n\nThe following is ' + update_item + ' update for Budget No. ' + \
                 str(_id) + ':\n\nValue before: ' + \
-                '{:,}'.format(upping_before) + '\nValue after: ' + \
-                '{:,}'.format(update.budget_upping) + '\n\nNote: ' + \
+                '{:,}'.format(before_field) + '\nValue after: ' + \
+                '{:,}'.format(update_field) + '\n\nNote: ' + \
                 str(release.upping_note) + '\n\nClick the following link to view the budget.\n' + host.url + 'budget/view/draft/' + \
                 str(_id) + '/NONE/' + \
                 '\n\nThank you.'
@@ -1950,7 +1925,8 @@ def budget_release_update(request, _id):
 
             return HttpResponseRedirect(reverse('budget-release-view', args=[_id, 'NONE', 0]))
     else:
-        form = FormBudgetUpdate(instance=budgets)
+        form = FormNewBudgetUpdate(instance=budgets) if budgets.budget_new else FormBudgetUpdate(
+            instance=budgets)
 
     YEAR_CHOICES = []
     for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
@@ -1967,6 +1943,7 @@ def budget_release_update(request, _id):
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
+        'new': budgets.budget_new,
         'segment': 'budget_release',
         'group_segment': 'budget',
         'crud': 'update',
@@ -3553,7 +3530,7 @@ def closing_view(request, _id):
 
 
 @login_required(login_url='/login/')
-@role_required(allowed_roles='CLOSING')
+@role_required(allowed_roles='BUDGET-CLOSING')
 def closing(request):
     period = Closing.objects.get(document='BUDGET')
     budgets = Budget.objects.filter(budget_status='OPEN')
@@ -3619,11 +3596,11 @@ def closing(request):
                 'next_month': next_month,
                 'next_year': next_year,
                 'total': budgets.count(),
-                'segment': 'closing',
+                'segment': 'budget_closing',
                 'group_segment': 'budget',
                 'crud': 'index',
                 'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-                'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLOSING') if not request.user.is_superuser else Auth.objects.all(),
+                'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-CLOSING') if not request.user.is_superuser else Auth.objects.all(),
             }
             return render(request, 'home/budget_closingreport.html', context)
 
@@ -3638,13 +3615,13 @@ def closing(request):
     context = {
         'data': period,
         'message': message,
-        'segment': 'closing',
+        'segment': 'budget_closing',
         'years': YEAR_CHOICES,
         'months': MONTH_CHOICES,
         'group_segment': 'budget',
         'crud': 'index',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLOSING') if not request.user.is_superuser else Auth.objects.all(),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-CLOSING') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/closing.html', context)
 
@@ -4275,6 +4252,7 @@ def proposal_update(request, _tab, _id):
     total_cost = ProjectedCost.objects.filter(
         proposal_id=_id).aggregate(Sum('cost'))
     message = '0'
+    msg = ''
 
     if request.POST:
         form = FormProposalUpdate(
@@ -4297,6 +4275,8 @@ def proposal_update(request, _tab, _id):
     else:
         form = FormProposalUpdate(instance=proposal)
 
+    msg = form.errors
+
     context = {
         'form': form,
         'data': proposal,
@@ -4308,6 +4288,7 @@ def proposal_update(request, _tab, _id):
         'total_cost': total_cost['cost__sum'] if total_cost['cost__sum'] else 0,
         'tab': _tab,
         'message': message,
+        'msg': msg,
         'segment': 'proposal',
         'group_segment': 'proposal',
         'crud': 'update',
@@ -4419,10 +4400,8 @@ def program_add(request, _area, _distributor, _proposal):
 
     _id = 'SBS-3' + format_no + '/' + proposal.channel + '/' + selected_area + '/' + \
         str(proposal.budget.budget_distributor.distributor_id) + '/' + \
-        str(datetime.datetime.now().month) + \
-        '/' + str(datetime.datetime.now().year) if selected_proposal != '0' else 'SBS-3' + format_no + '/' + selected_area + '/0' + \
-        str(datetime.datetime.now().month) + \
-        '/' + str(datetime.datetime.now().year)
+        datetime.datetime.now().strftime('%m/%Y') if selected_proposal != '0' else 'SBS-3' + format_no + '/' + selected_area + '/0' + \
+        datetime.datetime.now().strftime('%m/%Y')
 
     if request.POST:
         form = FormProgram(request.POST, request.FILES)
@@ -5153,10 +5132,8 @@ def claim_add(request, _area, _distributor, _program):
 
     _id = 'CBS-4' + format_no + '/' + program.proposal.channel + '/' + selected_area + '/' + \
         program.proposal.budget.budget_distributor.distributor_id + '/' + \
-        str(datetime.datetime.now().month) + '/' + \
-        str(datetime.datetime.now().year) if selected_program != '0' else 'CBS-4' + format_no + '/' + selected_area + '/0' + \
-        '/' + str(datetime.datetime.now().month) + '/' + \
-        str(datetime.datetime.now().year)
+        datetime.datetime.now().strftime('%m/%Y') if selected_program != '0' else 'CBS-4' + format_no + '/' + selected_area + '/0' + \
+        '/' + datetime.datetime.now().strftime('%m/%Y')
 
     if request.POST:
         form = FormClaim(request.POST, request.FILES)
@@ -5177,7 +5154,7 @@ def claim_add(request, _area, _distributor, _program):
                     'additional_proposal') else Decimal(request.POST.get('amount'))
                 draft.additional_proposal_id = request.POST.get(
                     'additional_proposal')
-                draft.additional_amount = request.POST.get('additional_amount') if request.POST.get(
+                draft.additional_amount = difference if request.POST.get(
                     'additional_proposal') else 0
                 draft.save()
 
@@ -5318,6 +5295,7 @@ def claim_view(request, _tab, _id):
         'btn': Auth.objects.get(
             user_id=request.user.user_id, menu_id='CLAIM') if not request.user.is_superuser else Auth.objects.all(),
     }
+
     return render(request, 'home/claim_view.html', context)
 
 
@@ -5358,7 +5336,7 @@ def claim_update(request, _tab, _id):
                         'additional_proposal')
                 else:
                     draft.additional_proposal = None
-                draft.additional_amount = request.POST.get('additional_amount') if request.POST.get(
+                draft.additional_amount = difference if request.POST.get(
                     'additional_proposal') else 0
                 draft.save()
 
@@ -5589,7 +5567,7 @@ def claim_release_update(request, _id):
                         'additional_proposal')
                 else:
                     parent.additional_proposal_id = None
-                parent.additional_amount = request.POST.get('additional_amount') if request.POST.get(
+                parent.additional_amount = difference if request.POST.get(
                     'additional_proposal') else 0
                 parent.save()
 
@@ -5957,6 +5935,256 @@ def claim_release_reject(request, _id):
 
 
 @login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM')
+def claim_print(request, _id):
+    claim = Claim.objects.get(claim_id=_id)
+    claim_id = _id.replace('/', '-')
+
+    # Create a new PDF file with landscape orientation
+    filename = 'claim_' + claim_id + '.pdf'
+    pdf_file = canvas.Canvas(filename, pagesize=landscape(A4))
+
+    # Set the font and font size
+    pdf_file.setFont('Helvetica-Bold', 11)
+
+    # Add logo in the center of the page
+    logo_path = 'https://ksisolusi.com/apps/static/img/favicon.png'
+    logo_width = 60
+    logo_height = 60
+    page_width = landscape(A4)
+    logo_x = (page_width[0] - logo_width) / 2
+    pdf_file.drawImage(logo_path, logo_x, 515,
+                       width=logo_width, height=logo_height)
+
+    # Add title in the center of page width
+    title = 'DEBIT NOTE'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 11)
+    title_x = (page_width[0] - title_width) / 2
+    pdf_file.setFont('Helvetica-Bold', 11)
+    pdf_file.drawString(title_x, 500, title)
+
+    # Write the claim details
+    y = 450
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Claim No.')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, str(claim.claim_id))
+    pdf_file.setFont('Helvetica-Bold', 8)
+    y -= 10
+    pdf_file.drawString(25, y, 'Claim Date')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, claim.claim_date.strftime('%d %b %Y'))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Proposal No.')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, str(claim.proposal.proposal_id))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Program Name')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, str(claim.proposal.program_name))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Invoice No.')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, str(claim.invoice))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Invoice Date')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, claim.invoice_date.strftime('%d %b %Y'))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Due Date')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, claim.due_date.strftime('%d %b %Y'))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Amount')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, '{:,}'.format(claim.total_claim))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Additional Proposal')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, str(
+        claim.additional_proposal if claim.additional_proposal else '-'))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Additional Amount')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, '{:,}'.format(
+        claim.additional_amount) if claim.additional_amount else '-')
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Tax')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, '{:,}'.format(claim.tax))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Total Amount')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, '{:,}'.format(claim.total))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Remarks')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, str(claim.remarks))
+
+    y -= 50
+    col_width = (page_width[0] - 50) / 11
+    approver = ClaimRelease.objects.filter(
+        claim_id=_id, claim_approval_status='Y', printed=True).order_by('sequence')
+    verificator = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='verificator', printed=True).aggregate(id=Count(
+        'id')) if ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='verificator', printed=True).exists() else 0
+    area_approver = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='area_approver', printed=True).aggregate(id=Count(
+        'id')) if ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='area_approver', printed=True).exists() else 0
+    checker = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='checker', printed=True).aggregate(id=Count(
+        'id')) if ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='checker', printed=True).exists() else 0
+    ho_approver = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='ho_approver', printed=True).aggregate(id=Count(
+        'id')) if ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='ho_approver', printed=True).exists() else 0
+    validator = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='validator', printed=True).aggregate(id=Count(
+        'id')) if ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='validator', printed=True).exists() else 0
+    finalizer = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='finalizer', printed=True).aggregate(id=Count(
+        'id')) if ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='Y', as_approved='finalizer', printed=True).exists() else 0
+
+    verificator_count = verificator['id'] if verificator else 0
+    area_approver_count = area_approver['id'] if area_approver else 0
+    checker_count = checker['id'] if checker else 0
+    ho_approver_count = ho_approver['id'] if ho_approver else 0
+    validator_count = validator['id'] if validator else 0
+    finalizer_count = finalizer['id'] if finalizer else 0
+
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.rect(25, y-5, col_width, 15, stroke=True)
+    title = 'Prepared By'
+    title_width = pdf_file.stringWidth(title, "Helvetica", 8)
+    title_x = 25 + (col_width - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.rect(25 + col_width, y-5,
+                  col_width * verificator_count, 15, stroke=True)
+    title = 'Verified By' if verificator_count > 0 else ''
+    title_width = pdf_file.stringWidth(title, "Helvetica", 8)
+    title_x = 25 + col_width + \
+        ((col_width * verificator_count) - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.rect(25 + (col_width * (verificator_count + 1)), y-5,
+                  col_width * area_approver_count, 15, stroke=True)
+    title = 'Approved By' if area_approver_count > 0 else ''
+    title_width = pdf_file.stringWidth(title, "Helvetica", 8)
+    title_x = 25 + (col_width * (verificator_count + 1)) + \
+        ((col_width * area_approver_count) - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.rect(25 + (col_width * (verificator_count + area_approver_count + 1)),
+                  y-5, col_width * checker_count, 15, stroke=True)
+    title = 'Checked By' if checker_count > 0 else ''
+    title_width = pdf_file.stringWidth(title, "Helvetica", 8)
+    title_x = 25 + (col_width * (verificator_count + area_approver_count + 1)
+                    ) + ((col_width * checker_count) - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.rect(25 + (col_width * (verificator_count + area_approver_count +
+                  checker_count + 1)), y-5, col_width * ho_approver_count, 15, stroke=True)
+    title = 'Approved By' if ho_approver_count > 0 else ''
+    title_width = pdf_file.stringWidth(title, "Helvetica", 8)
+    title_x = 25 + (col_width * (verificator_count + area_approver_count +
+                    checker_count + 1)) + ((col_width * ho_approver_count) - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.rect(25 + (col_width * (verificator_count + area_approver_count + checker_count +
+                  ho_approver_count + 1)), y-5, col_width * validator_count, 15, stroke=True)
+    title = 'Validated By' if validator_count > 0 else ''
+    title_width = pdf_file.stringWidth(title, "Helvetica", 8)
+    title_x = 25 + (col_width * (verificator_count + area_approver_count + checker_count +
+                    ho_approver_count + 1)) + ((col_width * validator_count) - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.rect(25 + (col_width * (verificator_count + area_approver_count + checker_count +
+                  ho_approver_count + validator_count + 1)), y-5, col_width * finalizer_count, 15, stroke=True)
+    title = 'Approved By' if finalizer_count > 0 else ''
+    title_width = pdf_file.stringWidth(title, "Helvetica", 8)
+    title_x = 25 + (col_width * (verificator_count + area_approver_count + checker_count +
+                    ho_approver_count + validator_count + 1)) + ((col_width * finalizer_count) - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.rect(25, y - 55, col_width, 50, stroke=True)
+    sign_path = User.objects.get(user_id=claim.entry_by).signature.path if User.objects.get(
+        user_id=claim.entry_by).signature else ''
+    if sign_path:
+        pdf_file.drawImage(sign_path, 30, y - 50,
+                           width=col_width - 10, height=40)
+    else:
+        pass
+    pdf_file.rect(25, y - 70, col_width, 15, stroke=True)
+    title = claim.entry_pos
+    title_width = pdf_file.stringWidth(title, "Helvetica-Bold", 8)
+    title_x = 25 + (col_width - title_width) / 2
+    pdf_file.setFont("Helvetica-Bold", 8)
+    pdf_file.drawString(title_x, y - 65, title)
+    pdf_file.rect(25, y - 85, col_width, 15, stroke=True)
+    pdf_file.setFont("Helvetica", 8)
+    title = 'Date: ' + claim.entry_date.strftime('%d/%m/%Y')
+    title_width = pdf_file.stringWidth(title, "Helvetica", 8)
+    title_x = 25 + (col_width - title_width) / 2
+    pdf_file.drawString(title_x, y - 80, title)
+
+    for i in range(1, approver.count() + 1):
+        pdf_file.rect(25 + (col_width * i), y - 55, col_width, 50, stroke=True)
+        if approver:
+            sign_path = User.objects.get(user_id=approver[i - 1].claim_approval_id).signature.path if User.objects.get(
+                user_id=approver[i - 1].claim_approval_id).signature else ''
+            if sign_path:
+                pdf_file.drawImage(sign_path, 30 + (col_width * i), y - 50,
+                                   width=col_width - 10, height=40)
+            else:
+                pass
+            pdf_file.rect(25 + (col_width * i), y - 70,
+                          col_width, 15, stroke=True)
+            title = approver[i - 1].claim_approval_position
+            title_width = pdf_file.stringWidth(title, "Helvetica-Bold", 8)
+            title_x = 25 + (col_width * i) + (col_width - title_width) / 2
+            pdf_file.setFont("Helvetica-Bold", 8)
+            pdf_file.drawString(title_x, y - 65, title)
+            pdf_file.rect(25 + (col_width * i), y - 85,
+                          col_width, 15, stroke=True)
+            pdf_file.setFont("Helvetica", 8)
+            title = 'Date: ' + \
+                approver[i - 1].claim_approval_date.strftime('%d/%m/%Y')
+            title_width = pdf_file.stringWidth(title, "Helvetica", 8)
+            title_x = 25 + (col_width * i) + (col_width - title_width) / 2
+            pdf_file.drawString(title_x, y - 80, title)
+        else:
+            pass
+
+    pdf_file.save()
+
+    return FileResponse(open(filename, 'rb'), content_type='application/pdf')
+
+
+@login_required(login_url='/login/')
 @role_required(allowed_roles='CLAIM-ARCHIVE')
 def claim_archive_index(request):
     rejects = Claim.objects.filter(status='REJECTED', area__in=AreaUser.objects.filter(
@@ -6111,14 +6339,11 @@ def cl_index(request, _tab):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='CL')
-def cl_add(request, _area, _channel, _distributor):
+def cl_add(request, _area, _distributor):
     selected_area = _area
-    selected_channel = _channel
     selected_distributor = _distributor
     area = AreaUser.objects.filter(user_id=request.user.user_id).values_list(
         'area_id', 'area__area_name')
-    channels = AreaChannelDetail.objects.filter(
-        area_id=selected_area, status=1)
     distributors = Claim.objects.filter(status='OPEN', area=selected_area).values_list(
         'proposal__budget__budget_distributor', 'proposal__budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
 
@@ -6127,10 +6352,10 @@ def cl_add(request, _area, _channel, _distributor):
 
     if selected_area != '0' and selected_distributor != '0':
         approvers = CLMatrix.objects.filter(
-            area_id=selected_area, channel=selected_channel).order_by('sequence')
+            area_id=selected_area).order_by('sequence')
         if approvers.count() == 0:
             no_save = True
-            message = "No communication letter's approver found for this area and channel."
+            message = "No communication letter's approver found for this area."
 
     try:
         _no = CL.objects.all().order_by('seq_number').last()
@@ -6141,12 +6366,11 @@ def cl_add(request, _area, _channel, _distributor):
     else:
         format_no = '{:04d}'.format(_no.seq_number + 1)
 
-    _id = 'LBS-5' + format_no + '/' + selected_channel + '/' + selected_area + \
+    _id = 'LBS-5' + format_no + '/' + selected_area + \
         '/' + selected_distributor + '/' + datetime.datetime.now().strftime('%m/%Y')
 
-    if selected_area != '0' and selected_distributor != '0' and selected_channel != '0':
-        _channel = Channel.objects.get(channel_id=selected_channel)
-        parent = CL(cl_id=_id, cl_date=datetime.datetime.now(), area_id=selected_area, channel=_channel,
+    if selected_area != '0' and selected_distributor != '0' and not no_save:
+        parent = CL(cl_id=_id, cl_date=datetime.datetime.now(), area_id=selected_area,
                     distributor_id=selected_distributor, entry_pos=request.user.position.position_id, seq_number=_no.seq_number + 1 if _no else 1)
         parent.save()
 
@@ -6170,36 +6394,12 @@ def cl_add(request, _area, _channel, _distributor):
                 as_approved=i.as_approved)
             release.save()
 
-        mail_sent = CLRelease.objects.filter(cl_id=_id).order_by(
-            'sequence').values_list('mail_sent', flat=True)
-        if mail_sent[0] == False:
-            email = CLRelease.objects.filter(
-                cl_id=_id).order_by('sequence').values_list('cl_approval_email', flat=True)
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT username FROM apps_clrelease INNER JOIN apps_user ON apps_clrelease.cl_approval_id = apps_user.user_id WHERE cl_id_id = '" + str(_id) + "' AND cl_approval_status = 'N' ORDER BY sequence LIMIT 1")
-                approver = cursor.fetchone()
-
-            subject = 'Communication Letter Approval'
-            msg = 'Dear ' + approver[0] + ',\n\nYou have a new communication letter to approve. Please check your communication letter release list.\n\n' + \
-                'Click this link to approve, revise, return or reject this communication letter.\n' + host.url + 'cl_release/view/' + str(_id) + '/0/' + \
-                '\n\nThank you.'
-            send_email(subject, msg, [email[0]])
-
-            # update mail sent to true
-            release = CLRelease.objects.filter(
-                cl_id=_id).order_by('sequence').first()
-            release.mail_sent = True
-            release.save()
-
         return HttpResponseRedirect(reverse('cl-view', args=['draft', _id]))
 
     context = {
         'selected_area': selected_area,
-        'selected_channel': selected_channel,
         'selected_distributor': selected_distributor,
         'area': area,
-        'channels': channels,
         'distributors': distributors,
         'no_save': no_save,
         'message': message,
@@ -6217,10 +6417,8 @@ def cl_add(request, _area, _channel, _distributor):
 def cl_view(request, _tab, _id):
     cl = CL.objects.get(cl_id=_id)
     cl_detail = CLDetail.objects.filter(cl_id=_id)
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT apps_claim.claim_id, remarks, q_detail.claim_id FROM apps_claim LEFT JOIN (SELECT * FROM apps_cldetail WHERE cl_id_id = '" + str(_id) + "') AS q_detail ON apps_claim.claim_id = q_detail.claim_id WHERE q_detail.claim_id IS NULL")
-        claim = cursor.fetchall()
+    claim = Claim.objects.filter(status='OPEN', area_id=cl.area_id, proposal__budget__budget_distributor=cl.distributor_id).exclude(
+        cldetail__claim_id__in=CLDetail.objects.all().values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'cldetail__claim_id')
 
     highest_approval = CLRelease.objects.filter(
         cl_id=_id).aggregate(Max('sequence'))
@@ -6255,7 +6453,7 @@ def cl_view(request, _tab, _id):
                 cl_id=_id).order_by('sequence').values_list('cl_approval_email', flat=True)
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT username FROM apps_clrelease INNER JOIN apps_user ON apps_clrelease.cl_approval_id = apps_user.user_id WHERE cl_id = '" + str(_id) + "' AND cl_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                    "SELECT username FROM apps_clrelease INNER JOIN apps_user ON apps_clrelease.cl_approval_id = apps_user.user_id WHERE cl_id_id = '" + str(_id) + "' AND cl_approval_status = 'N' ORDER BY sequence LIMIT 1")
                 approver = cursor.fetchone()
 
             subject = 'CL Approval'
@@ -6278,6 +6476,7 @@ def cl_view(request, _tab, _id):
         'claim': claim,
         'tab': _tab,
         'approval': approval,
+        'status': cl.status,
         'segment': 'cl',
         'group_segment': 'cl',
         'crud': 'view',
@@ -6286,16 +6485,26 @@ def cl_view(request, _tab, _id):
         'btn': Auth.objects.get(
             user_id=request.user.user_id, menu_id='CL') if not request.user.is_superuser else Auth.objects.all(),
     }
+
     return render(request, 'home/cl_view.html', context)
 
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='CL')
-def cldetail_delete(request, _tab, _id, _claim):
-    detail = CLDetail.objects.get(cl_id=_id, claim_id=_claim)
+def cldetail_delete(request, _tab, _id):
+    detail = CLDetail.objects.get(id=_id)
     detail.delete()
 
-    return HttpResponseRedirect(reverse('cl-view', args=[_tab, _id]))
+    return HttpResponseRedirect(reverse('cl-view', args=[_tab, detail.cl_id_id]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-RELEASE')
+def cldetail_release_delete(request, _id):
+    detail = CLDetail.objects.get(id=_id)
+    detail.delete()
+
+    return HttpResponseRedirect(reverse('cl-release-view', args=[detail.cl_id_id]))
 
 
 @login_required(login_url='/login/')
@@ -6312,7 +6521,7 @@ def cl_delete(request, _tab, _id):
 def cl_release_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT apps_cl.cl_id, apps_cl.cl_date, apps_cl.area_id, apps_cl.channel_id, apps_distributor.distributor_name, apps_cl.status, apps_clrelease.sequence FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id INNER JOIN apps_clrelease ON apps_cl.cl_id = apps_clrelease.cl_id_id INNER JOIN (SELECT cl_id_id, MIN(sequence) AS seq FROM apps_clrelease WHERE cl_approval_status = 'N' GROUP BY cl_id_id ORDER BY sequence ASC) AS q_group ON apps_clrelease.cl_id_id = q_group.cl_id_id AND apps_clrelease.sequence = q_group.seq WHERE (apps_cl.status = 'PENDING' OR apps_cl.status = 'IN APPROVAL') AND apps_clrelease.cl_approval_id = '" + str(request.user.user_id) + "'")
+            "SELECT apps_cl.cl_id, apps_cl.cl_date, apps_cl.area_id, apps_distributor.distributor_name, apps_cl.status, apps_clrelease.sequence FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id INNER JOIN apps_clrelease ON apps_cl.cl_id = apps_clrelease.cl_id_id INNER JOIN (SELECT cl_id_id, MIN(sequence) AS seq FROM apps_clrelease WHERE cl_approval_status = 'N' GROUP BY cl_id_id ORDER BY sequence ASC) AS q_group ON apps_clrelease.cl_id_id = q_group.cl_id_id AND apps_clrelease.sequence = q_group.seq WHERE (apps_cl.status = 'PENDING' OR apps_cl.status = 'IN APPROVAL') AND apps_clrelease.cl_approval_id = '" + str(request.user.user_id) + "'")
         release = cursor.fetchall()
 
     context = {
@@ -6334,10 +6543,8 @@ def cl_release_view(request, _id, _is_revise):
     cl_detail = CLDetail.objects.filter(cl_id=_id)
     approved = CLRelease.objects.get(
         cl_id=_id, cl_approval_id=request.user.user_id).cl_approval_status
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT apps_claim.claim_id, remarks, q_detail.claim_id FROM apps_claim LEFT JOIN (SELECT * FROM apps_cldetail WHERE cl_id_id = '" + str(_id) + "') AS q_detail ON apps_claim.claim_id = q_detail.claim_id WHERE q_detail.claim_id IS NULL")
-        claim = cursor.fetchall()
+    claim = Claim.objects.filter(status='OPEN', area_id=cl.area_id, proposal__budget__budget_distributor=cl.distributor_id).exclude(
+        cldetail__claim_id__in=CLDetail.objects.all().values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'cldetail__claim_id')
 
     if request.POST:
         check = request.POST.getlist('checks[]')
@@ -6376,10 +6583,9 @@ def cl_release_view(request, _id, _is_revise):
 def cl_release_update(request, _id):
     cl = CL.objects.get(cl_id=_id)
     cl_detail = CLDetail.objects.filter(cl_id=_id)
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT apps_claim.claim_id, remarks, q_detail.claim_id FROM apps_claim LEFT JOIN (SELECT * FROM apps_cldetail WHERE cl_id = '" + str(_id) + "') AS q_detail ON apps_claim.claim_id = q_detail.claim_id WHERE q_detail.claim_id IS NULL")
-        claim = cursor.fetchall()
+    claim = Claim.objects.filter(status='OPEN', area_id=cl.area_id, proposal__budget__budget_distributor=cl.distributor_id).exclude(
+        cldetail__claim_id__in=CLDetail.objects.all().values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'cldetail__claim_id')
+
     _add = ''
     _remove = ''
 
@@ -6649,13 +6855,12 @@ def cl_matrix_index(request):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='CL-APPROVAL')
-def cl_matrix_view(request, _id, _channel):
+def cl_matrix_view(request, _id):
     area = AreaSales.objects.get(area_id=_id)
-    channels = AreaChannelDetail.objects.filter(area_id=_id, status=1)
-    approvers = CLMatrix.objects.filter(area_id=_id, channel_id=_channel)
+    approvers = CLMatrix.objects.filter(area_id=_id)
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT user_id, username, position_name, q_clmatrix.approver_id FROM apps_user INNER JOIN apps_position ON apps_user.position_id = apps_position.position_id LEFT JOIN (SELECT * FROM apps_clmatrix WHERE area_id = '" + str(_id) + "' AND channel_id = '" + str(_channel) + "') AS q_clmatrix ON apps_user.user_id = q_clmatrix.approver_id WHERE q_clmatrix.approver_id IS NULL")
+            "SELECT user_id, username, position_name, q_clmatrix.approver_id FROM apps_user INNER JOIN apps_position ON apps_user.position_id = apps_position.position_id LEFT JOIN (SELECT * FROM apps_clmatrix WHERE area_id = '" + str(_id) + "') AS q_clmatrix ON apps_user.user_id = q_clmatrix.approver_id WHERE q_clmatrix.approver_id IS NULL")
         users = cursor.fetchall()
 
     if request.POST:
@@ -6663,23 +6868,19 @@ def cl_matrix_view(request, _id, _channel):
         for i in users:
             if str(i[0]) in check:
                 try:
-                    approver = CLMatrix(
-                        area_id=_id, channel_id=_channel, approver_id=i[0])
+                    approver = CLMatrix(area_id=_id, approver_id=i[0])
                     approver.save()
                 except IntegrityError:
                     continue
             else:
-                CLMatrix.objects.filter(
-                    area_id=_id, channel_id=_channel, approver_id=i[0]).delete()
+                CLMatrix.objects.filter(area_id=_id, approver_id=i[0]).delete()
 
-        return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id, _channel]))
+        return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id]))
 
     context = {
         'data': area,
-        'channels': channels,
         'users': users,
         'approvers': approvers,
-        'channel': _channel,
         'segment': 'cl_matrix',
         'group_segment': 'approval',
         'tab': 'auth',
@@ -6692,9 +6893,8 @@ def cl_matrix_view(request, _id, _channel):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='CL-APPROVAL')
-def cl_matrix_update(request, _id, _channel, _approver):
-    approvers = CLMatrix.objects.get(
-        area=_id, channel_id=_channel, approver_id=_approver)
+def cl_matrix_update(request, _id, _approver):
+    approvers = CLMatrix.objects.get(area=_id, approver_id=_approver)
 
     if request.POST:
         approvers.sequence = int(request.POST.get('sequence'))
@@ -6709,16 +6909,165 @@ def cl_matrix_update(request, _id, _channel, _approver):
         approvers.as_approved = request.POST.get('as_approved')
         approvers.save()
 
-        return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id, _channel]))
+        return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id]))
 
     return render(request, 'home/cl_matrix_view.html')
 
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='CL-APPROVAL')
-def cl_matrix_delete(request, _id, _channel, _arg):
-    approvers = CLMatrix.objects.get(
-        area=_id, channel_id=_channel, approver_id=_arg)
+def cl_matrix_delete(request, _id, _arg):
+    approvers = CLMatrix.objects.get(area=_id, approver_id=_arg)
     approvers.delete()
 
-    return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id, _channel]))
+    return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL')
+def cl_print(request, _id):
+    cl = CL.objects.get(cl_id=_id)
+    cl_detail = CLDetail.objects.filter(cl_id=_id)
+    detail_sum = Claim.objects.filter(
+        claim_id__in=cl_detail.values_list('claim_id')).aggregate(total=Sum('total_claim'))
+    approver = CLRelease.objects.filter(
+        cl_id=_id, cl_approval_status='Y', printed=True).order_by('sequence')
+    cl_id = _id.replace('/', '-')
+
+    # Create a new PDF file with landscape orientation
+    filename = 'CL-' + cl_id + '.pdf'
+    pdf_file = canvas.Canvas(filename, pagesize=landscape(A4))
+
+    # Set the font and font size
+    pdf_file.setFont('Helvetica-Bold', 8)
+
+    # Add logo in the center of the page
+    logo_path = 'https://ksisolusi.com/apps/static/img/favicon.png'
+    logo_width = 60
+    logo_height = 60
+    page_width = landscape(A4)
+    logo_x = (page_width[0] - logo_width) / 2
+    pdf_file.drawImage(logo_path, logo_x, 515,
+                       width=logo_width, height=logo_height)
+
+    # Add header
+    y = 500
+    pdf_file.drawString(25, y, 'Jakarta, ' + cl.cl_date.strftime('%d %B %Y'))
+    pdf_file.drawRightString(800, y, 'No. ' + cl.cl_id)
+
+    y -= 25
+    pdf_file.drawString(25, y, 'Kepada Yth.')
+    y -= 10
+    pdf_file.drawString(25, y, cl.distributor.distributor_name)
+    y -= 10
+    pdf_file.drawString(25, y, 'Di tempat')
+
+    y -= 25
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(25, y, 'Dengan hormat,')
+
+    y -= 25
+    pdf_file.drawString(25, y, 'Bersama ini kami sampaikan daftar program yang akan memotong Budget Selisih Margin PT. ABC PI di ' +
+                        cl.distributor.distributor_name + ' sebagai berikut:')
+
+    y -= 20
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.rect(25, y - 5, 25, 15, stroke=True)
+    title = 'No.'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 25 + (25 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.rect(50, y-5, 150, 15, stroke=True)
+    title = 'No. Klaim'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 50 + (150 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.rect(200, y-5, 225, 15, stroke=True)
+    title = 'Deskripsi'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 200 + (225 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.rect(425, y-5, 75, 15, stroke=True)
+    title = 'Nilai Klaim'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 425 + (75 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.rect(500, y-5, 150, 15, stroke=True)
+    title = 'No. Surat Program'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 500 + (150 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.rect(650, y-5, 150, 15, stroke=True)
+    title = 'No. Proposal'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 650 + (150 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.setFont("Helvetica", 8)
+    n = 0
+    for i in cl_detail:
+        y -= 15
+        n += 1
+        pdf_file.rect(25, y - 5, 25, 15, stroke=True)
+        title = str(n)
+        title_width = pdf_file.stringWidth(title, 'Helvetica', 8)
+        title_x = 25 + (25 - title_width) / 2
+        pdf_file.drawString(title_x, y, title)
+        pdf_file.rect(50, y - 5, 150, 15, stroke=True)
+        pdf_file.drawString(55, y, i.claim_id)
+        pdf_file.rect(200, y - 5, 225, 15, stroke=True)
+        remarks = Truncator(i.claim.remarks).chars(55)
+        pdf_file.drawString(205, y, remarks)
+        pdf_file.rect(425, y - 5, 75, 15, stroke=True)
+        pdf_file.drawRightString(495, y, "{:,}".format(i.claim.total_claim))
+        pdf_file.rect(500, y - 5, 150, 15, stroke=True)
+        pdf_file.drawString(505, y, i.claim.program_id)
+        pdf_file.rect(650, y - 5, 150, 15, stroke=True)
+        pdf_file.drawString(655, y, i.claim.proposal_id)
+
+    y -= 15
+    pdf_file.setFont("Helvetica-Bold", 8)
+    pdf_file.rect(25, y - 5, 775, 15, stroke=True)
+    pdf_file.drawRightString(420, y, 'TOTAL')
+    pdf_file.drawRightString(495, y, "{:,}".format(detail_sum['total']))
+
+    y -= 25
+    pdf_file.setFont("Helvetica", 8)
+    pdf_file.drawString(
+        25, y, 'Demikian surat konfirmasi ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkann terima kasih.')
+
+    y -= 25
+    pdf_file.drawString(25, y, 'Hormat Kami,')
+
+    col_width = (page_width[0] - 50) / 11
+    for i in range(1, approver.count() + 1):
+        if approver:
+            sign_path = User.objects.get(user_id=approver[i - 1].cl_approval_id).signature.path if User.objects.get(
+                user_id=approver[i - 1].cl_approval_id).signature else ''
+            pos = User.objects.get(
+                user_id=approver[i - 1].cl_approval_id).position
+            if sign_path:
+                pdf_file.drawImage(sign_path, 25 + ((col_width * 2) * (i - 1)), y - 50,
+                                   width=col_width - 10, height=40)
+            else:
+                pass
+
+            pdf_file.setFont("Helvetica-Bold", 8)
+            pdf_file.drawString(25 + ((col_width * 2) * (i - 1)),
+                                y - 60, approver[i - 1].cl_approval_name)
+            pdf_file.setFont("Helvetica", 8)
+            pdf_file.drawString(25 + ((col_width * 2) * (i - 1)),
+                                y - 70, str(pos))
+
+    y -= 95
+    pdf_file.setFont("Helvetica-Bold", 8)
+    pdf_file.drawString(25, y, 'Cc : Finance Department')
+
+    pdf_file.save()
+
+    return FileResponse(open(filename, 'rb'), content_type='application/pdf')

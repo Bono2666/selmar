@@ -115,6 +115,11 @@
                                 {{ message }}
                             </div>
                             {% endif %}
+                            {% if msg %}
+                            <div class="alert text-danger text-bg-light mt-2" role="alert">
+                                {{ msg }}
+                            </div>
+                            {% endif %}
                             <div class="row">
                                 {{ form.area }}
                                 <div class="{% if crud == 'view' %}col-md-10{% else %}col-md-12{% endif %}">
@@ -807,7 +812,7 @@
 <script>
     $(document).ready( function () {
         $('#incTable').DataTable({
-            'pageLength': 5,
+            'pageLength': 10,
             'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
             'searching': false,
             'lengthChange': false,
@@ -816,7 +821,7 @@
         });
 
         $('#costTable').DataTable({
-            'pageLength': 5,
+            'pageLength': 10,
             'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
             'searching': false,
             'lengthChange': false,

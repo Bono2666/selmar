@@ -10,12 +10,12 @@
 
 {% load humanize %}
 
-<div class="container-fluid mt-0 mb-0">
+<div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
             <form action="" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card mb-6">
+                <div class="card mb-2">
                     <div class="card-header">
                         <div class="row">
                             <div class="col-6 d-flex align-items-center">
@@ -26,8 +26,7 @@
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.cl_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
-                                <a href="{% url 'program-print' data.cl_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
-                                <!-- <a href="{% url 'program-print' data.cl_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4" target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a> -->
+                                <a href="{% url 'cl-print' data.cl_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
                             </div>
                         </div>
                     </div>
@@ -127,22 +126,22 @@
                                         <input type="text" name="cl_id" id="id_cl_id" class="form-control form-control-sm" value="{{ data.cl_id }}" readonly>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <div class="shadow-none">
                                         <label for="id_cl_date">Date</label>
                                         <input type="text" name="cl_date" id="id_cl_date" class="form-control form-control-sm" value="{{ data.cl_date|date:'d/m/Y' }}" readonly>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <div class="shadow-none">
                                         <label for="id_area">Area</label>
                                         <input type="text" name="area" id="id_area" class="form-control form-control-sm" value="{{ data.area }}" readonly>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-5">
                                     <div class="shadow-none">
-                                        <label for="id_channel">Channel</label>
-                                        <input type="text" name="channel" id="id_channel" class="form-control form-control-sm" value="{{ data.channel }}" readonly>
+                                        <label for="id_distributor">Distributor</label>
+                                        <input type="text" name="distributor" id="id_distributor" class="form-control form-control-sm" value="{{ data.distributor }}" readonly>
                                     </div>
                                 </div>
                             </div>
@@ -153,10 +152,13 @@
         </div>
     </div>
 </div>
-<div class="container-fluid mt-0">
+<div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4 p-4">
+            <div class="card mb-4 px-4 pb-4">
+                <div class="row">
+                    <h5 class="mb-0 mt-4">Claim List</h5>
+                </div>
                 <div class="row">
                     <div class="col-6 d-flex align-items-center">
                         <h5 class="mb-0"></h5>
@@ -257,7 +259,7 @@
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.claim.total_claim|intcomma }}</h6>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.claim.total_claim|intcomma }}</h6>
                                             </div>
                                         </div>
                                     </td>
@@ -286,11 +288,11 @@
                                                     <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
                                                 </div>
                                                 <div class="modal-body border-bottom-0">
-                                                    Are you sure you want to delete claim no. <strong>{{ item.claim }}</strong>?
+                                                    Are you sure you want to delete claim no. <strong>{{ item.claim_id }}</strong>?
                                                 </div>
                                                 <div class="modal-footer border-0">
                                                     <button role="button" class="btn bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
-                                                    <a href="{% url 'cldetail-delete' tab item.cl_id item.claim %}" role="button" class="btn bg-gradient-danger text-white">Delete
+                                                    <a href="{% url 'cldetail-delete' tab item.id %}" role="button" class="btn bg-gradient-danger text-white">Delete
                                                     </a>
                                                 </div>
                                             </div>
@@ -321,7 +323,6 @@
         $('#detailTable').DataTable({
             'pageLength': 10,
             'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
-            'searching': false,
         });
         $('#claimTable').DataTable();
 

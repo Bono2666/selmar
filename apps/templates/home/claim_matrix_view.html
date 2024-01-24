@@ -278,9 +278,9 @@
                                                                 <div class="form-group shadow-none mt-0 mb-0">
                                                                     <select name="as_approved" id="as_approved" class="form-control form-select-sm">
                                                                         <option value="verificator" {% if item.as_approved == 'verificator' %}selected{% endif %}>Verificator</option>
-                                                                        <option value="proposer" {% if item.as_approved == 'proposer' %}selected{% endif %}>Area Approver</option>
+                                                                        <option value="area_approver" {% if item.as_approved == 'area_approver' %}selected{% endif %}>Area Approver</option>
                                                                         <option value="checker" {% if item.as_approved == 'checker' %}selected{% endif %}>Checker</option>
-                                                                        <option value="approver" {% if item.as_approved == 'approver' %}selected{% endif %}>HO Approver</option>
+                                                                        <option value="ho_approver" {% if item.as_approved == 'ho_approver' %}selected{% endif %}>HO Approver</option>
                                                                         <option value="validator" {% if item.as_approved == 'validator' %}selected{% endif %}>Validator</option>
                                                                         <option value="finalizer" {% if item.as_approved == 'finalizer' %}selected{% endif %}>Finalizer</option>
                                                                     </select>

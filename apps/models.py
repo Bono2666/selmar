@@ -898,7 +898,6 @@ class CL(models.Model):
     area = models.ForeignKey(AreaSales, on_delete=models.CASCADE, null=True)
     distributor = models.ForeignKey(
         Distributor, on_delete=models.CASCADE, null=True)
-    channel = models.ForeignKey(Channel, on_delete=models.CASCADE, null=True)
     status = models.CharField(max_length=15, default='DRAFT')
     seq_number = models.IntegerField(default=0)
     entry_pos = models.CharField(max_length=5, null=True)
@@ -941,7 +940,6 @@ class CLDetail(models.Model):
 
 class CLMatrix(models.Model):
     area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
-    channel = models.ForeignKey(Channel, on_delete=models.CASCADE, null=True)
     approver = models.ForeignKey(User, on_delete=models.CASCADE)
     sequence = models.IntegerField(default=0)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=True)
@@ -964,7 +962,7 @@ class CLMatrix(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['area', 'channel', 'approver'], name='unique_cl_approver')
+                fields=['area', 'approver'], name='unique_cl_approver')
         ]
 
     def save(self, *args, **kwargs):

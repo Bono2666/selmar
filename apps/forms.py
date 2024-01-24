@@ -455,10 +455,29 @@ class FormBudgetUpdate(ModelForm):
         self.fields['budget_upping'].label = 'Upping Price'
         self.fields['budget_upping'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
+        self.fields['budget_amount'].label = 'Beginning Balance'
+        self.fields['budget_amount'].widget = forms.NumberInput(
+            attrs={'class': 'form-control-sm no-spinners', 'readonly': 'readonly'})
 
     class Meta:
         model = Budget
-        fields = ['budget_upping']
+        fields = ['budget_upping', 'budget_amount']
+
+
+class FormNewBudgetUpdate(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormNewBudgetUpdate, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['budget_amount'].label = 'Beginning Balance'
+        self.fields['budget_amount'].widget = forms.NumberInput(
+            attrs={'class': 'form-control-sm no-spinners'})
+        self.fields['budget_upping'].label = 'Upping Price'
+        self.fields['budget_upping'].widget = forms.NumberInput(
+            attrs={'class': 'form-control-sm no-spinners', 'readonly': 'readonly'})
+
+    class Meta:
+        model = Budget
+        fields = ['budget_amount', 'budget_upping']
 
 
 class FormBudgetView(ModelForm):
@@ -864,7 +883,7 @@ class FormProposalUpdate(ModelForm):
 
     class Meta:
         model = Proposal
-        exclude = ['proposal_id', 'budget', 'channel', 'duration', 'total_cost', 'roi', 'claim', 'balance', 'status', 'seq_number', 'entry_date', 'entry_pos',
+        exclude = ['proposal_id', 'budget', 'channel', 'duration', 'total_cost', 'roi', 'claim', 'balance', 'status', 'seq_number', 'entry_date', 'entry_pos', 'proposal_claim',
                    'entry_by', 'update_date', 'update_by']
 
         widgets = {
@@ -960,13 +979,11 @@ class FormClaim(ModelForm):
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].required = False
         self.fields['additional_proposal'].label = 'Additional Proposal'
-        self.fields['additional_amount'].label = 'Additional Amount'
         self.fields['additional_proposal'].required = False
-        self.fields['additional_amount'].required = False
 
     class Meta:
         model = Claim
-        exclude = ['program', 'status', 'tax', 'total', 'total_claim', 'seq_number', 'entry_pos', 'entry_date',
+        exclude = ['program', 'status', 'tax', 'total', 'total_claim', 'seq_number', 'entry_pos', 'entry_date', 'additional_amount',
                    'entry_by', 'update_date', 'update_by']
 
         widgets = {
@@ -1035,13 +1052,11 @@ class FormClaimUpdate(ModelForm):
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].required = False
         self.fields['additional_proposal'].label = 'Additional Proposal'
-        self.fields['additional_amount'].label = 'Additional Amount'
         self.fields['additional_proposal'].required = False
-        self.fields['additional_amount'].required = False
 
     class Meta:
         model = Claim
-        exclude = ['claim_id', 'proposal', 'program', 'status', 'tax', 'total', 'total_claim', 'seq_number', 'entry_pos', 'entry_date',
+        exclude = ['claim_id', 'proposal', 'program', 'status', 'tax', 'total', 'total_claim', 'seq_number', 'entry_pos', 'entry_date', 'additional_amount',
                    'entry_by', 'update_date', 'update_by']
 
         widgets = {
