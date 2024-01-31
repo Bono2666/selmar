@@ -23,7 +23,7 @@
                 <div class="card-body">
                     <div class="col-4">
                         <label class="form-control-label">Channel</label>
-                        <select class="form-control form-select-sm" name="area" id="area" onchange="location = this.value;">
+                        <select class="form-control form-select-sm" name="channel" id="channel" onchange="location = this.value;">
                             <option value="">Select Channel</option>
                             {% for item in channels %}
                             <option value="{% url 'program-matrix-view' item.area_id item.channel_id %}" {% if item.channel_id == channel %}selected{% endif %}>{{ item.channel }}</option>
@@ -44,7 +44,7 @@
                         <h5 class="mb-0">Approver</h5>
                     </div>
                     <div class="col-6 text-end">
-                        <button type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Approver</button>
+                        <button type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% if channel == '0' %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Approver</button>
                     </div>
                 </div>
                 <div class="modal fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"

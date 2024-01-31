@@ -1017,3 +1017,49 @@ class CLRelease(models.Model):
         self.update_date = timezone.now()
         self.update_by = get_current_user().username
         super(CLRelease, self).save(*args, **kwargs)
+
+
+class Region(models.Model):
+    region_id = models.CharField(max_length=50, primary_key=True)
+    region_name = models.CharField(max_length=50)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(
+        null=True, blank=True, auto_now=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.region_id = self.region_id.upper()
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(Region, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.region_name
+
+
+class RegionDetail(models.Model):
+    region = models.ForeignKey(Region, on_delete=models.CASCADE)
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(
+        null=True, blank=True, auto_now=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['region', 'area'], name='unique_region_area')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.update_by = get_current_user().username
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().username
+        super(RegionDetail, self).save(*args, **kwargs)

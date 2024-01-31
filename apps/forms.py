@@ -1064,3 +1064,45 @@ class FormClaimUpdate(ModelForm):
             'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
             'due_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
         }
+
+
+class FormRegion(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormRegion, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['region_id'].label = 'Region ID'
+        self.fields['region_id'].widget = forms.TextInput(
+            {'class': 'form-control-sm text-uppercase'})
+        self.fields['region_name'].label = 'Region Name'
+        self.fields['region_name'].widget = forms.TextInput(
+            {'class': 'form-control-sm'})
+
+    class Meta:
+        model = Region
+        fields = ['region_id', 'region_name']
+
+
+class FormRegionUpdate(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormRegionUpdate, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['region_name'].label = 'Region Name'
+        self.fields['region_name'].widget = forms.TextInput(
+            {'class': 'form-control-sm'})
+
+    class Meta:
+        model = Region
+        fields = ['region_name']
+
+
+class FormRegionView(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormRegionView, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['region_name'].label = 'Region Name'
+        self.fields['region_name'].widget = forms.TextInput(
+            {'class': 'form-control-sm', 'readonly': 'readonly'})
+
+    class Meta:
+        model = Region
+        fields = ['region_id', 'region_name']

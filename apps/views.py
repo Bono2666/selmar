@@ -22,13 +22,15 @@ from reportlab.pdfgen import canvas
 from django.http import FileResponse
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import portrait, landscape, A4
+from reportlab.lib.pagesizes import landscape, A4
 from django.db.models import Count
 from PyPDF2 import PdfMerger
 from django.conf import settings
 from xhtml2pdf import pisa
 from django.template.loader import get_template
 from django.utils.text import Truncator
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 
 @login_required(login_url='/login/')
@@ -2515,22 +2517,38 @@ def proposal_print(request, _id):
     pdf_file.setFont("Helvetica", 8)
     pdf_file.drawString(350, y, str(proposal.duration) + ' days')
     y -= 10
-    pdf_file.setFont("Helvetica-Bold", 8)
-    pdf_file.drawString(25, y, "Objectives")
-    pdf_file.drawString(90, y, ":")
-    pdf_file.setFont("Helvetica", 8)
-
     styles = getSampleStyleSheet()
     normal_style = styles["Normal"]
     normal_style.fontSize = 8  # Set font size to 8
-    objectives = proposal.objectives.split('\n')
+
+    pdf_file.setFont("Helvetica-Bold", 8)
+    pdf_file.drawString(25, y, "Background")
+    pdf_file.drawString(90, y, ":")
+    pdf_file.setFont("Helvetica", 8)
+    background = proposal.background.split('\n')
+    y2 = y
     y -= 4
-    for line in objectives:
-        objectives_paragraph = Paragraph(line, normal_style)
-        objectives_paragraph.wrapOn(pdf_file, page_width - 125, 100)
-        objectives_paragraph.drawOn(pdf_file, 100, y)
+    for line in background:
+        background_paragraph = Paragraph(line, normal_style)
+        background_paragraph.wrapOn(pdf_file, (page_width / 2) - 125, 100)
+        background_paragraph.drawOn(pdf_file, 100, y)
+        if background_paragraph.wrap((page_width / 2) - 125, 100):
+            y -= 10
         y -= 10
 
+    pdf_file.setFont("Helvetica-Bold", 8)
+    pdf_file.drawString(page_width / 2, y2, "Objectives")
+    pdf_file.drawString((page_width / 2) + 65, y2, ":")
+    pdf_file.setFont("Helvetica", 8)
+    objectives = proposal.objectives.split('\n')
+    y2 -= 4
+    for line in objectives:
+        objectives_paragraph = Paragraph(line, normal_style)
+        objectives_paragraph.wrapOn(pdf_file, (page_width / 2) - 125, 100)
+        objectives_paragraph.drawOn(pdf_file, (page_width / 2) + 75, y2)
+        y2 -= 10
+
+    y = y2 if y2 > y else y
     y += 4
     pdf_file.setFont("Helvetica-Bold", 8)
     pdf_file.drawString(25, y, "Mechanism")
@@ -3823,7 +3841,7 @@ def proposal_add(request, _area, _budget, _channel):
     if selected_area != '0' and selected_channel != '0':
         approvers = ProposalMatrix.objects.filter(
             area_id=_area, channel_id=_channel).order_by('sequence')
-        if approvers.count() == 0:
+        if approvers.count() == 0 or approvers[0].limit > 0:
             message = "No proposal's approver found for this area and channel."
             no_save = True
 
@@ -4391,7 +4409,7 @@ def program_add(request, _area, _distributor, _proposal):
     if selected_area != '0' and selected_proposal != '0':
         approvers = ProgramMatrix.objects.filter(
             area_id=_area, channel_id=proposal.channel).order_by('sequence')
-        if approvers.count() == 0:
+        if approvers.count() == 0 or approvers[0].limit > 0:
             message = "No program's approver found for this area and channel."
             no_save = True
 
@@ -4941,13 +4959,15 @@ def program_archive_index(request):
 @role_required(allowed_roles='PROGRAM')
 def program_print(request, _id):
     program = Program.objects.get(program_id=_id)
+    space = ' ' * 50
     with connection.cursor() as cursor:
         cursor.execute(
             "SELECT signature, program_approval_name, position_name FROM apps_user INNER JOIN apps_programrelease ON user_id = program_approval_id INNER JOIN apps_position ON program_approval_position = apps_position.position_id WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'Y' AND printed = True ORDER BY sequence")
         approvers = cursor.fetchall()
 
     html_file = 'home/program_print.html'
-    context = {'data': program, 'approvers': approvers, 'host': host.url}
+    context = {'data': program, 'approvers': approvers,
+               'host': host.url, 'space': space}
     template = get_template(html_file)
     html = template.render(context)
 
@@ -5123,7 +5143,7 @@ def claim_add(request, _area, _distributor, _program):
     if selected_area != '0' and selected_program != '0':
         approvers = ClaimMatrix.objects.filter(
             area_id=selected_area, channel=program.proposal.channel).order_by('sequence')
-        if approvers.count() == 0:
+        if approvers.count() == 0 or approvers[0].limit > 0:
             no_save = True
             message = "No claim's approver found for this area and channel."
 
@@ -7077,3 +7097,137 @@ def cl_print(request, _id):
     pdf_file.save()
 
     return FileResponse(open(filename, 'rb'), content_type='application/pdf')
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REGION')
+def region_index(request):
+    regions = Region.objects.all()
+
+    context = {
+        'data': regions,
+        'segment': 'region',
+        'group_segment': 'master',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REGION') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/region_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REGION')
+def region_add(request):
+    if request.POST:
+        form = FormRegion(request.POST)
+        if form.is_valid():
+            region = form.save(commit=False)
+            region.region_id = form.cleaned_data['region_id'].replace(' ', '')
+            region.save()
+
+            return HttpResponseRedirect(reverse('region-view', args=[region.region_id]))
+    else:
+        form = FormRegion()
+
+    message = form.errors
+    context = {
+        'form': form,
+        'segment': 'region',
+        'group_segment': 'master',
+        'crud': 'add',
+        'message': message,
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='REGION') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/region_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REGION')
+def region_view(request, _id):
+    region = Region.objects.get(region_id=_id)
+    form = FormRegionView(instance=region)
+    details = RegionDetail.objects.filter(region_id=_id)
+    areas = AreaSales.objects.exclude(regiondetail__region_id=_id).values_list(
+        'area_id', 'area_name', 'regiondetail__region_id')
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        for area in areas:
+            if str(area[0]) in check:
+                try:
+                    detail = RegionDetail(region_id=_id, area_id=area[0])
+                    detail.save()
+                except IntegrityError:
+                    continue
+            else:
+                RegionDetail.objects.filter(
+                    region_id=_id, area_id=area[0]).delete()
+
+    context = {
+        'form': form,
+        'data': region,
+        'areas': areas,
+        'detail': details,
+        'segment': 'region',
+        'group_segment': 'master',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='REGION') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/region_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REGION')
+def region_update(request, _id):
+    region = Region.objects.get(region_id=_id)
+    detail = RegionDetail.objects.filter(region_id=_id)
+
+    if request.POST:
+        form = FormRegionUpdate(request.POST, instance=region)
+        if form.is_valid():
+            region = form.save(commit=False)
+            region.save()
+
+            return HttpResponseRedirect(reverse('region-view', args=[_id]))
+    else:
+        form = FormRegionUpdate(instance=region)
+
+    message = form.errors
+    context = {
+        'form': form,
+        'data': region,
+        'detail': detail,
+        'segment': 'region',
+        'group_segment': 'master',
+        'crud': 'update',
+        'message': message,
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
+            'menu_id', flat=True),
+        'btn': Auth.objects.get(
+            user_id=request.user.user_id, menu_id='REGION') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/region_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REGION')
+def region_delete(request, _id):
+    region = Region.objects.get(region_id=_id)
+    region.delete()
+
+    return HttpResponseRedirect(reverse('region-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REGION')
+def region_detail_delete(request, _id, _area):
+    detail = RegionDetail.objects.get(region_id=_id, area_id=_area)
+    detail.delete()
+
+    return HttpResponseRedirect(reverse('region-view', args=[_id]))

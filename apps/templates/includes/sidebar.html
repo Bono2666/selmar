@@ -350,6 +350,11 @@
                 <span class="nav-link-text ms-1 {% if 'DIVISION' not in role and not request.user.is_superuser %}disabled{% endif %}">Division</span>
               </a>
             </li>
+            <li class="nav-item {% if 'region' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'REGION' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' and crud != 'delete' %}href="{% url 'region-index' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'REGION' not in role and not request.user.is_superuser %}disabled{% endif %}">Region</span>
+              </a>
+            </li>
           </ul>
         </div>
       </li>
