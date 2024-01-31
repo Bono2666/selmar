@@ -2530,25 +2530,24 @@ def proposal_print(request, _id):
     y -= 4
     for line in background:
         background_paragraph = Paragraph(line, normal_style)
-        background_paragraph.wrapOn(pdf_file, (page_width / 2) - 125, 100)
+        background_paragraph.wrapOn(pdf_file, page_width - 125, 100)
         background_paragraph.drawOn(pdf_file, 100, y)
-        if background_paragraph.wrap((page_width / 2) - 125, 100):
-            y -= 10
         y -= 10
 
     pdf_file.setFont("Helvetica-Bold", 8)
-    pdf_file.drawString(page_width / 2, y2, "Objectives")
-    pdf_file.drawString((page_width / 2) + 65, y2, ":")
+    pdf_file.drawString((page_width / 2) + 42, y2, "Objectives")
+    pdf_file.drawString((page_width / 2) + 87, y2, ":")
     pdf_file.setFont("Helvetica", 8)
     objectives = proposal.objectives.split('\n')
     y2 -= 4
     for line in objectives:
         objectives_paragraph = Paragraph(line, normal_style)
-        objectives_paragraph.wrapOn(pdf_file, (page_width / 2) - 125, 100)
-        objectives_paragraph.drawOn(pdf_file, (page_width / 2) + 75, y2)
+        objectives_paragraph.wrapOn(pdf_file, (page_width - 125) / 2, 100)
+        objectives_paragraph.drawOn(pdf_file, (page_width / 2) + 95, y2)
         y2 -= 10
 
-    y = y2 if y2 > y else y
+    y = y2 if y2 < y else y
+
     y += 4
     pdf_file.setFont("Helvetica-Bold", 8)
     pdf_file.drawString(25, y, "Mechanism")
