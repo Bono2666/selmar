@@ -14,8 +14,6 @@
     <link rel="icon" href="https://ksisolusi.com/apps/static/img/favicon.png" type="image/png">
     <!-- Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700">
-    <!-- Soft UI Dashboard -->
-    <link id="pagestyle" href="https://ksisolusi.com/apps/static/css/soft-ui-dashboard.css" rel="stylesheet" />
     
     <style>
         body {
@@ -24,20 +22,10 @@
             /* to centre page on screen*/
             margin-left: auto;
             margin-right: auto;
-            font-family: 'Helvetica', Helvetica, Arial, sans-serif;
+            font-family: 'Helvetica', Arial, sans-serif;
             font-size: 12px !important;
             padding-left: 6mm;
-            padding-right: 6mm;
-        }
-        .row {
-            /* --bs-gutter-x: 1.5rem;
-            --bs-gutter-y: 0; */
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .col-md-3 {
-            flex: 0 0 auto;
-            width: 25%;
+            padding-right: 3mm;
         }
     </style>
     {{ form.media }}
@@ -46,39 +34,10 @@
 <body class="body-print">
     <div class="container">
         <div style="text-align: center;">
-        <!-- <div class="row"> -->
             <img height="100" width="100" src="https://ksisolusi.com/apps/static/img/favicon.png" alt="Logo" />
-            <!-- <img class="h-auto w-10 m-auto" src="https://ksisolusi.com/apps/static/img/favicon.png" alt="Logo" /> -->
         </div>
         {{ data.content|safe }}
-        <div style="margin-top: 8mm;">
-            Hormat Kami,
-            <div>
-                <div class="row">
-                    {% for approver in approvers %}
-                        <img height="70" width="100" style="flex: 0 0 auto; width: 25%;" src="{{ host }}apps/media/{{ approver.0 }}" alt="Signature"/>
-                        {{ space }}
-                    {% endfor %}
-                    <br>
-                </div>
-                <!-- <div> -->
-                <div class="row">
-                    {% for approver in approvers %}
-                    <div class="col-md-3">
-                        {{ approver.1 }}
-                    </div>
-                    {% endfor %}
-                </div>
-                <!-- <div> -->
-                <div class="row">
-                    {% for approver in approvers %}
-                    <div class="col-md-3">
-                        {{ approver.2 }}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
+        {{ data.approval|safe }}
     </div>
 </body>
 

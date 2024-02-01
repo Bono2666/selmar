@@ -4408,6 +4408,8 @@ def program_add(request, _area, _distributor, _proposal):
     if selected_area != '0' and selected_proposal != '0':
         approvers = ProgramMatrix.objects.filter(
             area_id=_area, channel_id=proposal.channel).order_by('sequence')
+        print_approvers = ProgramMatrix.objects.filter(
+            area_id=_area, channel_id=proposal.channel, printed=1).order_by('sequence')
         if approvers.count() == 0 or approvers[0].limit > 0:
             message = "No program's approver found for this area and channel."
             no_save = True
@@ -4502,7 +4504,11 @@ def program_add(request, _area, _distributor, _proposal):
             form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 3;"><b>' + 'Jakarta, ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
                                         'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3; width: 22%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 3; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Produk</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Periode</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.period_start.strftime("%d %b") + ' - ' + proposal.period_end.strftime("%d %b %Y") + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Detail Qty</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;"></td></tr></table>' +
                                         # '<table style="width: 100%; height: 15; padding-left: 7; margin-top: 4;"><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40; background-color: red; color: white;">No.</td><td style="text-align: center; border: 1 solid; width: 100; background-color: red; color: white;">Pengambilan</td><td style="text-align: center; border: 1 solid; width: 160; background-color: red; color: white;">Add Diskon (on faktur)</td><td style="border: 0;"></td></tr><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40;">1.</td><td style="padding-left: 2; border: 1 solid; width: 100;">8 karton</td><td style="padding-left: 2; border: 1 solid; width: 160;">3%</td><td style="border: 0;"></td></tr></table>' +
-                                        '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p><b><i>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline.strftime('%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</i></b></p><p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>'})
+                                        '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p><b><i>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline.strftime('%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</i></b></p><p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'approval':
+                                        '<p><br /><br />Hormat Kami,</p>' +
+                                        '<table style="width: 100%; height: 50"><tbody><tr><td style="padding-left: 3; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[0].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[1].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[2].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[3].approver.signature) + '" alt="Signature" width="120" height="70" /></td></tr>' +
+                                        '<tr><td style="padding-left: 3; height: 15"><span style="text-decoration: underline;">' + print_approvers[0].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[1].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[2].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[3].approver.username + '</span></td></tr>' +
+                                        '<tr><td style="padding-left: 3; height: 15">' + print_approvers[0].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[1].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[2].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[3].approver.position.position_name + '</td></tr></tbody></table>'})
         else:
             form = FormProgram()
 
@@ -4958,15 +4964,17 @@ def program_archive_index(request):
 @role_required(allowed_roles='PROGRAM')
 def program_print(request, _id):
     program = Program.objects.get(program_id=_id)
-    space = ' ' * 50
     with connection.cursor() as cursor:
         cursor.execute(
             "SELECT signature, program_approval_name, position_name FROM apps_user INNER JOIN apps_programrelease ON user_id = program_approval_id INNER JOIN apps_position ON program_approval_position = apps_position.position_id WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'Y' AND printed = True ORDER BY sequence")
         approvers = cursor.fetchall()
 
+    for approver in approvers:
+        name_length = len(approver[1])
+
     html_file = 'home/program_print.html'
     context = {'data': program, 'approvers': approvers,
-               'host': host.url, 'space': space}
+               'host': host.url, 'space': '0' * 20}
     template = get_template(html_file)
     html = template.render(context)
 

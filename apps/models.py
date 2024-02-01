@@ -674,6 +674,7 @@ class Program(models.Model):
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, null=True)
     deadline = models.DateTimeField(null=True)
     content = HTMLField()
+    approval = HTMLField(null=True)
     seq_number = models.IntegerField(default=0)
     status = models.CharField(max_length=15, default='PENDING')
     entry_pos = models.CharField(max_length=5, null=True)

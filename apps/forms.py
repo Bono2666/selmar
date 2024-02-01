@@ -904,11 +904,12 @@ class FormProgram(ModelForm):
 
     class Meta:
         model = Program
-        fields = ['area', 'deadline', 'content']
+        fields = ['area', 'deadline', 'content', 'approval']
 
         widgets = {
             'deadline': DateInput(attrs={'class': 'form-control form-control-sm'}),
             'content': TinyMCE(attrs={'cols': 80, 'rows': 30}),
+            'approval': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 3}),
         }
 
 

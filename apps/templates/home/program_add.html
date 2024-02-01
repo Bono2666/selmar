@@ -54,6 +54,9 @@
                                         <div class="text-sm text-danger">
                                             {{ form.content.errors }}
                                         </div>
+                                        <div class="d-none">
+                                            {{ form.approval }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -112,7 +115,7 @@
                 </div>
                 <div class="modal-body border-bottom-0">
                     <div class="table-responsive p-0">
-                        <table class="table hover cursor-pointer align-items-center mb-3" id="proposalTable">
+                        <table class="table hover cursor-pointer align-items-center mb-3" id="distributorTable">
                             <thead>
                                 <tr>
                                     <th
@@ -231,6 +234,12 @@
     
     $(document).ready(function() {
         $('#areaTable').DataTable({
+            "paging": false,
+            "info": false,
+            "searching": false,
+            "lengthChange": false,
+        });
+        $('#distributorTable').DataTable({
             "paging": false,
             "info": false,
             "searching": false,
