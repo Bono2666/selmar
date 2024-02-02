@@ -1148,9 +1148,9 @@ def budget_add(request, _area):
     ).exclude(
         distributor_id__in=Budget.objects.filter(
             budget_area=selected_area,
-            budget_month=datetime.datetime.now().month,
+            budget_month=datetime.datetime.now().strftime('%m'),
             budget_year=datetime.datetime.now().year
-        ).values_list('budget_distributor', flat=True)
+        ).values_list('budget_distributor_id', flat=True)
     )
     month = '{:02d}'.format(int(request.POST.get('budget_month'))) if request.POST.get(
         'budget_month') else '{:02d}'.format(int(datetime.datetime.now().month))
@@ -3855,7 +3855,7 @@ def proposal_add(request, _area, _budget, _channel):
 
     _id = 'PBS-2' + format_no + '/' + selected_channel + '/' + selected_area + '/' + \
         str(distributor) + '/' + \
-        str(datetime.datetime.now().month) + \
+        str(datetime.datetime.now().strftime('%m')) + \
         '/' + str(datetime.datetime.now().year)
 
     if request.method == 'POST':
