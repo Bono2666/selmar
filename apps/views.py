@@ -3878,11 +3878,12 @@ def proposal_add(request, _area, _budget, _channel):
                 if not settings.DEBUG:
                     proposal = Proposal.objects.get(
                         proposal_id=parent.proposal_id)
-                    my_file = proposal.attachment
-                    filename = '../../www/selmar/apps/media/' + my_file.name
-                    with open(filename, 'wb+') as temp_file:
-                        for chunk in my_file.chunks():
-                            temp_file.write(chunk)
+                    if proposal.attachment:
+                        my_file = proposal.attachment
+                        filename = '../../www/selmar/apps/media/' + my_file.name
+                        with open(filename, 'wb+') as temp_file:
+                            for chunk in my_file.chunks():
+                                temp_file.write(chunk)
 
                 for approver in approvers:
                     release = ProposalRelease(
