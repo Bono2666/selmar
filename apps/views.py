@@ -4402,7 +4402,7 @@ def program_add(request, _area, _distributor, _proposal):
     distributors = Proposal.objects.filter(
         status='OPEN', area=selected_area, balance__gt=0).values_list('budget__budget_distributor__distributor_id', 'budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
     proposals = Proposal.objects.filter(
-        status='OPEN', area=selected_area, balance__gt=0, budget__budget_distributor=selected_distributor).order_by('-proposal_id') if selected_distributor != '0' else None
+        status='OPEN', area=selected_area, balance__gt=0, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor).order_by('-proposal_id') if selected_distributor != '0' else None
 
     message = ''
     no_save = False
