@@ -5172,7 +5172,7 @@ def claim_add(request, _area, _distributor, _program):
     if request.POST:
         form = FormClaim(request.POST, request.FILES)
         difference = int(request.POST.get('amount')) - int(proposal.balance)
-        if int(request.POST.get('amount')) > int(proposal.balance) and request.POST.get('additional_proposal') == '':
+        if int(request.POST.get('amount')) > int(proposal.balance) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
             add_proposals = Proposal.objects.filter(status='OPEN', area=selected_area, channel=proposal.channel, balance__gte=difference, budget__budget_distributor=selected_distributor).exclude(
@@ -5185,11 +5185,11 @@ def claim_add(request, _area, _distributor, _program):
                 draft.entry_pos = request.user.position.position_id
                 draft.total_claim = Decimal(request.POST.get('amount'))
                 draft.amount = proposal.balance if request.POST.get(
-                    'additional_proposal') else Decimal(request.POST.get('amount'))
+                    'add_proposal') else Decimal(request.POST.get('amount'))
                 draft.additional_proposal_id = request.POST.get(
-                    'additional_proposal')
+                    'add_proposal') if request.POST.get('add_proposal') else ''
                 draft.additional_amount = difference if request.POST.get(
-                    'additional_proposal') else 0
+                    'add_proposal') else 0
                 draft.save()
 
                 sum_amount = Claim.objects.filter(
@@ -5353,7 +5353,7 @@ def claim_update(request, _tab, _id):
         form = FormClaimUpdate(request.POST, request.FILES, instance=claim)
         difference = int(request.POST.get('amount')) - \
             (int(proposal.balance) + int(claim.amount))
-        if int(request.POST.get('amount')) > (int(program.proposal.balance) + int(claim.amount)) and request.POST.get('additional_proposal') == '':
+        if int(request.POST.get('amount')) > (int(program.proposal.balance) + int(claim.amount)) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
             add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
@@ -5364,14 +5364,14 @@ def claim_update(request, _tab, _id):
                 draft.status = 'PENDING'
                 draft.total_claim = Decimal(request.POST.get('amount'))
                 draft.amount = proposal.balance + amount_before if request.POST.get(
-                    'additional_proposal') else Decimal(request.POST.get('amount'))
+                    'add_proposal') else Decimal(request.POST.get('amount'))
                 if int(request.POST.get('amount')) > (int(proposal.balance) + int(amount_before)):
                     draft.additional_proposal = request.POST.get(
-                        'additional_proposal')
+                        'add_proposal')
                 else:
-                    draft.additional_proposal = None
+                    draft.additional_proposal = ''
                 draft.additional_amount = difference if request.POST.get(
-                    'additional_proposal') else 0
+                    'add_proposal') else 0
                 draft.save()
 
                 sum_amount = Claim.objects.filter(
@@ -5575,7 +5575,7 @@ def claim_release_update(request, _id):
             request.POST, request.FILES, instance=claim)
         difference = int(request.POST.get('amount')) - \
             (int(proposal.balance) + int(claim.amount))
-        if int(request.POST.get('amount')) > (int(proposal.balance) + int(claim.amount)) and request.POST.get('additional_proposal') == '':
+        if int(request.POST.get('amount')) > (int(proposal.balance) + int(claim.amount)) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
             add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
@@ -5590,19 +5590,19 @@ def claim_release_update(request, _id):
                 claim_amount = _amount if form.cleaned_data['amount'] != _amount else None
                 remarks = _remarks if form.cleaned_data['remarks'] != _remarks else None
                 additional_proposal = _additional_proposal if request.POST.get(
-                    'additional_proposal') != _additional_proposal else None
+                    'add_proposal') != _additional_proposal else None
                 add_amount = _additional_amount if request.POST.get(
-                    'additional_amount') != _additional_amount else None
+                    'add_amount') != _additional_amount else None
                 parent.total_claim = Decimal(request.POST.get('amount'))
                 parent.amount = proposal.balance + amount_before if request.POST.get(
-                    'additional_proposal') else Decimal(request.POST.get('amount'))
+                    'add_proposal') else Decimal(request.POST.get('amount'))
                 if int(request.POST.get('amount')) > (int(proposal.balance) + int(amount_before)):
                     parent.additional_proposal_id = request.POST.get(
-                        'additional_proposal')
+                        'add_proposal')
                 else:
-                    parent.additional_proposal_id = None
+                    parent.additional_proposal_id = ''
                 parent.additional_amount = difference if request.POST.get(
-                    'additional_proposal') else 0
+                    'add_proposal') else 0
                 parent.save()
 
                 sum_amount = Claim.objects.filter(

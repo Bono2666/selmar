@@ -36,7 +36,7 @@
                                                 <div class="col-md-12">
                                                     <div class="shadow-none">
                                                         <label for="id_proposal">Proposal No.</label>
-                                                        <select name="additional_proposal" id="select_addprop" class="form-control form-select-sm" {% if add_prop == '1' %}required{% endif %}>
+                                                        <select name="add_proposal" id="select_addprop" class="form-control form-select-sm" {% if add_prop == '1' %}required{% endif %}>
                                                             <option value="">Select Proposal</option>
                                                             {% for item in add_proposals %}
                                                             <option value="{{ item.proposal_id }}">{{ item.proposal_id }} - Balance: {{ item.balance|intcomma }}</option>
