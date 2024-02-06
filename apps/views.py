@@ -5175,7 +5175,7 @@ def claim_add(request, _area, _distributor, _program):
         if int(request.POST.get('amount')) > int(proposal.balance) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
-            add_proposals = Proposal.objects.filter(status='OPEN', area=selected_area, channel=proposal.channel, balance__gte=difference, budget__budget_distributor=selected_distributor).exclude(
+            add_proposals = Proposal.objects.filter(status='OPEN', area=selected_area, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor).exclude(
                 proposal_id=proposal.proposal_id).order_by('-proposal_id') if selected_program != '0' else None
         else:
             if form.is_valid():
@@ -5186,7 +5186,7 @@ def claim_add(request, _area, _distributor, _program):
                 draft.total_claim = Decimal(request.POST.get('amount'))
                 draft.amount = proposal.balance if request.POST.get(
                     'add_proposal') else Decimal(request.POST.get('amount'))
-                draft.additional_proposal_id = request.POST.get(
+                draft.additional_proposal = request.POST.get(
                     'add_proposal') if request.POST.get('add_proposal') else ''
                 draft.additional_amount = difference if request.POST.get(
                     'add_proposal') else 0
@@ -5217,7 +5217,7 @@ def claim_add(request, _area, _distributor, _program):
                 proposal.save()
 
                 proposal2 = Proposal.objects.get(
-                    proposal_id=draft.additional_proposal_id) if draft.additional_proposal else None
+                    proposal_id=draft.additional_proposal) if draft.additional_proposal else None
                 if proposal2:
                     proposal2.proposal_claim = amount2 + additional_amount2
                     proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
@@ -5356,7 +5356,7 @@ def claim_update(request, _tab, _id):
         if int(request.POST.get('amount')) > (int(program.proposal.balance) + int(claim.amount)) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
-            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
+            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
                 proposal_id=proposal.proposal_id)
         else:
             if form.is_valid():
@@ -5578,7 +5578,7 @@ def claim_release_update(request, _id):
         if int(request.POST.get('amount')) > (int(proposal.balance) + int(claim.amount)) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
-            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
+            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
                 proposal_id=proposal.proposal_id).order_by('-proposal_id')
         else:
             if form.is_valid():

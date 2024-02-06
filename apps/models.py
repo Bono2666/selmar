@@ -440,9 +440,9 @@ class ProposalRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(ProposalRelease, self).save(*args, **kwargs)
 
 
@@ -591,9 +591,9 @@ class Proposal(models.Model):
         self.duration = (self.period_end - self.period_start).days + 1
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(Proposal, self).save(*args, **kwargs)
 
 
@@ -636,9 +636,9 @@ class IncrementalSales(models.Model):
             100 if self.swop_nom > 0 else 0
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(IncrementalSales, self).save(*args, **kwargs)
 
 
@@ -661,9 +661,9 @@ class ProjectedCost(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(ProjectedCost, self).save(*args, **kwargs)
 
 
@@ -686,9 +686,9 @@ class Program(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(Program, self).save(*args, **kwargs)
 
 
@@ -768,9 +768,9 @@ class ProgramRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(ProgramRelease, self).save(*args, **kwargs)
 
 
@@ -808,9 +808,9 @@ class Claim(models.Model):
         self.total = self.total_claim + self.tax
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(Claim, self).save(*args, **kwargs)
 
 
@@ -844,9 +844,9 @@ class ClaimMatrix(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(ClaimMatrix, self).save(*args, **kwargs)
 
 
@@ -887,9 +887,9 @@ class ClaimRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(ClaimRelease, self).save(*args, **kwargs)
 
 
@@ -910,9 +910,9 @@ class CL(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(CL, self).save(*args, **kwargs)
 
 
@@ -933,9 +933,9 @@ class CLDetail(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(CLDetail, self).save(*args, **kwargs)
 
 
@@ -969,9 +969,9 @@ class CLMatrix(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.update_by = get_current_user().username
+            self.update_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(CLMatrix, self).save(*args, **kwargs)
 
 
@@ -1014,9 +1014,9 @@ class CLRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.update_by = get_current_user().username
+            self.update_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(CLRelease, self).save(*args, **kwargs)
 
 
@@ -1033,9 +1033,9 @@ class Region(models.Model):
         self.region_id = self.region_id.upper()
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().username
+            self.entry_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(Region, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -1060,7 +1060,7 @@ class RegionDetail(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.update_by = get_current_user().username
+            self.update_by = get_current_user().user_id
         self.update_date = timezone.now()
-        self.update_by = get_current_user().username
+        self.update_by = get_current_user().user_id
         super(RegionDetail, self).save(*args, **kwargs)
