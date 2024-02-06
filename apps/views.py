@@ -1424,7 +1424,7 @@ def budget_view(request, _tab, _id, _msg):
         'message': 'NONE' if _msg == 'NONE' else 'Total budget percentage you entered is not 100%',
         'tab': _tab,
         'channel': channel,
-        'segment': 'budget',
+        'segment': 'budget_archive' if _tab == 'closed' else 'budget',
         'group_segment': 'budget',
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
@@ -3994,7 +3994,7 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         'message': _msg,
         'status': proposal.status,
         'add_cost': add_cost,
-        'segment': 'proposal',
+        'segment': 'proposal_archive' if _tab in ['closed', 'reject'] else 'proposal',
         'group_segment': 'proposal',
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
@@ -4559,7 +4559,7 @@ def program_view(request, _tab, _id):
         'tab': _tab,
         'approval': approval,
         'status': program.status,
-        'segment': 'program',
+        'segment': 'program_archive' if _tab == 'reject' else 'program',
         'group_segment': 'program',
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
@@ -5321,7 +5321,7 @@ def claim_view(request, _tab, _id):
         'program': program,
         'approval': approval,
         'status': claim.status,
-        'segment': 'claim',
+        'segment': 'claim_archive' if _tab == 'reject' else 'claim',
         'group_segment': 'claim',
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
@@ -6452,7 +6452,7 @@ def cl_view(request, _tab, _id):
     cl = CL.objects.get(cl_id=_id)
     cl_detail = CLDetail.objects.filter(cl_id=_id)
     claim = Claim.objects.filter(status='OPEN', area_id=cl.area_id, proposal__budget__budget_distributor=cl.distributor_id).exclude(
-        cldetail__claim_id__in=CLDetail.objects.all().values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'cldetail__claim_id')
+        cldetail__claim_id__in=CLDetail.objects.exclude(cl_id__status='REJECTED').values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'cldetail__claim_id')
 
     highest_approval = CLRelease.objects.filter(
         cl_id=_id).aggregate(Max('sequence'))
@@ -6511,7 +6511,7 @@ def cl_view(request, _tab, _id):
         'tab': _tab,
         'approval': approval,
         'status': cl.status,
-        'segment': 'cl',
+        'segment': 'cl_archive' if _tab == 'reject' else 'cl',
         'group_segment': 'cl',
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
@@ -6955,6 +6955,23 @@ def cl_matrix_delete(request, _id, _arg):
     approvers.delete()
 
     return HttpResponseRedirect(reverse('cl-matrix-view', args=[_id]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL-ARCHIVE')
+def cl_archive_index(request):
+    cl = CL.objects.filter(status='REJECTED', area__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
+
+    context = {
+        'data': cl,
+        'segment': 'cl_archive',
+        'group_segment': 'cl',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CL-ARCHIVE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/cl_archive.html', context)
 
 
 @login_required(login_url='/login/')

@@ -22,7 +22,7 @@
                                 <h5 class="mb-2">CL No. {{ data.cl_id }}</h5>
                             </div>
                             <div class="col-6 text-end">
-                                <a href="{% if crud == 'view' %}{% url 'cl-index' tab %}{% else %}{% url 'cl-view' tab data.cl_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
+                                <a href="{% if crud == 'view' %}{% if tab == 'close' or tab == 'reject' %}{% url 'cl-archive-index' %}{% else %}{% url 'cl-index' tab %}{% endif %}{% else %}{% url 'cl-view' tab data.cl_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.cl_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
@@ -164,7 +164,7 @@
                         <h5 class="mb-0"></h5>
                     </div>
                     <div class="col-6 text-end">
-                        <button id="myBtn" type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Claim</button>
+                        <button id="myBtn" type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% if tab == 'reject' %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Claim</button>
                     </div>
                 </div>
                 <div class="modal modal-lg fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
@@ -205,7 +205,7 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <input type="checkbox" class="cursor-pointer border" name="checks[]" value="{{ item.0 }}" {% if item.2 %}checked{% endif %}/>                                                    
+                                                        <input type="checkbox" class="cursor-pointer border" name="checks[]" value="{{ item.0 }}"/>                                                    
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -278,7 +278,7 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <button class="btn-icon-only text-dark bg-transparent border-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-{{ item.claim_id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
+                                        <button class="btn-icon-only text-dark bg-transparent border-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-{{ item.claim_id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if tab == 'reject' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
                                     </td>
                                     <div class="modal fade" id="delete-{{ item.claim_id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                                         aria-hidden="true">

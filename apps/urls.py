@@ -281,6 +281,7 @@ urlpatterns = [
          views.cl_release_return, name='cl-release-return'),
     path('cl_release/reject/<path:_id>/',
          views.cl_release_reject, name='cl-release-reject'),
+    path('cl_archive/', views.cl_archive_index, name='cl-archive-index'),
     path('matrix/cl/', views.cl_matrix_index, name='cl-matrix-index'),
     path('matrix/cl/view/<str:_id>/', views.cl_matrix_view, name='cl-matrix-view'),
     path('matrix/cl/update/<str:_id>/<str:_approver>/',
