@@ -6,6 +6,7 @@ from decimal import Decimal
 from re import sub
 from django.db import models
 from tinymce.models import HTMLField
+from apps.validators import file_size
 
 
 class User(AbstractUser):
@@ -571,7 +572,6 @@ class Proposal(models.Model):
     objectives = models.TextField()
     mechanism = models.TextField()
     remarks = models.CharField(max_length=200, null=True)
-    attachment = models.FileField(upload_to='proposal/', null=True)
     total_cost = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     proposal_claim = models.DecimalField(
@@ -595,6 +595,24 @@ class Proposal(models.Model):
         self.update_date = timezone.now()
         self.update_by = get_current_user().user_id
         super(Proposal, self).save(*args, **kwargs)
+
+
+class ProposalAttachment(models.Model):
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
+    attachment = models.FileField(
+        upload_to='proposal/', null=True, validators=[file_size])
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True, blank=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(ProposalAttachment, self).save(*args, **kwargs)
 
 
 class IncrementalSales(models.Model):

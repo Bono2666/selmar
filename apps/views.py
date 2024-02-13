@@ -24,13 +24,12 @@ from reportlab.platypus import Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import landscape, A4
 from django.db.models import Count
-from PyPDF2 import PdfMerger
+# from PyPDF2 import PdfMerger
 from django.conf import settings
 from xhtml2pdf import pisa
 from django.template.loader import get_template
 from django.utils.text import Truncator
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+import os
 
 
 @login_required(login_url='/login/')
@@ -1805,6 +1804,8 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
         budget=proposal.budget, budget_channel=proposal.channel)
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
+    form_attachment = FormProposalAttachment()
+    attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     form_incremental = FormIncrementalSales()
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     total = IncrementalSales.objects.filter(proposal_id=_id).aggregate(
@@ -1830,6 +1831,8 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
     context = {
         'form': form,
         'divs': divs,
+        'formAttachment': form_attachment,
+        'attachment': attachment,
         'formInc': form_incremental,
         'incremental': incremental,
         'data': proposal,
@@ -1963,6 +1966,7 @@ def budget_release_update(request, _id):
 def proposal_release_update(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     divs = Division.objects.all()
+    attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     cost = ProjectedCost.objects.filter(proposal_id=_id)
     total = IncrementalSales.objects.filter(proposal_id=_id).aggregate(
@@ -1977,6 +1981,10 @@ def proposal_release_update(request, _id):
         incpst_nom__ratio=(Sum('incpst_nom') / Sum('swop_nom')
                            ) * 100 if Sum('swop_nom') else 0,
     )
+    incpst_carton = (total['incrp_carton__sum'] / total['swop_carton__sum']
+                     ) * 100 if total['swop_carton__sum'] else 0
+    incpst_nom = (total['incrp_nom__sum'] / total['swop_nom__sum']
+                  ) * 100 if total['swop_nom__sum'] else 0
     total_cost = ProjectedCost.objects.filter(
         proposal_id=_id).aggregate(Sum('cost'))
     message = '0'
@@ -1989,7 +1997,6 @@ def proposal_release_update(request, _id):
     _obj = proposal.objectives
     _mech = proposal.mechanism
     _rem = proposal.remarks
-    _att = proposal.attachment.name if proposal.attachment else None
 
     if request.POST:
         form = FormProposalUpdate(
@@ -2012,7 +2019,6 @@ def proposal_release_update(request, _id):
                 objectives = _obj if form.cleaned_data['objectives'] != _obj else None
                 mechanism = _mech if form.cleaned_data['mechanism'] != _mech else None
                 remarks = _rem if form.cleaned_data['remarks'] != _rem else None
-                attachment = _att if form.cleaned_data['attachment'] != _att else None
                 parent.save()
 
                 recipients = []
@@ -2074,8 +2080,7 @@ def proposal_release_update(request, _id):
                     msg += 'Mechanism:\n' + str(mechanism) + '\n'
                 if remarks:
                     msg += 'Remarks: ' + str(remarks) + '\n'
-                if attachment:
-                    msg += 'Attachment: ' + str(_att) + '\n'
+
                 msg += '\nAFTER\n'
                 if program_name:
                     msg += 'Program Name: ' + \
@@ -2106,9 +2111,7 @@ def proposal_release_update(request, _id):
                 if remarks:
                     msg += 'Remarks: ' + \
                         str(form.cleaned_data['remarks']) + '\n'
-                if attachment:
-                    msg += 'Attachment: ' + \
-                        str(form.cleaned_data['attachment']) + '\n'
+
                 msg += '\nNote: ' + \
                     str(release.revise_note) + '\n\nClick the following link to view the proposal.\n' + host.url + 'proposal/view/inapproval/' + str(_id) + '/0/0/0/' + \
                     '\n\nThank you.'
@@ -2123,9 +2126,12 @@ def proposal_release_update(request, _id):
     msg = form.errors
     context = {
         'form': form,
+        'attachment': attachment,
         'incremental': incremental,
         'cost': cost,
         'total': total,
+        'incpst_carton': incpst_carton,
+        'incpst_nom': incpst_nom,
         'total_inc': total['incrp_nom__sum'] if total['incrp_nom__sum'] else 0,
         'total_cost': total_cost['cost__sum'] if total_cost['cost__sum'] else 0,
         'data': proposal,
@@ -2932,21 +2938,21 @@ def proposal_print(request, _id):
 
     pdf_file.save()
 
-    # Assuming `proposal.attachment` contains the file path of the attachment
-    attachment_path = proposal.attachment.path if proposal.attachment else ''
+    # # Assuming `proposal.attachment` contains the file path of the attachment
+    # attachment_path = proposal.attachment.path if proposal.attachment else ''
 
-    if attachment_path:
-        # Create a PdfFileMerger object
-        merger = PdfMerger()
+    # if attachment_path:
+    #     # Create a PdfFileMerger object
+    #     merger = PdfMerger()
 
-        # Add the existing PDF file to the merger
-        merger.append(filename)
+    #     # Add the existing PDF file to the merger
+    #     merger.append(filename)
 
-        # Add the attachment page to the merger
-        merger.append(attachment_path)
+    #     # Add the attachment page to the merger
+    #     merger.append(attachment_path)
 
-        # Save the merged PDF file
-        merger.write(filename)
+    #     # Save the merged PDF file
+    #     merger.write(filename)
 
     return FileResponse(open(filename, 'rb'), content_type='application/pdf')
 
@@ -3869,7 +3875,6 @@ def proposal_add(request, _area, _budget, _channel):
             else:
                 parent.budget_id = selected_budget
                 parent.channel = selected_channel
-                parent.attachment = form.cleaned_data['attachment']
                 parent.status = 'DRAFT'
                 parent.seq_number = _no.seq_number + 1 if _no else 1
                 parent.entry_pos = request.user.position.position_id
@@ -3942,6 +3947,8 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         budget=proposal.budget, budget_channel=proposal.channel)
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
+    form_attachment = FormProposalAttachment()
+    attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     form_incremental = FormIncrementalSales()
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     total = IncrementalSales.objects.filter(proposal_id=_id).aggregate(
@@ -3978,6 +3985,8 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         'budget': budget,
         'form': form,
         'divs': divs,
+        'formAttachment': form_attachment,
+        'attachment': attachment,
         'formInc': form_incremental,
         'incremental': incremental,
         'formCost': form_cost,
@@ -4003,6 +4012,31 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
                                 menu_id='PROPOSAL') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/proposal_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL')
+def proposal_attachment_add(request, _tab, _id):
+    if request.method == 'POST':
+        form = FormProposalAttachment(request.POST, request.FILES)
+        if form.is_valid():
+            attachment = form.save(commit=False)
+            attachment.proposal_id = _id
+            attachment.save()
+            if not settings.DEBUG:
+                proposal_attachment = ProposalAttachment.objects.get(
+                    id=attachment.id)
+                if proposal_attachment.attachment:
+                    my_file = proposal_attachment.attachment
+                    filename = '../../www/selmar/apps/media/' + my_file.name
+                    with open(filename, 'wb+') as temp_file:
+                        for chunk in my_file.chunks():
+                            temp_file.write(chunk)
+
+    if _tab in ['draft', 'pending']:
+        return HttpResponseRedirect(reverse('proposal-view', args=[_tab, _id, '0', '0', '0']))
+    else:
+        return HttpResponseRedirect(reverse('proposal-release-view', args=[_id, '0', '0', '0', 1]))
 
 
 @login_required(login_url='/login/')
@@ -4159,19 +4193,39 @@ def proposal_cost_delete(request, _tab, _id, _activities):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='PROPOSAL')
 def remove_attachment(request, _tab, _id):
-    proposal = Proposal.objects.get(proposal_id=_id)
-    proposal.attachment = None
-    proposal.save()
-    return HttpResponseRedirect(reverse('proposal-view', args=[_tab, _id, '0', '0', '0']))
+    attachment = ProposalAttachment.objects.get(id=_id)
+    attachment_path = attachment.attachment.path
+    attachment.delete()
+
+    # Remove the physical file
+    if os.path.exists(attachment_path):
+        os.remove(attachment_path)
+
+    if not settings.DEBUG and attachment.attachment:
+        my_file = attachment.attachment
+        filename = '../../www/selmar/apps/media/' + my_file.name
+        os.remove(filename)
+
+    return HttpResponseRedirect(reverse('proposal-view', args=[_tab, attachment.proposal_id, '0', '0', '0']))
 
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='PROPOSAL-RELEASE')
 def remove_release_attachment(request, _id):
-    proposal = Proposal.objects.get(proposal_id=_id)
-    proposal.attachment = None
-    proposal.save()
-    return render(request, 'home/proposal_release_view.html')
+    attachment = ProposalAttachment.objects.get(id=_id)
+    attachment_path = attachment.attachment.path
+    attachment.delete()
+
+    # Remove the physical file
+    if os.path.exists(attachment_path):
+        os.remove(attachment_path)
+
+    if not settings.DEBUG and attachment.attachment:
+        my_file = attachment.attachment
+        filename = '../../www/selmar/apps/media/' + my_file.name
+        os.remove(filename)
+
+    return HttpResponseRedirect(reverse('proposal-release-view', args=[attachment.proposal_id, '0', '0', '0', 1]))
 
 
 @login_required(login_url='/login/')
@@ -5597,10 +5651,10 @@ def claim_release_update(request, _id):
                 parent.amount = proposal.balance + amount_before if request.POST.get(
                     'add_proposal') else Decimal(request.POST.get('amount'))
                 if int(request.POST.get('amount')) > (int(proposal.balance) + int(amount_before)):
-                    parent.additional_proposal_id = request.POST.get(
+                    parent.additional_proposal = request.POST.get(
                         'add_proposal')
                 else:
-                    parent.additional_proposal_id = ''
+                    parent.additional_proposal = ''
                 parent.additional_amount = difference if request.POST.get(
                     'add_proposal') else 0
                 parent.save()
@@ -5991,7 +6045,7 @@ def claim_print(request, _id):
                        width=logo_width, height=logo_height)
 
     # Add title in the center of page width
-    title = 'DEBIT NOTE'
+    title = 'PAYMENT VOUCHER'
     title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 11)
     title_x = (page_width[0] - title_width) / 2
     pdf_file.setFont('Helvetica-Bold', 11)
@@ -7030,7 +7084,7 @@ def cl_print(request, _id):
     pdf_file.drawString(title_x, y, title)
 
     pdf_file.rect(50, y-5, 150, 15, stroke=True)
-    title = 'No. Klaim'
+    title = 'No. Invoice'
     title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
     title_x = 50 + (150 - title_width) / 2
     pdf_file.drawString(title_x, y, title)
@@ -7070,7 +7124,7 @@ def cl_print(request, _id):
         title_x = 25 + (25 - title_width) / 2
         pdf_file.drawString(title_x, y, title)
         pdf_file.rect(50, y - 5, 150, 15, stroke=True)
-        pdf_file.drawString(55, y, i.claim_id)
+        pdf_file.drawString(55, y, i.claim.invoice)
         pdf_file.rect(200, y - 5, 225, 15, stroke=True)
         remarks = Truncator(i.claim.remarks).chars(55)
         pdf_file.drawString(205, y, remarks)

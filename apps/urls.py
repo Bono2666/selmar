@@ -178,6 +178,8 @@ urlpatterns = [
          views.proposal_update, name='proposal-update'),
     path('proposal/delete/<str:_tab>/<path:_id>/',
          views.proposal_delete, name='proposal-delete'),
+    path('proposal/add-attachment/<str:_tab>/<path:_id>/', views.proposal_attachment_add,
+         name='proposal-attachment-add'),
     path('proposal/remove-attachment/<str:_tab>/<path:_id>/',
          views.remove_attachment, name='remove-attachment'),
     path('proposal_release/remove-release-attachment/<path:_id>/',

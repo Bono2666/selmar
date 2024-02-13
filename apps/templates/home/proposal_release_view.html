@@ -231,23 +231,14 @@
                                 {% endif %}
                             </div>
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-5">
                                     {{ form.background.label_tag }}
                                     {{ form.background }}
                                     <div class="text-sm text-danger">
                                         {{ form.background.errors }}
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    {{ form.objectives.label_tag }}
-                                    {{ form.objectives }}
-                                    <div class="text-sm text-danger">
-                                        {{ form.objectives.errors }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
+                                <div class="col-md-7">
                                     {{ form.mechanism.label_tag }}
                                     {{ form.mechanism }}
                                     <div class="text-sm text-danger">
@@ -256,45 +247,18 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-5">
+                                    {{ form.objectives.label_tag }}
+                                    {{ form.objectives }}
+                                    <div class="text-sm text-danger">
+                                        {{ form.objectives.errors }}
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
                                     {{ form.remarks.label_tag }}
                                     {{ form.remarks }}
                                     <div class="text-sm text-danger">
                                         {{ form.remarks.errors }}
-                                    </div>
-                                </div>
-                                <div class="col-md-5">
-                                    {{ form.attachment.label_tag }}
-                                    <div class="input-group input-group-alternative">
-                                        <a {% if data.attachment %}href="{{ data.attachment.url }}"{% endif %} target="_blank" class="form-control form-control-sm border">{% if data.attachment %}{{ data.attachment }}{% else %}No attachment available for this proposal{% endif %}</a>
-                                        <span class="input-group-text bg-transparent end-0 pe-3 py-2 {% if crud == 'update' %}cursor-pointer{% endif %} text-body {% if crud == 'view' %}disabled{% endif %} z-index-0" data-bs-toggle="modal" {% if crud == 'update' %}data-bs-target="#delete-attch"{% endif %}><i class="fas fa-times-circle"></i></span>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="shadow-none">
-                                        <label class="pb-3"></label>
-                                        {{ form.attachment }}
-                                        <div class="text-danger text-sm">
-                                        {{ form.attachment.errors }}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal fade" id="delete-attch" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-                                    aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered" role="document">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
-                                            </div>
-                                            <div class="modal-body border-bottom-0">
-                                                Are you sure you want to remove this attachment?
-                                            </div>
-                                            <div class="modal-footer border-0">
-                                                <button role="button" class="btn bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
-                                                <a href="{% url 'remove-release-attachment' data.proposal_id %}" role="button" class="btn bg-gradient-danger text-white">Remove
-                                                </a>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -347,6 +311,111 @@
                                 <button type="submit" class="btn btn-sm bg-gradient-danger text-white">Reject</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-fluid py-2">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-0 p-4">
+                <div class="row mb-2">
+                    <div class="col-6 d-flex align-items-center">
+                        <h5 class="mb-0">Attachment</h5>
+                    </div>
+                    <div class="col-6 text-end">
+                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' or is_revise == 0 %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#addAttachment"><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Attachment</button>
+                    </div>
+                </div>
+                <div class="modal fade" id="addAttachment" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="ModalLabel">Attachment - Add Attachment</h5>
+                            </div>
+                            <form method="post" action="{% url 'proposal-attachment-add' 'inapproval' data.proposal_id %}" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="modal-body border-bottom-0">
+                                    <div class="pl-lg-0">
+                                        {% if message != '0' %}
+                                        <div class="alert text-danger text-bg-light" role="alert">
+                                            {{ message|to_space }}
+                                        </div>
+                                        {% endif %}
+                                        {% if msg %}
+                                        <div class="alert text-danger text-bg-light" role="alert">
+                                            {{ msg|to_space }}
+                                        </div>
+                                        {% endif %}
+                                        <h6 class="text-danger">Maximum file size: 2 MB</h6>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="shadow-none">
+                                                    {{ formAttachment.attachment }}
+                                                    <div class="text-danger text-sm">
+                                                        {{ formAttachment.attachment.errors }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <a href="{% url 'proposal-release-view' tab data.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
+                                    <button type="submit"
+                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body px-0 pt-0 pb-1">
+                    <div class="table-responsive p-0">
+                        <table class="table {% if crud == 'view' %}hover{% endif %} align-items-center mb-0" id="attachmentTable">
+                            <thead>
+                                <tr>
+                                    <th class="mb-0 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                        Attachment</th>
+                                    <th class="mb-0"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in attachment %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0 ps-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <a {% if item.attachment %}href="{{ item.attachment.url }}"{% endif %} target="_blank" class="form-control form-control-sm border">{% if item.attachment %}{{ item.attachment }}{% else %}No attachment available{% endif %}</a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit and is_revise == 1 or request.user.is_superuser %}data-bs-target="#delete-attch-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if status == 'CLOSED' or status == 'REJECTED' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
+                                    </td>
+                                    <div class="modal fade" id="delete-attch-{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                                        aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered" role="document">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                                </div>
+                                                <div class="modal-body border-bottom-0">
+                                                    Are you sure you want to remove this attachment?
+                                                </div>
+                                                <div class="modal-footer border-0">
+                                                    <button role="button" class="btn bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                                    <a href="{% url 'remove-release-attachment' item.id %}" role="button" class="btn bg-gradient-danger text-white">Remove
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -881,6 +950,14 @@
 {% block javascripts %}
 <script>
     $(document).ready( function () {
+        $('#attachmentTable').DataTable({
+            'searching': false,
+            'lengthChange': false,
+            'paging': false,
+            'info': false,
+            'cell-border': true,
+        });
+
         $('#incTable').DataTable({
             'pageLength': 5,
             'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],

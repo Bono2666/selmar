@@ -733,8 +733,6 @@ class FormProposal(ModelForm):
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['attachment'].label = 'Attachment'
-        self.fields['attachment'].required = False
 
     class Meta:
         model = Proposal
@@ -746,6 +744,21 @@ class FormProposal(ModelForm):
             # Set the date picker for period_start and period_end fields
             'period_start': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
             'period_end': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
+        }
+
+
+class FormProposalAttachment(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormProposalAttachment, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['attachment'].label = 'Attachment'
+
+    class Meta:
+        model = ProposalAttachment
+        exclude = ['proposal', 'entry_date',
+                   'entry_by', 'update_date', 'update_by']
+
+        widgets = {
             'attachment': forms.FileInput(attrs={'class': 'form-control form-control-sm'}),
         }
 
@@ -830,14 +843,11 @@ class FormProposalView(ModelForm):
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['attachment'].label = 'Attachment'
-        self.fields['attachment'].widget = forms.FileInput(
-            attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'})
 
     class Meta:
         model = Proposal
         fields = ['proposal_id', 'proposal_date', 'channel', 'type', 'division', 'program_name', 'products', 'area',
-                  'period_start', 'period_end', 'duration', 'background', 'objectives', 'mechanism', 'remarks', 'attachment']
+                  'period_start', 'period_end', 'duration', 'background', 'objectives', 'mechanism', 'remarks']
 
         widgets = {
             'proposal_date': DateInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
@@ -878,8 +888,6 @@ class FormProposalUpdate(ModelForm):
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['attachment'].label = 'Attachment'
-        self.fields['attachment'].required = False
 
     class Meta:
         model = Proposal
@@ -890,7 +898,6 @@ class FormProposalUpdate(ModelForm):
             'division': forms.Select(attrs={'class': 'form-control form-select-sm'}),
             'period_start': DateInput(attrs={'class': 'form-control form-control-sm'}),
             'period_end': DateInput(attrs={'class': 'form-control form-control-sm'}),
-            'attachment': forms.FileInput(attrs={'class': 'form-control form-control-sm'}),
         }
 
 
