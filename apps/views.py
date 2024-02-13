@@ -1147,12 +1147,14 @@ def budget_add(request, _area):
     ).exclude(
         distributor_id__in=Budget.objects.filter(
             budget_area=selected_area,
-            budget_month=datetime.datetime.now().strftime('%m'),
-            budget_year=datetime.datetime.now().year
+            budget_month='{:02d}'.format(
+                int(Closing.objects.get(document='BUDGET').month_open)),
+            budget_year=Closing.objects.get(document='BUDGET').year_open
         ).values_list('budget_distributor_id', flat=True)
     )
+    open_period = Closing.objects.get(document='BUDGET')
     month = '{:02d}'.format(int(request.POST.get('budget_month'))) if request.POST.get(
-        'budget_month') else '{:02d}'.format(int(datetime.datetime.now().month))
+        'budget_month') else '{:02d}'.format(int(open_period.month_open))
     no_save = False
     if _area != 'NONE':
         approvers = BudgetApproval.objects.filter(
@@ -1164,58 +1166,58 @@ def budget_add(request, _area):
     if period.count() == 0:
         closing_period = 'False'
     else:
-        if period[0].month_open == str(datetime.datetime.now().month) and period[0].year_open == str(datetime.datetime.now().year):
-            if request.POST:
-                form = FormBudget(request.POST, request.FILES)
-                if form.is_valid():
-                    _id = 'UBS/' + \
-                        request.POST.get('budget_area') + '/' + \
-                        request.POST.get('budget_distributor') + '/' + \
-                        month + '/' + request.POST.get('budget_year')
-                    try:
-                        budget = Budget.objects.get(budget_id=_id)
-                        if budget:
-                            message = 'Budget already exist'
-                    except Budget.DoesNotExist:
-                        parent = form.save(commit=False)
-                        if parent.budget_amount == 0:
-                            message = 'Beginning Budget is required'
-                        else:
-                            parent.budget_id = _id
-                            parent.budget_balance = int(request.POST.get(
-                                'budget_amount'))
-                            parent.budget_status = 'DRAFT'
-                            parent.budget_new = True
-                            area = parent.budget_area.area_id
-                            parent.save()
-                            with connection.cursor() as cursor:
-                                cursor.execute(
-                                    "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
-                                area_channels = cursor.fetchall()
-                                for i in area_channels:
-                                    child = BudgetDetail(
-                                        budget=parent, budget_channel_id=i[0])
-                                    child.save()
+        # if period[0].month_open == str(datetime.datetime.now().month) and period[0].year_open == str(datetime.datetime.now().year):
+        if request.POST:
+            form = FormBudget(request.POST, request.FILES)
+            if form.is_valid():
+                _id = 'UBS/' + \
+                    request.POST.get('budget_area') + '/' + \
+                    request.POST.get('budget_distributor') + '/' + \
+                    month + '/' + request.POST.get('budget_year')
+                try:
+                    budget = Budget.objects.get(budget_id=_id)
+                    if budget:
+                        message = 'Budget already exist'
+                except Budget.DoesNotExist:
+                    parent = form.save(commit=False)
+                    if parent.budget_amount == 0:
+                        message = 'Beginning Budget is required'
+                    else:
+                        parent.budget_id = _id
+                        parent.budget_balance = int(request.POST.get(
+                            'budget_amount'))
+                        parent.budget_status = 'DRAFT'
+                        parent.budget_new = True
+                        area = parent.budget_area.area_id
+                        parent.save()
+                        with connection.cursor() as cursor:
+                            cursor.execute(
+                                "SELECT channel_id FROM apps_areachanneldetail WHERE area_id = '" + str(area) + "' AND status = 1")
+                            area_channels = cursor.fetchall()
+                            for i in area_channels:
+                                child = BudgetDetail(
+                                    budget=parent, budget_channel_id=i[0])
+                                child.save()
 
-                            for j in approvers:
-                                release = BudgetRelease(
-                                    budget=parent, budget_approval_id=j.approver_id, budget_approval_name=j.approver.username, budget_approval_email=j.approver.email, budget_approval_position=j.approver.position.position_name, sequence=j.sequence)
-                                release.save()
+                        for j in approvers:
+                            release = BudgetRelease(
+                                budget=parent, budget_approval_id=j.approver_id, budget_approval_name=j.approver.username, budget_approval_email=j.approver.email, budget_approval_position=j.approver.position.position_name, sequence=j.sequence)
+                            release.save()
 
-                            email = User.objects.filter(
-                                position_id='TMM', areauser__area_id=_area).values_list('email', flat=True)
-                            recipient_list = list(email)
-                            subject = 'Budget Percentages Input'
-                            _message = 'Dear All,\n\nPlease note that Budget No. ' + _id + ' needs to be inputted as a budget percentage for each channel.\n\nClick the following link to upload some budget percentage at once.\n' + host.url + 'budget_upload/\n\nOr click the following link to change this budget channel percentage only.\n' + \
-                                host.url + 'budget/view/draft/' + _id + '/NONE/' + '\n\nThank you.'
-                            send_email(subject, _message, recipient_list)
+                        email = User.objects.filter(
+                            position_id='TMM', areauser__area_id=_area).values_list('email', flat=True)
+                        recipient_list = list(email)
+                        subject = 'Budget Percentages Input'
+                        _message = 'Dear All,\n\nPlease note that Budget No. ' + _id + ' needs to be inputted as a budget percentage for each channel.\n\nClick the following link to upload some budget percentage at once.\n' + host.url + 'budget_upload/\n\nOr click the following link to change this budget channel percentage only.\n' + \
+                            host.url + 'budget/view/draft/' + _id + '/NONE/' + '\n\nThank you.'
+                        send_email(subject, _message, recipient_list)
 
-                            return HttpResponseRedirect(reverse('budget-view', args=['draft', parent.budget_id, 'NONE']))
-        else:
-            closing = 'False'
+                        return HttpResponseRedirect(reverse('budget-view', args=['draft', parent.budget_id, 'NONE']))
+        # else:
+        #     closing = 'False'
 
     form = FormBudget(
-        initial={'budget_year': datetime.datetime.now().year, 'budget_month': month, 'budget_amount': 0, 'budget_upping': 0, 'budget_total': 0})
+        initial={'budget_year': open_period.year_open, 'budget_month': month, 'budget_amount': 0, 'budget_upping': 0, 'budget_total': 0})
 
     msg = form.errors
     context = {
