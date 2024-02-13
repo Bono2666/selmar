@@ -2585,10 +2585,10 @@ def proposal_print(request, _id):
     pdf_file.drawString(25, y, "Attachment")
     pdf_file.drawString(90, y, ":")
     pdf_file.setFont("Helvetica", 8)
-    if proposal.attachment:
-        pdf_file.drawString(100, y, proposal.attachment.name)
-    else:
-        pdf_file.drawString(100, y, 'None')
+    # if proposal.attachment:
+    #     pdf_file.drawString(100, y, proposal.attachment.name)
+    # else:
+    #     pdf_file.drawString(100, y, 'None')
 
     y -= 20
     pdf_file.setFont("Helvetica-Bold", 8)
