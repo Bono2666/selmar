@@ -19,11 +19,29 @@
                                 <h4 class="mb-2">Budget No. {{ data.budget_id }}</h4>
                             </div>
                             <div class="col-6 text-end">
-                                <a href="{% if crud == 'view' %}{% if tab == 'closed' %}{% url 'budget-archive-index' %}{% else %}{% url 'budget-index' tab %}{% endif %}{% else %}{% url 'budget-view' tab data.budget_id 'NONE' %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
-                                <a href="{% url 'budget-update' tab data.budget_id %}" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
-                                <button type="submit" class="btn btn-sm bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.budget_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
-                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
+                                <a href="{% if crud == 'view' %}{% if tab == 'closed' %}{% url 'budget-archive-index' %}{% else %}{% url 'budget-index' tab %}{% endif %}{% else %}{% url 'budget-view' tab data.budget_id 'NONE' %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
+                                <a href="{% url 'budget-update' tab data.budget_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
+                                <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
+                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.budget_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if hundreds == 0 %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.budget_status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="confirm-submit" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    Are you sure you want to submit budget no: <strong>{{ data.budget_id }}</strong>?
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'budget-submit' data.budget_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Submit</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -236,14 +254,11 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div class="text-body text-sm mt-2">
-                                        This percentage update will change the budget status to PENDING APPROVAL and is ready to wait for approval.
-                                    </div>
                                 </div>
                                 <div class="modal-footer border-0">
                                     <a href="{% url 'budget-view' tab data.budget_id 'NONE' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                     <button type="submit"
-                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn_percent.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
+                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn_percent.edit and not request.user.is_superuser %}disabled{% endif %}">Ok</button>
                                 </div>
                             </form>
                         </div>

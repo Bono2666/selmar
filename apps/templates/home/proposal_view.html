@@ -27,7 +27,25 @@
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.proposal_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
-                                <a href="{% url 'proposal-print' data.proposal_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if total_cost <= 0 %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button>
+                                <a href="{% url 'proposal-print' data.proposal_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" {% if data.status == 'DRAFT' %}hidden{% endif %} target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="confirm-submit" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    Are you sure you want to submit proposal no: <strong>{{ data.proposal_id }}</strong>?
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'proposal-submit' data.proposal_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Submit</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -295,7 +313,7 @@
                                 <div class="modal-footer border-0">
                                     <a href="{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                     <button type="submit"
-                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
+                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Ok</button>
                                 </div>
                             </form>
                         </div>
@@ -322,7 +340,7 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-attch-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if status == 'CLOSED' or status == 'REJECTED' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
+                                        <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-attch-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
                                     </td>
                                     <div class="modal fade" id="delete-attch-{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                                         aria-hidden="true">
@@ -437,7 +455,7 @@
                                 <div class="modal-footer border-0">
                                     <a href="{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                     <button type="submit"
-                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
+                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Ok</button>
                                 </div>
                             </form>
                         </div>
@@ -514,7 +532,7 @@
                                         <h6 class="mb-0 text-xs text-end">{{ item.incpst_nom }}%</h6>
                                     </td>
                                     <td>
-                                        <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if status == 'CLOSED' or status == 'REJECTED' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
+                                        <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
                                     </td>
                                     <div class="modal fade" id="delete-{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                                         aria-hidden="true">
@@ -597,7 +615,7 @@
                                                 <div class="modal-footer border-0">
                                                     <a href="{% url 'proposal-view' tab item.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                                     <button type="submit"
-                                                        class="btn btn-sm bg-gradient-danger text-white {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}">Save</button>
+                                                        class="btn btn-sm bg-gradient-danger text-white {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}">Ok</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -701,7 +719,7 @@
                                 <div class="modal-footer border-0">
                                     <a href="{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                     <button type="submit"
-                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
+                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Ok</button>
                                 </div>
                             </form>
                         </div>
@@ -733,7 +751,7 @@
                                         <h6 class="mb-0 text-xs text-end">{{ item.cost|floatformat:0|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#del-cost-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if status == 'CLOSED' or status == 'REJECTED' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
+                                        <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#del-cost-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
                                     </td>
                                     <div class="modal fade" id="del-cost-{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                                         aria-hidden="true">
@@ -797,7 +815,7 @@
                                                 <div class="modal-footer border-0">
                                                     <a href="{% url 'proposal-view' tab item.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                                     <button type="submit"
-                                                        class="btn btn-sm bg-gradient-danger text-white {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}">Save</button>
+                                                        class="btn btn-sm bg-gradient-danger text-white {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}">Ok</button>
                                                 </div>
                                             </form>
                                         </div>

@@ -249,6 +249,7 @@ class Auth(models.Model):
     add = models.BooleanField(default=False)
     edit = models.BooleanField(default=False)
     delete = models.BooleanField(default=False)
+    submit = models.BooleanField(default=False)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True)
@@ -352,6 +353,92 @@ class BudgetDetail(models.Model):
         self.update_date = timezone.now()
         self.update_by = get_current_user().user_id
         super(BudgetDetail, self).save(*args, **kwargs)
+
+
+class BudgetTransfer(models.Model):
+    transfer_id = models.CharField(max_length=50, primary_key=True)
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
+    distributor = models.ForeignKey(Distributor, on_delete=models.CASCADE)
+    date = models.DateTimeField(null=True)
+    channel_from = models.ForeignKey(
+        Channel, on_delete=models.CASCADE, related_name='channel_from')
+    channel_to = models.ForeignKey(
+        Channel, on_delete=models.CASCADE, related_name='channel_to')
+    amount = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
+    status = models.CharField(max_length=15, default='PENDING')
+    seq_number = models.IntegerField(default=0)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(BudgetTransfer, self).save(*args, **kwargs)
+
+
+class BudgetTransferMatrix(models.Model):
+    area = models.ForeignKey(AreaSales, on_delete=models.CASCADE)
+    approver = models.ForeignKey(User, on_delete=models.CASCADE)
+    sequence = models.IntegerField(default=0)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, null=True)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['area', 'approver'], name='unique_transfer_approver')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(BudgetTransferMatrix, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.area.area_name
+
+
+class BudgetTransferRelease(models.Model):
+    transfer = models.ForeignKey(BudgetTransfer, on_delete=models.CASCADE)
+    transfer_approval_id = models.CharField(max_length=50, null=True)
+    transfer_approval_name = models.CharField(max_length=50, null=True)
+    transfer_approval_email = models.CharField(max_length=50, null=True)
+    transfer_approval_position = models.CharField(max_length=50, null=True)
+    transfer_approval_date = models.DateTimeField(null=True)
+    transfer_approval_status = models.CharField(max_length=1, default='N')
+    update_note = models.CharField(max_length=200, null=True)
+    return_note = models.CharField(max_length=200, null=True)
+    sequence = models.IntegerField(default=0)
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(null=True)
+    update_by = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['transfer', 'transfer_approval_id'], name='unique_transfer_approval')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(BudgetTransferRelease, self).save(*args, **kwargs)
 
 
 class UploadLog(models.Model):
@@ -694,7 +781,7 @@ class Program(models.Model):
     content = HTMLField()
     approval = HTMLField(null=True)
     seq_number = models.IntegerField(default=0)
-    status = models.CharField(max_length=15, default='PENDING')
+    status = models.CharField(max_length=15, default='DRAFT')
     entry_pos = models.CharField(max_length=5, null=True)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
@@ -813,7 +900,7 @@ class Claim(models.Model):
     total_claim = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     remarks = models.TextField(null=True)
-    status = models.CharField(max_length=15, default='PENDING')
+    status = models.CharField(max_length=15, default='DRAFT')
     seq_number = models.IntegerField(default=0)
     entry_pos = models.CharField(max_length=5, null=True)
     entry_date = models.DateTimeField(null=True)

@@ -27,7 +27,25 @@
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.claim_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
-                                <a href="{% url 'claim-print' data.claim_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button>
+                                <a href="{% url 'claim-print' data.claim_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" {% if data.status == 'DRAFT' %}hidden{% endif %} target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="confirm-submit" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    Are you sure you want to submit claim no: <strong>{{ data.claim_id }}</strong>?
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'claim-submit' data.claim_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Submit</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -65,7 +83,7 @@
                                 <div class="modal-footer border-0">
                                     <button type="button" class="btn btn-sm bg-gradient-dark" data-dismiss="modal" id="addprop_cancel">Cancel</button>
                                     <button type="submit"
-                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Save</button>
+                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Ok</button>
                                 </div>
                             </div>
                         </div>

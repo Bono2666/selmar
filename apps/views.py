@@ -217,6 +217,7 @@ def auth_update(request, _id, _menu):
         auth.add = 1 if request.POST.get('add') else 0
         auth.edit = 1 if request.POST.get('edit') else 0
         auth.delete = 1 if request.POST.get('delete') else 0
+        auth.submit = 1 if request.POST.get('submit') else 0
         auth.save()
 
         return HttpResponseRedirect(reverse('user-view', args=[_id, ]))
@@ -1247,10 +1248,6 @@ def budget_index(request, _tab):
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
     draft_count = Budget.objects.filter(budget_status='DRAFT', budget_area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
-    pendings = Budget.objects.filter(budget_status='PENDING', budget_area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
-    pendings_count = Budget.objects.filter(budget_status='PENDING', budget_area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
     inapprovals = Budget.objects.filter(budget_status='IN APPROVAL', budget_area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
     inapprovals_count = Budget.objects.filter(budget_status='IN APPROVAL', budget_area__in=AreaUser.objects.filter(
@@ -1263,8 +1260,6 @@ def budget_index(request, _tab):
     context = {
         'drafts': drafts,
         'drafts_count': draft_count,
-        'pendings': pendings,
-        'pendings_count': pendings_count,
         'inapprovals': inapprovals,
         'inapprovals_count': inapprovals_count,
         'opens': opens,
@@ -1389,11 +1384,15 @@ def budget_view(request, _tab, _id, _msg):
     budget.budget_total = '{:,}'.format(budget.budget_total)
     form = FormBudgetView(instance=budget)
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
-    for detail in budget_detail:
-        detail.budget_amount = '{:,}'.format(detail.budget_amount)
-        detail.budget_upping = '{:,}'.format(detail.budget_upping)
-        detail.budget_total = '{:,}'.format(detail.budget_total)
-        detail.budget_balance = '{:,}'.format(detail.budget_balance)
+    hundreds = 0
+    for i in budget_detail:
+        hundreds += int(i.budget_percent)
+
+        i.budget_amount = '{:,}'.format(i.budget_amount)
+        i.budget_upping = '{:,}'.format(i.budget_upping)
+        i.budget_total = '{:,}'.format(i.budget_total)
+        i.budget_balance = '{:,}'.format(i.budget_balance)
+
     with connection.cursor() as cursor:
         cursor.execute(
             "SELECT apps_channel.channel_id, channel_name, q_channel.budget_channel_id FROM apps_channel LEFT JOIN (SELECT * FROM apps_budgetdetail WHERE budget_id = '" + str(_id) + "') AS q_channel ON apps_channel.channel_id = q_channel.budget_channel_id WHERE q_channel.budget_channel_id IS NULL")
@@ -1417,6 +1416,7 @@ def budget_view(request, _tab, _id, _msg):
     context = {
         'form': form,
         'data': budget,
+        'hundreds': hundreds,
         'status': budget.budget_status,
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
@@ -1455,28 +1455,33 @@ def budget_detail_update(request, _tab, _id):
                 i.budget_upping = Decimal(
                     int(i.budget_percent)/100) * budget.budget_upping
                 i.save()
-
-            budget.budget_status = 'PENDING'
-            budget.save()
-
-            email = BudgetRelease.objects.filter(
-                budget_id=_id).order_by('sequence').values_list('budget_approval_email', flat=True)
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT username FROM apps_budgetrelease INNER JOIN apps_user ON apps_budgetrelease.budget_approval_id = apps_user.user_id WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'N' ORDER BY sequence LIMIT 1")
-                approver = cursor.fetchone()
-
-            subject = 'Budget Approval'
-            message = 'Dear ' + approver[0] + ',\n\nYou have a new budget to approve. Please check your budget release list.\n\n' + \
-                'Click this link to approve, revise or return this budget.\n' + host.url + 'budget_release/view/' + str(_id) + '/NONE/0/' + \
-                '\n\nThank you.'
-            send_email(subject, message, [email[0]])
-
-            return HttpResponseRedirect(reverse('budget-view', args=['pending', _id, 'NONE']))
         else:
             msg = 'Total budget percentage you entered is not 100%'
 
     return HttpResponseRedirect(reverse('budget-view', args=[_tab, _id, msg, ]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET')
+def budget_submit(request, _id):
+    budget = Budget.objects.get(budget_id=_id)
+    budget.budget_status = 'IN APPROVAL'
+    budget.save()
+
+    email = BudgetRelease.objects.filter(
+        budget_id=_id).order_by('sequence').values_list('budget_approval_email', flat=True)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT username FROM apps_budgetrelease INNER JOIN apps_user ON apps_budgetrelease.budget_approval_id = apps_user.user_id WHERE budget_id = '" + str(_id) + "' AND budget_approval_status = 'N' ORDER BY sequence LIMIT 1")
+        approver = cursor.fetchone()
+
+    subject = 'Budget Approval'
+    message = 'Dear ' + approver[0] + ',\n\nYou have a new budget to approve. Please check your budget release list.\n\n' + \
+        'Click this link to approve, revise or return this budget.\n' + host.url + 'budget_release/view/' + str(_id) + '/NONE/0/' + \
+        '\n\nThank you.'
+    send_email(subject, message, [email[0]])
+
+    return HttpResponseRedirect(reverse('budget-index', args=['inapproval', ]))
 
 
 @login_required(login_url='/login/')
@@ -1522,7 +1527,7 @@ def budget_upload(request):
                                     int(data[col])/100) * budget.budget_upping
                                 rec.save()
                                 success += 1
-                                budget.budget_status = 'PENDING'
+                                budget.budget_status = 'IN APPROVAL'
                                 budget.save()
 
                                 is_send = True
@@ -1705,6 +1710,94 @@ def export_budget_to_excel(request):
         ), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = 'attachment; filename=Budget_Data.xlsx'
         return response
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-TRANSFER')
+def budget_transfer_index(request, _tab):
+    drafts = BudgetTransfer.objects.filter(status='DRAFT', area_id__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').all
+    draft_count = BudgetTransfer.objects.filter(status='DRAFT', area_id__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').count
+    inapprovals = BudgetTransfer.objects.filter(status='IN APPROVAL', area_id__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').all
+    inapprovals_count = BudgetTransfer.objects.filter(status='IN APPROVAL', area_id__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').count
+    approved = BudgetTransfer.objects.filter(status='APPROVED', area_id__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').all
+    approved_count = BudgetTransfer.objects.filter(status='APPROVED', area_id__in=AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').count
+
+    context = {
+        'drafts': drafts,
+        'drafts_count': draft_count,
+        'inapprovals': inapprovals,
+        'inapprovals_count': inapprovals_count,
+        'approved': approved,
+        'approved_count': approved_count,
+        'tab': _tab,
+        'segment': 'budget_transfer',
+        'group_segment': 'budget',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-TRANSFER') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/budget_transfer_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='BUDGET-TRANSFER')
+def budget_transfer_add(request, _area, _distributor, _channel):
+    selected_area = _area
+    selected_distributor = _distributor
+    selected_channel = _channel
+    area = AreaUser.objects.filter(
+        user_id=request.user.user_id).values_list('area_id', 'area__area_name')
+    distributor = Budget.objects.get(
+        budget_status='OPEN', budget_area=selected_area).values_list('budget_distributor_id', 'budget_distributor__distributor_name', 'budget_id')
+    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
+        'budget_id', flat=True), budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance')
+
+    try:
+        _no = BudgetTransfer.objects.all().order_by('seq_number').last()
+    except Program.DoesNotExist:
+        _no = None
+    if _no is None:
+        format_no = '{:04d}'.format(1)
+    else:
+        format_no = '{:04d}'.format(_no.seq_number + 1)
+
+    _id = 'TRF-6' + format_no + '/' + proposal.channel + '/' + selected_area + '/' + \
+        str(proposal.budget.budget_distributor.distributor_id) + '/' + \
+        datetime.datetime.now().strftime('%m/%Y') if selected_proposal != '0' else 'SBS-3' + format_no + '/' + selected_area + '/0' + \
+        datetime.datetime.now().strftime('%m/%Y')
+
+    if request.POST:
+        form = FormBudgetTransfer(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('budget-transfer-index', args=['pending', ]))
+
+    form = FormBudgetTransfer()
+
+    msg = form.errors
+    context = {
+        'msg': msg,
+        'form': form,
+        'selected_area': selected_area,
+        'selected_distributor': selected_distributor,
+        'selected_channel': selected_channel,
+        'area': area,
+        'distributor': distributor,
+        'channel': channel,
+        'segment': 'budget_transfer',
+        'group_segment': 'budget',
+        'crud': 'add',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-TRANSFER') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/budget_transfer_add.html', context)
 
 
 @login_required(login_url='/login/')
@@ -2353,8 +2446,8 @@ def proposal_release_cost_add(request, _id):
                 proposal.balance = total_cost
                 proposal.status = 'PENDING'
                 proposal.save()
-                sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))[
-                    'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
+                sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
+                    'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
                 budget_detail.budget_proposed = sum_cost
                 budget_detail.save()
                 sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -2383,8 +2476,8 @@ def proposal_release_cost_delete(request, _id, _activities):
     proposal.total_cost = total_cost
     proposal.balance = total_cost
     proposal.save()
-    sum_cost = Proposal.objects.filter(
-        budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))['total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
+    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
+        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
     budget_detail.budget_proposed = sum_cost
     budget_detail.save()
     sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -2422,8 +2515,8 @@ def proposal_release_cost_update(request, _id, _activities):
             proposal.total_cost = total_cost
             proposal.balance = total_cost
             proposal.save()
-            sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))[
-                'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
+            sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
+                'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
             budget_detail.budget_proposed = sum_cost
             budget_detail.save()
             sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -3763,10 +3856,6 @@ def proposal_index(request, _tab):
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').all
     draft_count = Proposal.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').count
-    pendings = Proposal.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').all
-    pending_count = Proposal.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').count
     inapprovals = Proposal.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').all
     inapproval_count = Proposal.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
@@ -3779,8 +3868,6 @@ def proposal_index(request, _tab):
     context = {
         'drafts': drafts,
         'draft_count': draft_count,
-        'pendings': pendings,
-        'pending_count': pending_count,
         'inapprovals': inapprovals,
         'inapproval_count': inapproval_count,
         'opens': opens,
@@ -4096,7 +4183,6 @@ def proposal_cost_add(request, _tab, _id):
                     100 if total_inc != 0 else 0
                 proposal.total_cost = total_cost
                 proposal.balance = total_cost
-                proposal.status = 'PENDING' if proposal.status == 'DRAFT' else proposal.status
                 proposal.save()
 
                 sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
@@ -4109,29 +4195,41 @@ def proposal_cost_add(request, _tab, _id):
                 budget.budget_balance = sum_balance
                 budget.save()
 
-                mail_sent = ProposalRelease.objects.filter(
-                    proposal_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
-                if mail_sent[0] == False:
-                    email = ProposalRelease.objects.filter(
-                        proposal_id=_id).order_by('sequence').values_list('proposal_approval_email', flat=True)
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            "SELECT username FROM apps_proposalrelease INNER JOIN apps_user ON apps_proposalrelease.proposal_approval_id = apps_user.user_id WHERE proposal_id = '" + str(_id) + "' AND proposal_approval_status = 'N' ORDER BY sequence LIMIT 1")
-                        approver = cursor.fetchone()
-
-                    subject = 'Proposal Approval'
-                    msg = 'Dear ' + approver[0] + ',\n\nYou have a new proposal to approve. Please check your proposal release list.\n\n' + \
-                        'Click this link to approve, revise, return or reject this proposal.\n' + host.url + 'proposal_release/view/' + str(_id) + '/0/0/0/0/' + \
-                        '\n\nThank you.'
-                    send_email(subject, msg, [email[0]])
-
-                    # update mail sent to true
-                    release = ProposalRelease.objects.filter(
-                        proposal_id=_id).order_by('sequence').first()
-                    release.mail_sent = True
-                    release.save()
-
     return HttpResponseRedirect(reverse('proposal-view', args=[_tab, _id, '0', 'add-cost', message]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL')
+def proposal_submit(request, _id):
+    proposal = Proposal.objects.get(proposal_id=_id)
+    budget_detail = BudgetDetail.objects.get(
+        budget=proposal.budget, budget_channel=proposal.channel)
+    proposal.status = 'IN APPROVAL'
+    proposal.save()
+
+    mail_sent = ProposalRelease.objects.filter(
+        proposal_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
+    if mail_sent[0] == False:
+        email = ProposalRelease.objects.filter(
+            proposal_id=_id).order_by('sequence').values_list('proposal_approval_email', flat=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT username FROM apps_proposalrelease INNER JOIN apps_user ON apps_proposalrelease.proposal_approval_id = apps_user.user_id WHERE proposal_id = '" + str(_id) + "' AND proposal_approval_status = 'N' ORDER BY sequence LIMIT 1")
+            approver = cursor.fetchone()
+
+        subject = 'Proposal Approval'
+        msg = 'Dear ' + approver[0] + ',\n\nYou have a new proposal to approve. Please check your proposal release list.\n\n' + \
+            'Click this link to approve, revise, return or reject this proposal.\n' + host.url + 'proposal_release/view/' + str(_id) + '/0/0/0/0/' + \
+            '\n\nThank you.'
+        send_email(subject, msg, [email[0]])
+
+        # update mail sent to true
+        release = ProposalRelease.objects.filter(
+            proposal_id=_id).order_by('sequence').first()
+        release.mail_sent = True
+        release.save()
+
+    return HttpResponseRedirect(reverse('proposal-index', args=['inapproval']))
 
 
 @login_required(login_url='/login/')
@@ -4169,8 +4267,9 @@ def proposal_cost_delete(request, _tab, _id, _activities):
     proposal.total_cost = total_cost
     proposal.balance = total_cost
     proposal.save()
-    sum_cost = Proposal.objects.filter(
-        budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))['total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
+
+    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
+        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
     budget_detail.budget_proposed = sum_cost
     budget_detail.save()
     sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -4285,10 +4384,10 @@ def proposal_cost_update(request, _tab, _id, _activities):
                 100 if total_inc != 0 else 0
             proposal.total_cost = total_cost
             proposal.balance = total_cost
-            proposal.status = 'PENDING' if proposal.status == 'DRAFT' else proposal.status
             proposal.save()
-            sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))[
-                'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
+
+            sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
+                'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
             budget_detail.budget_proposed = sum_cost
             budget_detail.save()
             sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -4305,6 +4404,7 @@ def proposal_cost_update(request, _tab, _id, _activities):
 def proposal_update(request, _tab, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     divs = Division.objects.all()
+    attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     cost = ProjectedCost.objects.filter(proposal_id=_id)
     total = IncrementalSales.objects.filter(proposal_id=_id).aggregate(
@@ -4335,12 +4435,6 @@ def proposal_update(request, _tab, _id):
                 message = 'Period end must be greater than period start.'
             else:
                 parent.save()
-                if not settings.DEBUG:
-                    my_file = proposal.attachment
-                    filename = '../../www/selmar/apps/media/' + my_file.name
-                    with open(filename, 'wb+') as temp_file:
-                        for chunk in my_file.chunks():
-                            temp_file.write(chunk)
                 return HttpResponseRedirect(reverse('proposal-view', args=[_tab, _id, '0', '0', '0']))
     else:
         form = FormProposalUpdate(instance=proposal)
@@ -4351,6 +4445,7 @@ def proposal_update(request, _tab, _id):
         'form': form,
         'data': proposal,
         'divs': divs,
+        'attachment': attachment,
         'incremental': incremental,
         'cost': cost,
         'total': total,
@@ -4377,8 +4472,8 @@ def proposal_delete(request, _tab, _id):
     budget_detail = BudgetDetail.objects.get(
         budget=proposal.budget, budget_channel=proposal.channel)
     proposal.delete()
-    sum_cost = Proposal.objects.filter(
-        budget=proposal.budget, channel=proposal.channel).aggregate(Sum('total_cost'))['total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exists() else 0
+    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
+        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
     budget_detail.budget_proposed = sum_cost
     budget_detail.save()
     sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -4398,10 +4493,6 @@ def program_index(request, _tab):
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
     draft_count = Program.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
-    pendings = Program.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
-    pending_count = Program.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
     inapprovals = Program.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
     inapproval_count = Program.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
@@ -4415,8 +4506,6 @@ def program_index(request, _tab):
         'data': programs,
         'drafts': drafts,
         'draft_count': draft_count,
-        'pendings': pendings,
-        'pending_count': pending_count,
         'inapprovals': inapprovals,
         'inapproval_count': inapproval_count,
         'opens': opens,
@@ -4483,7 +4572,6 @@ def program_add(request, _area, _distributor, _proposal):
             draft.program_date = datetime.datetime.now().date()
             draft.proposal_id = selected_proposal
             draft.seq_number = _no.seq_number + 1 if _no else 1
-            draft.status = 'PENDING'
             draft.entry_pos = request.user.position.position_id
             draft.save()
 
@@ -4506,29 +4594,7 @@ def program_add(request, _area, _distributor, _proposal):
                     as_approved=approver.as_approved)
                 release.save()
 
-            mail_sent = ProgramRelease.objects.filter(
-                program_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
-            if mail_sent[0] == False:
-                email = ProgramRelease.objects.filter(
-                    program_id=_id).order_by('sequence').values_list('program_approval_email', flat=True)
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT username FROM apps_programrelease INNER JOIN apps_user ON apps_programrelease.program_approval_id = apps_user.user_id WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'N' ORDER BY sequence LIMIT 1")
-                    approver = cursor.fetchone()
-
-                subject = 'Program Approval'
-                msg = 'Dear ' + approver[0] + ',\n\nYou have a new program to approve. Please check your program release list.\n\n' + \
-                    'Click this link to approve, revise, return or reject this program.\n' + host.url + 'program_release/view/' + str(_id) + '/0/' + \
-                    '\n\nThank you.'
-                send_email(subject, msg, [email[0]])
-
-                # update mail sent to true
-                release = ProgramRelease.objects.filter(
-                    program_id=_id).order_by('sequence').first()
-                release.mail_sent = True
-                release.save()
-
-            return HttpResponseRedirect(reverse('program-index', args=['pending', ]))
+            return HttpResponseRedirect(reverse('program-view', args=['draft', _id]))
     else:
         prod = ''
         if selected_proposal != '0':
@@ -4548,14 +4614,17 @@ def program_add(request, _area, _distributor, _proposal):
             else:
                 _height = 15
 
-            form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 3;"><b>' + 'Jakarta, ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
-                                        'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3; width: 22%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 3; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Produk</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Periode</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.period_start.strftime("%d %b") + ' - ' + proposal.period_end.strftime("%d %b %Y") + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Detail Qty</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;"></td></tr></table>' +
-                                        # '<table style="width: 100%; height: 15; padding-left: 7; margin-top: 4;"><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40; background-color: red; color: white;">No.</td><td style="text-align: center; border: 1 solid; width: 100; background-color: red; color: white;">Pengambilan</td><td style="text-align: center; border: 1 solid; width: 160; background-color: red; color: white;">Add Diskon (on faktur)</td><td style="border: 0;"></td></tr><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40;">1.</td><td style="padding-left: 2; border: 1 solid; width: 100;">8 karton</td><td style="padding-left: 2; border: 1 solid; width: 160;">3%</td><td style="border: 0;"></td></tr></table>' +
-                                        '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p><b><i>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline.strftime('%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</i></b></p><p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'approval':
-                                        '<p><br /><br />Hormat Kami,</p>' +
-                                        '<table style="width: 100%; height: 50"><tbody><tr><td style="padding-left: 3; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[0].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[1].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[2].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[3].approver.signature) + '" alt="Signature" width="120" height="70" /></td></tr>' +
-                                        '<tr><td style="padding-left: 3; height: 15"><span style="text-decoration: underline;">' + print_approvers[0].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[1].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[2].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[3].approver.username + '</span></td></tr>' +
-                                        '<tr><td style="padding-left: 3; height: 15">' + print_approvers[0].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[1].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[2].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[3].approver.position.position_name + '</td></tr></tbody></table>'})
+            if no_save:
+                form = FormProgram()
+            else:
+                form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 3;"><b>' + 'Jakarta, ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
+                                            'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3; width: 22%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 3; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Produk</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Periode</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.period_start.strftime("%d %b") + ' - ' + proposal.period_end.strftime("%d %b %Y") + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Detail Qty</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;"></td></tr></table>' +
+                                            # '<table style="width: 100%; height: 15; padding-left: 7; margin-top: 4;"><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40; background-color: red; color: white;">No.</td><td style="text-align: center; border: 1 solid; width: 100; background-color: red; color: white;">Pengambilan</td><td style="text-align: center; border: 1 solid; width: 160; background-color: red; color: white;">Add Diskon (on faktur)</td><td style="border: 0;"></td></tr><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40;">1.</td><td style="padding-left: 2; border: 1 solid; width: 100;">8 karton</td><td style="padding-left: 2; border: 1 solid; width: 160;">3%</td><td style="border: 0;"></td></tr></table>' +
+                                            '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p><b><i>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline.strftime('%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</i></b></p><p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'approval':
+                                            '<p><br /><br />Hormat Kami,</p>' +
+                                            '<table style="width: 100%; height: 50"><tbody><tr><td style="padding-left: 3; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[0].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[1].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[2].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[3].approver.signature) + '" alt="Signature" width="120" height="70" /></td></tr>' +
+                                            '<tr><td style="padding-left: 3; height: 15"><span style="text-decoration: underline;">' + print_approvers[0].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[1].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[2].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[3].approver.username + '</span></td></tr>' +
+                                            '<tr><td style="padding-left: 3; height: 15">' + print_approvers[0].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[1].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[2].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[3].approver.position.position_name + '</td></tr></tbody></table>'})
         else:
             form = FormProgram()
 
@@ -4580,6 +4649,38 @@ def program_add(request, _area, _distributor, _proposal):
             user_id=request.user.user_id, menu_id='PROGRAM') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/program_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROGRAM')
+def program_submit(request, _id):
+    program = Program.objects.get(program_id=_id)
+    program.status = 'IN APPROVAL'
+    program.save()
+
+    mail_sent = ProgramRelease.objects.filter(
+        program_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
+    if mail_sent[0] == False:
+        email = ProgramRelease.objects.filter(
+            program_id=_id).order_by('sequence').values_list('program_approval_email', flat=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT username FROM apps_programrelease INNER JOIN apps_user ON apps_programrelease.program_approval_id = apps_user.user_id WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'N' ORDER BY sequence LIMIT 1")
+            approver = cursor.fetchone()
+
+        subject = 'Program Approval'
+        msg = 'Dear ' + approver[0] + ',\n\nYou have a new program to approve. Please check your program release list.\n\n' + \
+            'Click this link to approve, revise, return or reject this program.\n' + host.url + 'program_release/view/' + str(_id) + '/0/' + \
+            '\n\nThank you.'
+        send_email(subject, msg, [email[0]])
+
+        # update mail sent to true
+        release = ProgramRelease.objects.filter(
+            program_id=_id).order_by('sequence').first()
+        release.mail_sent = True
+        release.save()
+
+    return HttpResponseRedirect(reverse('program-index', args=['inapproval', ]))
 
 
 @login_required(login_url='/login/')
@@ -4626,31 +4727,7 @@ def program_update(request, _tab, _id):
         form = FormProgramUpdate(
             request.POST, request.FILES, instance=program)
         if form.is_valid():
-            draft = form.save(commit=False)
-            draft.status = 'PENDING'
-            draft.save()
-
-            mail_sent = ProgramRelease.objects.filter(
-                program_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
-            if mail_sent[0] == False:
-                email = ProgramRelease.objects.filter(
-                    program_id=_id).order_by('sequence').values_list('program_approval_email', flat=True)
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT username FROM apps_programrelease INNER JOIN apps_user ON apps_programrelease.program_approval_id = apps_user.user_id WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'N' ORDER BY sequence LIMIT 1")
-                    approver = cursor.fetchone()
-
-                subject = 'Program Approval'
-                msg = 'Dear ' + approver[0] + ',\n\nYou have a new program to approve. Please check your program release list.\n\n' + \
-                    'Click this link to approve, revise, return or reject this program.\n' + host.url + 'program_release/view/' + str(_id) + '/0/' + \
-                    '\n\nThank you.'
-                send_email(subject, msg, [email[0]])
-
-                # update mail sent to true
-                release = ProgramRelease.objects.filter(
-                    program_id=_id).order_by('sequence').first()
-                release.mail_sent = True
-                release.save()
+            form.save()
 
             return HttpResponseRedirect(reverse('program-view', args=[_tab, _id]))
     else:
@@ -5136,10 +5213,6 @@ def claim_index(request, _tab):
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
     draft_count = Claim.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
-    pendings = Claim.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
-    pending_count = Claim.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
     inapprovals = Claim.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
     inapproval_count = Claim.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
@@ -5153,8 +5226,6 @@ def claim_index(request, _tab):
         'data': claims,
         'drafts': drafts,
         'draft_count': draft_count,
-        'pendings': pendings,
-        'pending_count': pending_count,
         'inapprovals': inapprovals,
         'inapproval_count': inapproval_count,
         'opens': opens,
@@ -5288,29 +5359,7 @@ def claim_add(request, _area, _distributor, _program):
                         as_approved=approver.as_approved)
                     release.save()
 
-                mail_sent = ClaimRelease.objects.filter(
-                    claim_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
-                if mail_sent[0] == False:
-                    email = ClaimRelease.objects.filter(
-                        claim_id=_id).order_by('sequence').values_list('claim_approval_email', flat=True)
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            "SELECT username FROM apps_claimrelease INNER JOIN apps_user ON apps_claimrelease.claim_approval_id = apps_user.user_id WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'N' ORDER BY sequence LIMIT 1")
-                        approver = cursor.fetchone()
-
-                    subject = 'Claim Approval'
-                    msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
-                        'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
-                        '\n\nThank you.'
-                    send_email(subject, msg, [email[0]])
-
-                    # update mail sent to true
-                    release = ClaimRelease.objects.filter(
-                        claim_id=_id).order_by('sequence').first()
-                    release.mail_sent = True
-                    release.save()
-
-                return HttpResponseRedirect(reverse('claim-index', args=['pending', ]))
+                return HttpResponseRedirect(reverse('claim-view', args=['draft', _id]))
     else:
         form = FormClaim(initial={'area': selected_area, 'claim_id': _id})
 
@@ -5340,6 +5389,38 @@ def claim_add(request, _area, _distributor, _program):
             user_id=request.user.user_id, menu_id='CLAIM') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/claim_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM')
+def claim_submit(request, _id):
+    claim = Claim.objects.get(claim_id=_id)
+    claim.status = 'IN APPROVAL'
+    claim.save()
+
+    mail_sent = ClaimRelease.objects.filter(
+        claim_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
+    if mail_sent[0] == False:
+        email = ClaimRelease.objects.filter(
+            claim_id=_id).order_by('sequence').values_list('claim_approval_email', flat=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT username FROM apps_claimrelease INNER JOIN apps_user ON apps_claimrelease.claim_approval_id = apps_user.user_id WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'N' ORDER BY sequence LIMIT 1")
+            approver = cursor.fetchone()
+
+        subject = 'Claim Approval'
+        msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
+            'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
+            '\n\nThank you.'
+        send_email(subject, msg, [email[0]])
+
+        # update mail sent to true
+        release = ClaimRelease.objects.filter(
+            claim_id=_id).order_by('sequence').first()
+        release.mail_sent = True
+        release.save()
+
+    return HttpResponseRedirect(reverse('claim-index', args=['inapproval', ]))
 
 
 @login_required(login_url='/login/')
@@ -6384,10 +6465,6 @@ def cl_index(request, _tab):
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
     draft_count = CL.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).count
-    pendings = CL.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
-    pending_count = CL.objects.filter(status='PENDING', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).count
     inapprovals = CL.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
     inapproval_count = CL.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
@@ -6401,8 +6478,6 @@ def cl_index(request, _tab):
         'data': cl,
         'drafts': drafts,
         'draft_count': draft_count,
-        'pendings': pendings,
-        'pending_count': pending_count,
         'inapprovals': inapprovals,
         'inapproval_count': inapproval_count,
         'opens': opens,
@@ -6523,31 +6598,6 @@ def cl_view(request, _tab, _id):
             else:
                 CLDetail.objects.filter(cl_id=_id, claim_id=i[0]).delete()
 
-        cl.status = 'PENDING'
-        cl.save()
-
-        mail_sent = CLRelease.objects.filter(
-            cl_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
-        if mail_sent[0] == False:
-            email = CLRelease.objects.filter(
-                cl_id=_id).order_by('sequence').values_list('cl_approval_email', flat=True)
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT username FROM apps_clrelease INNER JOIN apps_user ON apps_clrelease.cl_approval_id = apps_user.user_id WHERE cl_id_id = '" + str(_id) + "' AND cl_approval_status = 'N' ORDER BY sequence LIMIT 1")
-                approver = cursor.fetchone()
-
-            subject = 'CL Approval'
-            msg = 'Dear ' + approver[0] + ',\n\nYou have a new CL to approve. Please check your CL release list.\n\n' + \
-                'Click this link to approve, revise, return or reject this CL.\n' + host.url + 'cl_release/view/' + str(_id) + '/0/' + \
-                '\n\nThank you.'
-            send_email(subject, msg, [email[0]])
-
-            # update mail sent to true
-            release = CLRelease.objects.filter(
-                cl_id=_id).order_by('sequence').first()
-            release.mail_sent = True
-            release.save()
-
         return HttpResponseRedirect(reverse('cl-view', args=[_tab, _id]))
 
     context = {
@@ -6567,6 +6617,38 @@ def cl_view(request, _tab, _id):
     }
 
     return render(request, 'home/cl_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CL')
+def cl_submit(request, _id):
+    cl = CL.objects.get(cl_id=_id)
+    cl.status = 'IN APPROVAL'
+    cl.save()
+
+    mail_sent = CLRelease.objects.filter(
+        cl_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
+    if mail_sent[0] == False:
+        email = CLRelease.objects.filter(
+            cl_id=_id).order_by('sequence').values_list('cl_approval_email', flat=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT username FROM apps_clrelease INNER JOIN apps_user ON apps_clrelease.cl_approval_id = apps_user.user_id WHERE cl_id_id = '" + str(_id) + "' AND cl_approval_status = 'N' ORDER BY sequence LIMIT 1")
+            approver = cursor.fetchone()
+
+        subject = 'CL Approval'
+        msg = 'Dear ' + approver[0] + ',\n\nYou have a new CL to approve. Please check your CL release list.\n\n' + \
+            'Click this link to approve, revise, return or reject this CL.\n' + host.url + 'cl_release/view/' + str(_id) + '/0/' + \
+            '\n\nThank you.'
+        send_email(subject, msg, [email[0]])
+
+        # update mail sent to true
+        release = CLRelease.objects.filter(
+            cl_id=_id).order_by('sequence').first()
+        release.mail_sent = True
+        release.save()
+
+    return HttpResponseRedirect(reverse('cl-index', args=['inapproval']))
 
 
 @login_required(login_url='/login/')
@@ -6817,13 +6899,13 @@ def cl_release_return(request, _id):
                 cl_id=_id, sequence__gte=CLRelease.objects.get(cl_id=_id, return_to=True).sequence, sequence__lt=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
     except CLRelease.DoesNotExist:
         approvers = CLRelease.objects.filter(
-            claim_id=_id, sequence__lte=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
+            cl_id=_id, sequence__lte=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
         draft = True
 
     for i in approvers:
-        recipients.append(i.claim_approval_email)
-        i.claim_approval_status = 'N'
-        i.claim_approval_date = None
+        recipients.append(i.cl_approval_email)
+        i.cl_approval_status = 'N'
+        i.cl_approval_date = None
         i.revise_note = ''
         i.return_note = ''
         i.reject_note = ''
@@ -6854,7 +6936,7 @@ def cl_release_return(request, _id):
         '\n\nClick the following link to revise the CL.\n'
 
     if draft:
-        cl = CL.objects.get(claim_id=_id)
+        cl = CL.objects.get(cl_id=_id)
         cl.status = 'DRAFT'
         cl.save()
         msg += host.url + 'cl/view/pending/' + str(_id) + \
@@ -6865,7 +6947,7 @@ def cl_release_return(request, _id):
     recipient_list = list(dict.fromkeys(recipients))
     send_email(subject, msg, recipient_list)
 
-    return HttpResponseRedirect(reverse('claim-release-index'))
+    return HttpResponseRedirect(reverse('cl-release-index'))
 
 
 @login_required(login_url='/login/')

@@ -544,6 +544,68 @@ class FormBudgetApproval(ModelForm):
         exclude = ['entry_date', 'entry_by', 'update_date', 'update_by']
 
 
+class FormBudgetTransfer(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormBudgetTransfer, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['date'].label = 'Date'
+        self.fields['channel_from'].label = 'From Channel'
+        self.fields['channel_to'].label = 'To Channel'
+        self.fields['amount'].label = 'Amount'
+        self.fields['date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['channel_from'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['amount'].widget = forms.NumberInput(
+            attrs={'class': 'form-control-sm no-spinners'})
+
+    class Meta:
+        model = BudgetTransfer
+        fields = ['date', 'channel_from', 'channel_to', 'amount']
+
+
+class FormBudgetTransferView(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormBudgetTransferView, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['date'].label = 'Date'
+        self.fields['channel_from'].label = 'From Channel'
+        self.fields['channel_to'].label = 'To Channel'
+        self.fields['amount'].label = 'Amount'
+        self.fields['date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['channel_from'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['channel_to'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['amount'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+
+    class Meta:
+        model = BudgetTransfer
+        fields = ['date', 'channel_from', 'channel_to', 'amount']
+
+
+class FormBudgetTransferUpdate(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormBudgetTransferUpdate, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['date'].label = 'Date'
+        self.fields['channel_from'].label = 'From Channel'
+        self.fields['channel_to'].label = 'To Channel'
+        self.fields['amount'].label = 'Amount'
+        self.fields['date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['channel_from'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['amount'].widget = forms.NumberInput(
+            attrs={'class': 'form-control-sm no-spinners'})
+
+    class Meta:
+        model = BudgetTransfer
+        fields = ['channel_from', 'channel_to', 'amount']
+
+
 class FormProposalMatrix(ModelForm):
     def __init__(self, *args, **kwargs):
         super(FormProposalMatrix, self).__init__(*args, **kwargs)

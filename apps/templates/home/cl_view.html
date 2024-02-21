@@ -26,7 +26,25 @@
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.cl_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
-                                <a href="{% url 'cl-print' data.cl_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if not cl_detail %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button>
+                                <a href="{% url 'cl-print' data.cl_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" {% if data.status == 'DRAFT' %}hidden{% endif %} target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="confirm-submit" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    Are you sure you want to submit CL no: <strong>{{ data.cl_id }}</strong>?
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'cl-submit' data.cl_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Submit</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -164,7 +182,7 @@
                         <h5 class="mb-0"></h5>
                     </div>
                     <div class="col-6 text-end">
-                        <button id="myBtn" type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% if tab == 'reject' %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Claim</button>
+                        <button id="myBtn" type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% if tab == 'reject' %}disabled{% endif %} {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Claim</button>
                     </div>
                 </div>
                 <div class="modal modal-lg fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
@@ -215,7 +233,7 @@
                                 </div>
                                 <div class="modal-footer border-0">
                                     <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-sm bg-gradient-danger text-white">Save
+                                    <button type="submit" class="btn btn-sm bg-gradient-danger text-white">Ok
                                     </button>
                                 </div>
                             </form>
@@ -278,7 +296,7 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <button class="btn-icon-only text-dark bg-transparent border-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-{{ item.claim_id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if tab == 'reject' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
+                                        <button class="btn-icon-only text-dark bg-transparent border-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-{{ item.claim_id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if tab == 'reject' %}disabled{% endif %} {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
                                     </td>
                                     <div class="modal fade" id="delete-{{ item.claim_id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                                         aria-hidden="true">
