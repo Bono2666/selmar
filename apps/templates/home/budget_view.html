@@ -147,11 +147,17 @@
                                         </div>
                                     </div>
                                     <div class="shadow-none">
-                                        <label class="form-control-label" for="budget_distributor">Distributor</label>
-                                        <input type="text" class="form-control-sm" name="budget_distributor" value="{{ data.budget_distributor }}" disabled/>
+                                        {{ form.budget_notes.label_tag }}{{ form.budget_notes }}
+                                        <div class="text-sm text-danger">
+                                            {{ form.budget_notes.errors }}
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
+                                    <div class="shadow-none">
+                                        <label class="form-control-label" for="budget_distributor">Distributor</label>
+                                        <input type="text" class="form-control-sm" name="budget_distributor" value="{{ data.budget_distributor }}" disabled/>
+                                    </div>
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="shadow-none">

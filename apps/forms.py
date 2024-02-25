@@ -176,6 +176,9 @@ class FormAreaSales(ModelForm):
             {'class': 'form-control-sm'})
         self.fields['manager'].widget = forms.TextInput(
             {'class': 'form-control-sm'})
+        self.fields['base_city'].label = 'Base City'
+        self.fields['base_city'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
 
     class Meta:
         model = AreaSales
@@ -192,10 +195,13 @@ class FormAreaSalesView(ModelForm):
             {'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['manager'].widget = forms.TextInput(
             {'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['base_city'].label = 'Base City'
+        self.fields['base_city'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
 
     class Meta:
         model = AreaSales
-        fields = ['area_id', 'area_name', 'manager']
+        fields = ['area_id', 'area_name', 'manager', 'base_city']
 
 
 class FormAreaSalesUpdate(ModelForm):
@@ -207,6 +213,9 @@ class FormAreaSalesUpdate(ModelForm):
         self.fields['area_name'].widget = forms.TextInput(
             {'class': 'form-control-sm'})
         self.fields['manager'].widget = forms.TextInput(
+            {'class': 'form-control-sm'})
+        self.fields['base_city'].label = 'Base City'
+        self.fields['base_city'].widget = forms.TextInput(
             {'class': 'form-control-sm'})
 
     class Meta:
@@ -433,6 +442,9 @@ class FormBudget(ModelForm):
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['budget_total'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['budget_notes'].label = 'Budget Description'
+        self.fields['budget_notes'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 4})
 
     class Meta:
         model = Budget
@@ -458,10 +470,13 @@ class FormBudgetUpdate(ModelForm):
         self.fields['budget_amount'].label = 'Beginning Balance'
         self.fields['budget_amount'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners', 'readonly': 'readonly'})
+        self.fields['budget_notes'].label = 'Budget Description'
+        self.fields['budget_notes'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 4, 'readonly': 'readonly'})
 
     class Meta:
         model = Budget
-        fields = ['budget_upping', 'budget_amount']
+        fields = ['budget_upping', 'budget_amount', 'budget_notes']
 
 
 class FormNewBudgetUpdate(ModelForm):
@@ -474,10 +489,13 @@ class FormNewBudgetUpdate(ModelForm):
         self.fields['budget_upping'].label = 'Upping Price'
         self.fields['budget_upping'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners', 'readonly': 'readonly'})
+        self.fields['budget_notes'].label = 'Budget Description'
+        self.fields['budget_notes'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 4})
 
     class Meta:
         model = Budget
-        fields = ['budget_amount', 'budget_upping']
+        fields = ['budget_amount', 'budget_upping', 'budget_notes']
 
 
 class FormBudgetView(ModelForm):
@@ -497,11 +515,14 @@ class FormBudgetView(ModelForm):
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['budget_total'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['budget_notes'].label = 'Budget Description'
+        self.fields['budget_notes'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 4, 'readonly': 'readonly'})
 
     class Meta:
         model = Budget
         fields = ['budget_id', 'budget_year', 'budget_month', 'budget_area',
-                  'budget_distributor', 'budget_amount', 'budget_upping', 'budget_total']
+                  'budget_distributor', 'budget_amount', 'budget_upping', 'budget_total', 'budget_notes']
 
         widgets = {
             'budget_area': forms.Select(attrs={'class': 'form-control form-select-sm', 'disabled': 'disabled'}),
@@ -795,6 +816,10 @@ class FormProposal(ModelForm):
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
+        self.fields['additional'].label = 'Additional Proposal'
+        self.fields['additional'].widget = forms.CheckboxInput(
+            attrs={'class': 'border mt-1'})
+        self.fields['additional'].required = False
 
     class Meta:
         model = Proposal
@@ -905,11 +930,13 @@ class FormProposalView(ModelForm):
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['additional'].label = 'Additional Proposal'
+        self.fields['additional'].required = False
 
     class Meta:
         model = Proposal
         fields = ['proposal_id', 'proposal_date', 'channel', 'type', 'division', 'program_name', 'products', 'area',
-                  'period_start', 'period_end', 'duration', 'background', 'objectives', 'mechanism', 'remarks']
+                  'period_start', 'period_end', 'duration', 'background', 'objectives', 'mechanism', 'remarks', 'additional']
 
         widgets = {
             'proposal_date': DateInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
@@ -950,6 +977,10 @@ class FormProposalUpdate(ModelForm):
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
+        self.fields['additional'].label = 'Additional Proposal'
+        self.fields['additional'].widget = forms.CheckboxInput(
+            attrs={'class': 'border mt-1'})
+        self.fields['additional'].required = False
 
     class Meta:
         model = Proposal
@@ -973,12 +1004,14 @@ class FormProgram(ModelForm):
 
     class Meta:
         model = Program
-        fields = ['area', 'deadline', 'content', 'approval']
+        fields = ['area', 'deadline', 'content',
+                  'approval', 'footer']
 
         widgets = {
             'deadline': DateInput(attrs={'class': 'form-control form-control-sm'}),
             'content': TinyMCE(attrs={'cols': 80, 'rows': 30}),
             'approval': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 3}),
+            'footer': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 3}),
         }
 
 
@@ -1046,8 +1079,17 @@ class FormClaim(ModelForm):
         self.fields['amount'].label = 'Amount'
         self.fields['amount'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
-        self.fields['remarks'].label = 'Remarks'
+        self.fields['is_tax'].label = 'Using Tax'
+        self.fields['remarks'].label = 'Invoice Description'
         self.fields['remarks'].required = False
+        self.fields['depo'].label = 'Depo'
+        self.fields['depo'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['depo'].required = False
+        self.fields['claim_period'].label = 'Claim Period'
+        self.fields['claim_period'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['claim_period'].required = False
         self.fields['additional_proposal'].label = 'Additional Proposal'
         self.fields['additional_proposal'].required = False
 
@@ -1057,7 +1099,7 @@ class FormClaim(ModelForm):
                    'entry_by', 'update_date', 'update_by']
 
         widgets = {
-            'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 4}),
             'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
             'due_date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
         }
@@ -1086,7 +1128,13 @@ class FormClaimView(ModelForm):
             attrs={'class': 'form-control-sm no-spinners', 'readonly': 'readonly'})
         self.fields['additional_proposal'].label = 'Additional Proposal'
         self.fields['additional_amount'].label = 'Additional Amount'
-        self.fields['remarks'].label = 'Remarks'
+        self.fields['remarks'].label = 'Invoice Description'
+        self.fields['depo'].label = 'Depo'
+        self.fields['depo'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['claim_period'].label = 'Claim Period'
+        self.fields['claim_period'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
 
     class Meta:
         model = Claim
@@ -1094,7 +1142,7 @@ class FormClaimView(ModelForm):
                    'entry_by', 'update_date', 'update_by']
 
         widgets = {
-            'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3, 'readonly': 'readonly'}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 4, 'readonly': 'readonly'}),
             'claim_date': DateInput(attrs={'class': 'form-control form-control-sm', 'readonly': 'readonly'}),
             'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm', 'readonly': 'readonly'}),
             'due_date': DateInput(attrs={'class': 'form-control form-control-sm', 'readonly': 'readonly'}),
@@ -1119,8 +1167,17 @@ class FormClaimUpdate(ModelForm):
         self.fields['amount'].label = 'Amount'
         self.fields['amount'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
-        self.fields['remarks'].label = 'Remarks'
+        self.fields['is_tax'].label = 'Using Tax'
+        self.fields['remarks'].label = 'Invoice Description'
         self.fields['remarks'].required = False
+        self.fields['depo'].label = 'Depo'
+        self.fields['depo'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['depo'].required = False
+        self.fields['claim_period'].label = 'Claim Period'
+        self.fields['claim_period'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['claim_period'].required = False
         self.fields['additional_proposal'].label = 'Additional Proposal'
         self.fields['additional_proposal'].required = False
 
@@ -1130,7 +1187,7 @@ class FormClaimUpdate(ModelForm):
                    'entry_by', 'update_date', 'update_by']
 
         widgets = {
-            'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 3}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 4}),
             'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
             'due_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
         }

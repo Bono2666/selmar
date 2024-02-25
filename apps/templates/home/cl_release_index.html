@@ -28,6 +28,7 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Area</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Distributor</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">Total Amount</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
                                 </tr>
                             </thead>
@@ -51,7 +52,10 @@
                                         <h6 class="mb-0 text-sm">{{ item.3 }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.4 }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.4|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.5 }}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}

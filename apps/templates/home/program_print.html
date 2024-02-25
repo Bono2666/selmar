@@ -37,8 +37,12 @@
             <img height="100" width="100" src="https://ksisolusi.com/apps/static/img/favicon.png" alt="Logo" />
         </div>
         {{ data.content|safe }}
+        {{ data.disclaimer|safe }}
         {{ data.approval|safe }}
     </div>
 </body>
+<footer>
+    {{ data.footer|safe }}
+</footer>
 
 </html>

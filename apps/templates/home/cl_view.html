@@ -248,8 +248,8 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Claim No.</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                        Remarks</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
+                                        Invoice Description</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">
                                         Amount</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Program No.</th>
@@ -275,11 +275,7 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="d-flex pe-2 py-0">
-                                            <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm text-end">{{ item.claim.total_claim|intcomma }}</h6>
-                                            </div>
-                                        </div>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.claim.total_claim|intcomma }}</h6>
                                     </td>
                                     <td>
                                         <div class="d-flex pe-2 py-0">
@@ -319,6 +315,19 @@
                                 </tr>
                                 {% endfor %}
                             </tbody>
+                            <tfoot>
+                                {% if cl_detail %}
+                                <tr>
+                                    <td colspan="2">
+                                        <h6 class="text-sm font-weight-bolder text-end">Total</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ sum_cl_detail.total_claim|intcomma }}</h6>
+                                    </td>
+                                    <td colspan="3"></td>
+                                </tr>
+                                {% endif %}
+                            </tfoot>
                         </table>
                     </div>
                 </div>

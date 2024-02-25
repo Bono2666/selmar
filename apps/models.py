@@ -83,6 +83,7 @@ class AreaSales(models.Model):
     area_id = models.CharField(max_length=50, primary_key=True)
     area_name = models.CharField(max_length=50)
     manager = models.CharField(max_length=50)
+    base_city = models.CharField(max_length=50, null=True)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True)
@@ -288,6 +289,7 @@ class Budget(models.Model):
         max_digits=12, decimal_places=0)
     budget_balance = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
+    budget_notes = models.CharField(max_length=200, null=True)
     budget_status = models.CharField(max_length=15)
     budget_new = models.BooleanField(default=False)
     entry_date = models.DateTimeField(null=True)
@@ -659,6 +661,7 @@ class Proposal(models.Model):
     objectives = models.TextField()
     mechanism = models.TextField()
     remarks = models.CharField(max_length=200, null=True)
+    additional = models.BooleanField(default=False)
     total_cost = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     proposal_claim = models.DecimalField(
@@ -780,6 +783,8 @@ class Program(models.Model):
     deadline = models.DateTimeField(null=True)
     content = HTMLField()
     approval = HTMLField(null=True)
+    footer = HTMLField(null=True)
+    disclaimer = HTMLField(null=True)
     seq_number = models.IntegerField(default=0)
     status = models.CharField(max_length=15, default='DRAFT')
     entry_pos = models.CharField(max_length=5, null=True)
@@ -893,6 +898,7 @@ class Claim(models.Model):
         max_digits=12, decimal_places=0, default=0)
     additional_amount = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
+    is_tax = models.BooleanField(default=False)
     tax = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     total = models.DecimalField(
@@ -900,6 +906,8 @@ class Claim(models.Model):
     total_claim = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     remarks = models.TextField(null=True)
+    depo = models.CharField(max_length=15, null=True)
+    claim_period = models.CharField(max_length=100, null=True)
     status = models.CharField(max_length=15, default='DRAFT')
     seq_number = models.IntegerField(default=0)
     entry_pos = models.CharField(max_length=5, null=True)
@@ -909,7 +917,7 @@ class Claim(models.Model):
     update_by = models.CharField(max_length=50, null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        self.tax = self.total_claim * Decimal(0.11)
+        self.tax = self.total_claim * Decimal(0.11) if self.is_tax else 0
         self.total = self.total_claim + self.tax
         if not self.entry_date:
             self.entry_date = timezone.now()

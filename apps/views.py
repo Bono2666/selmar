@@ -14,16 +14,13 @@ from django.utils import timezone
 import xlwt
 from django.http import HttpResponse
 import xlsxwriter
-from django.db.models import Sum
-from django.db.models import Max
-from django.db.models import Min
+from django.db.models import Sum, Max, Min, Count, OuterRef
 from . import host
 from reportlab.pdfgen import canvas
 from django.http import FileResponse
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import landscape, A4
-from django.db.models import Count
 # from PyPDF2 import PdfMerger
 from django.conf import settings
 from xhtml2pdf import pisa
@@ -1249,7 +1246,7 @@ def budget_index(request, _tab):
     draft_count = Budget.objects.filter(budget_status='DRAFT', budget_area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
     inapprovals = Budget.objects.filter(budget_status='IN APPROVAL', budget_area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').all
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').values_list('budget_id', 'budget_distributor__distributor_name', 'budget_amount', 'budget_upping', 'budget_total', BudgetRelease.objects.filter(budget_id=OuterRef('budget_id'), budget_approval_status='N').order_by('sequence').values('budget_approval_name')[:1])
     inapprovals_count = Budget.objects.filter(budget_status='IN APPROVAL', budget_area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-budget_year', '-budget_month').count
     opens = Budget.objects.filter(budget_status='OPEN', budget_area__in=AreaUser.objects.filter(
@@ -1397,6 +1394,7 @@ def budget_view(request, _tab, _id, _msg):
         cursor.execute(
             "SELECT apps_channel.channel_id, channel_name, q_channel.budget_channel_id FROM apps_channel LEFT JOIN (SELECT * FROM apps_budgetdetail WHERE budget_id = '" + str(_id) + "') AS q_channel ON apps_channel.channel_id = q_channel.budget_channel_id WHERE q_channel.budget_channel_id IS NULL")
         channel = cursor.fetchall()
+
     approval = BudgetRelease.objects.filter(budget_id=_id).order_by('sequence')
 
     YEAR_CHOICES = []
@@ -1964,6 +1962,7 @@ def budget_release_update(request, _id):
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
     amount_before = budgets.budget_amount
     upping_before = budgets.budget_upping
+    notes_before = budgets.budget_notes
 
     if request.POST:
         form = FormNewBudgetUpdate(
@@ -2011,15 +2010,27 @@ def budget_release_update(request, _id):
                 if approver_mail:
                     recipients.append(approver_mail[1])
 
-            subject = 'Beginning Balance Revised' if budgets.budget_new else 'Upping Price Revised'
-            update_item = 'Beginning Balance' if budgets.budget_new else 'Upping Price'
-            before_field = amount_before if budgets.budget_new else upping_before
-            update_field = update.budget_amount if budgets.budget_new else update.budget_upping
-            message = 'Dear All,\n\nThe following is ' + update_item + ' update for Budget No. ' + \
-                str(_id) + ':\n\nValue before: ' + \
-                '{:,}'.format(before_field) + '\nValue after: ' + \
-                '{:,}'.format(update_field) + '\n\nNote: ' + \
-                str(release.upping_note) + '\n\nClick the following link to view the budget.\n' + host.url + 'budget/view/draft/' + \
+            subject = 'Budget Revised'
+            message = 'Dear All,\n\nThe following is budget revise for Budget No. ' + \
+                str(_id) + ':\n\nBEFORE:\n'
+            if update.budget_amount != amount_before:
+                message += 'Beginning Balance: ' + \
+                    '{:,}'.format(amount_before)
+            if update.budget_upping != upping_before:
+                message += 'Upping Price: ' + '{:,}'.format(upping_before)
+            if update.budget_notes != notes_before:
+                message += 'Notes: ' + notes_before
+            message += '\n\nAFTER:\n'
+            if update.budget_amount != amount_before:
+                message += 'Beginning Balance: ' + \
+                    '{:,}'.format(update.budget_amount)
+            if update.budget_upping != upping_before:
+                message += 'Upping Price: ' + \
+                    '{:,}'.format(update.budget_upping)
+            if update.budget_notes != notes_before:
+                message += 'Notes: ' + update.budget_notes
+            message += '\n\nNote: ' + str(release.upping_note) + \
+                '\n\nClick the following link to view the budget.\n' + host.url + 'budget/view/draft/' + \
                 str(_id) + '/NONE/' + \
                 '\n\nThank you.'
             recipient_list = list(dict.fromkeys(recipients))
@@ -2092,6 +2103,7 @@ def proposal_release_update(request, _id):
     _obj = proposal.objectives
     _mech = proposal.mechanism
     _rem = proposal.remarks
+    _add = proposal.additional
 
     if request.POST:
         form = FormProposalUpdate(
@@ -2114,6 +2126,9 @@ def proposal_release_update(request, _id):
                 objectives = _obj if form.cleaned_data['objectives'] != _obj else None
                 mechanism = _mech if form.cleaned_data['mechanism'] != _mech else None
                 remarks = _rem if form.cleaned_data['remarks'] != _rem else None
+                additional = _add if request.POST.get(
+                    'additional') != _add else None
+                parent.additional = 1 if request.POST.get('additional') else 0
                 parent.save()
 
                 recipients = []
@@ -2175,6 +2190,8 @@ def proposal_release_update(request, _id):
                     msg += 'Mechanism:\n' + str(mechanism) + '\n'
                 if remarks:
                     msg += 'Remarks: ' + str(remarks) + '\n'
+                if additional:
+                    msg += 'Additional Proposal: ' + str(additional) + '\n'
 
                 msg += '\nAFTER\n'
                 if program_name:
@@ -2206,6 +2223,9 @@ def proposal_release_update(request, _id):
                 if remarks:
                     msg += 'Remarks: ' + \
                         str(form.cleaned_data['remarks']) + '\n'
+                if additional:
+                    msg += 'Additional Proposal: ' + \
+                        str(form.cleaned_data['additional']) + '\n'
 
                 msg += '\nNote: ' + \
                     str(release.revise_note) + '\n\nClick the following link to view the proposal.\n' + host.url + 'proposal/view/inapproval/' + str(_id) + '/0/0/0/' + \
@@ -2627,27 +2647,19 @@ def proposal_print(request, _id):
     pdf_file.drawString(90, y, ":")
     pdf_file.setFont("Helvetica", 8)
     background = proposal.background.split('\n')
-    y2 = y
     y -= 4
+    b = 0
     for line in background:
-        background_paragraph = Paragraph(line, normal_style)
-        background_paragraph.wrapOn(pdf_file, page_width - 125, 100)
-        background_paragraph.drawOn(pdf_file, 100, y)
-        y -= 10
-
-    pdf_file.setFont("Helvetica-Bold", 8)
-    pdf_file.drawString((page_width / 2) + 42, y2, "Objectives")
-    pdf_file.drawString((page_width / 2) + 87, y2, ":")
-    pdf_file.setFont("Helvetica", 8)
-    objectives = proposal.objectives.split('\n')
-    y2 -= 4
-    for line in objectives:
-        objectives_paragraph = Paragraph(line, normal_style)
-        objectives_paragraph.wrapOn(pdf_file, (page_width - 125) / 2, 100)
-        objectives_paragraph.drawOn(pdf_file, (page_width / 2) + 95, y2)
-        y2 -= 10
-
-    y = y2 if y2 < y else y
+        if b < 4:
+            if len(background) > 4:
+                background_paragraph = Paragraph(
+                    line + "...", normal_style) if b == 3 else Paragraph(line, normal_style)
+            else:
+                background_paragraph = Paragraph(line, normal_style)
+            background_paragraph.wrapOn(pdf_file, page_width - 125, 100)
+            background_paragraph.drawOn(pdf_file, 100, y)
+            y -= 10
+            b += 1
 
     y += 4
     pdf_file.setFont("Helvetica-Bold", 8)
@@ -2656,11 +2668,38 @@ def proposal_print(request, _id):
     pdf_file.setFont("Helvetica", 8)
     mechanism = proposal.mechanism.split('\n')
     y -= 4
+    m = 0
     for line in mechanism:
-        mechanism_paragraph = Paragraph(line, normal_style)
-        mechanism_paragraph.wrapOn(pdf_file, page_width - 125, 100)
-        mechanism_paragraph.drawOn(pdf_file, 100, y)
-        y -= 10
+        if m < 4:
+            if len(mechanism) > 4:
+                mechanism_paragraph = Paragraph(
+                    line + "...", normal_style) if m == 3 else Paragraph(line, normal_style)
+            else:
+                mechanism_paragraph = Paragraph(line, normal_style)
+            mechanism_paragraph.wrapOn(pdf_file, page_width - 125, 100)
+            mechanism_paragraph.drawOn(pdf_file, 100, y)
+            y -= 10
+            m += 1
+
+    y += 4
+    pdf_file.setFont("Helvetica-Bold", 8)
+    pdf_file.drawString(25, y, "Objectives")
+    pdf_file.drawString(90, y, ":")
+    pdf_file.setFont("Helvetica", 8)
+    objectives = proposal.objectives.split('\n')
+    y -= 4
+    o = 0
+    for line in objectives:
+        if o < 4:
+            if len(objectives) > 4:
+                objectives_paragraph = Paragraph(
+                    line + "...", normal_style) if o == 3 else Paragraph(line, normal_style)
+            else:
+                objectives_paragraph = Paragraph(line, normal_style)
+            objectives_paragraph.wrapOn(pdf_file, page_width - 125, 100)
+            objectives_paragraph.drawOn(pdf_file, 100, y)
+            y -= 10
+            o += 1
 
     y += 4
     pdf_file.setFont("Helvetica-Bold", 8)
@@ -3857,7 +3896,7 @@ def proposal_index(request, _tab):
     draft_count = Proposal.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').count
     inapprovals = Proposal.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').all
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').values_list('proposal_id', 'proposal_date', 'channel', 'total_cost', 'proposal_claim', 'balance', ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1])
     inapproval_count = Proposal.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').count
     opens = Proposal.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
@@ -3964,6 +4003,7 @@ def proposal_add(request, _area, _budget, _channel):
             else:
                 parent.budget_id = selected_budget
                 parent.channel = selected_channel
+                parent.additional = 1 if request.POST.get('additional') else 0
                 parent.status = 'DRAFT'
                 parent.seq_number = _no.seq_number + 1 if _no else 1
                 parent.entry_pos = request.user.position.position_id
@@ -4434,6 +4474,7 @@ def proposal_update(request, _tab, _id):
             if parent.duration.days < 0:
                 message = 'Period end must be greater than period start.'
             else:
+                parent.additional = 1 if form.cleaned_data['additional'] else 0
                 parent.save()
                 return HttpResponseRedirect(reverse('proposal-view', args=[_tab, _id, '0', '0', '0']))
     else:
@@ -4494,7 +4535,7 @@ def program_index(request, _tab):
     draft_count = Program.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
     inapprovals = Program.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').all
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').values_list('program_id', 'program_date', 'proposal__budget__budget_distributor__distributor_name', 'proposal__channel', ProgramRelease.objects.filter(program_id=OuterRef('program_id'), program_approval_status='N').order_by('sequence').values('program_approval_name')[:1])
     inapproval_count = Program.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-program_id').count
     opens = Program.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
@@ -4528,11 +4569,13 @@ def program_add(request, _area, _distributor, _proposal):
     selected_area = _area
     selected_distributor = _distributor
     selected_proposal = _proposal
+    area = AreaSales.objects.get(
+        area_id=selected_area) if selected_area != '0' else None
     proposal = Proposal.objects.get(
         proposal_id=selected_proposal) if selected_proposal != '0' else None
     inc_sales = IncrementalSales.objects.filter(
         proposal_id=selected_proposal) if selected_proposal != '0' else None
-    area = AreaUser.objects.filter(
+    areas = AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', 'area__area_name')
     distributors = Proposal.objects.filter(
         status='OPEN', area=selected_area, balance__gt=0).values_list('budget__budget_distributor__distributor_id', 'budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
@@ -4573,6 +4616,12 @@ def program_add(request, _area, _distributor, _proposal):
             draft.proposal_id = selected_proposal
             draft.seq_number = _no.seq_number + 1 if _no else 1
             draft.entry_pos = request.user.position.position_id
+            deadline_str = request.POST.get('deadline')
+            # assuming the date is in 'YYYY-MM-DD' format
+            deadline_date = datetime.datetime.strptime(
+                deadline_str, '%Y-%m-%d').date()
+            draft.disclaimer = '<p><strong><em>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline_date.strftime(
+                '%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</em></strong></p>'
             draft.save()
 
             for approver in approvers:
@@ -4617,21 +4666,26 @@ def program_add(request, _area, _distributor, _proposal):
             if no_save:
                 form = FormProgram()
             else:
-                form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 3;"><b>' + 'Jakarta, ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
+                form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 3;"><b>' + area.base_city + ', ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
                                             'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3; width: 22%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 3; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Produk</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Periode</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.period_start.strftime("%d %b") + ' - ' + proposal.period_end.strftime("%d %b %Y") + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Detail Qty</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;"></td></tr></table>' +
                                             # '<table style="width: 100%; height: 15; padding-left: 7; margin-top: 4;"><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40; background-color: red; color: white;">No.</td><td style="text-align: center; border: 1 solid; width: 100; background-color: red; color: white;">Pengambilan</td><td style="text-align: center; border: 1 solid; width: 160; background-color: red; color: white;">Add Diskon (on faktur)</td><td style="border: 0;"></td></tr><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40;">1.</td><td style="padding-left: 2; border: 1 solid; width: 100;">8 karton</td><td style="padding-left: 2; border: 1 solid; width: 160;">3%</td><td style="border: 0;"></td></tr></table>' +
-                                            '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p><b><i>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline.strftime('%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</i></b></p><p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'approval':
+                                            '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'approval':
                                             '<p><br /><br />Hormat Kami,</p>' +
                                             '<table style="width: 100%; height: 50"><tbody><tr><td style="padding-left: 3; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[0].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[1].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[2].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[3].approver.signature) + '" alt="Signature" width="120" height="70" /></td></tr>' +
                                             '<tr><td style="padding-left: 3; height: 15"><span style="text-decoration: underline;">' + print_approvers[0].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[1].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[2].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[3].approver.username + '</span></td></tr>' +
-                                            '<tr><td style="padding-left: 3; height: 15">' + print_approvers[0].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[1].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[2].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[3].approver.position.position_name + '</td></tr></tbody></table>'})
+                                            '<tr><td style="padding-left: 3; height: 15">' + print_approvers[0].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[1].approver.position.position_name + \
+                                                '</td><td style="padding-left: 0; height: 15">' + \
+                                            print_approvers[2].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + \
+                                                print_approvers[3].approver.position.position_name + \
+                                            '</td></tr></tbody></table><br /><br /><hr>',
+                                            'footer': '<p style="line-height: 1.05;"><strong><span style="font-size: 6pt;">PT. ABC PRESIDENT INDONESIA (www.abcpresident.com)<br />Head Office : </span></strong><span style="font-size: 6pt;">EightyEight@Kasablanka Office Tower A Lt. 31 Jl. Casablanca Raya Kav. 88 Jakarta Selatan 12870 <strong>Tel : </strong>+62 21 2982 0168 (Hunting) <strong>Fax : </strong>+62 21 2982 0166<br /><strong>Factory : </strong>Desa Walabar Kec. Klari, Karawang Timur 41371, Jawa Barat, Indonesia <strong>Tel : </strong>+62 267 431 422 (Hunting) <strong>Fax : </strong>+62 267 431 421<br /></span></p>'})
         else:
             form = FormProgram()
 
     msg = form.errors
     context = {
         'form': form,
-        'area': area,
+        'area': areas,
         'distributors': distributors,
         'proposals': proposals,
         'selected_area': selected_area,
@@ -4727,7 +4781,14 @@ def program_update(request, _tab, _id):
         form = FormProgramUpdate(
             request.POST, request.FILES, instance=program)
         if form.is_valid():
-            form.save()
+            update = form.save(commit=False)
+            deadline_str = request.POST.get('deadline')
+            # assuming the date is in 'YYYY-MM-DD' format
+            deadline_date = datetime.datetime.strptime(
+                deadline_str, '%Y-%m-%d').date()
+            update.disclaimer = '<p><strong><em>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline_date.strftime(
+                '%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</em></strong></p>'
+            update.save()
 
             return HttpResponseRedirect(reverse('program-view', args=[_tab, _id]))
     else:
@@ -4816,10 +4877,16 @@ def program_release_update(request, _id):
         form = FormProgramUpdate(
             request.POST, request.FILES, instance=program)
         if form.is_valid():
-            parent = form.save(commit=False)
+            update = form.save(commit=False)
+            deadline_str = request.POST.get('deadline')
+            # assuming the date is in 'YYYY-MM-DD' format
+            deadline_date = datetime.datetime.strptime(
+                deadline_str, '%Y-%m-%d').date()
+            update.disclaimer = '<p><strong><em>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline_date.strftime(
+                '%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</em></strong></p>'
             deadline = _deadline if form.cleaned_data['deadline'] != _deadline else None
             content = _content if form.cleaned_data['content'] != _content else None
-            parent.save()
+            update.save()
 
             recipients = []
 
@@ -5214,7 +5281,7 @@ def claim_index(request, _tab):
     draft_count = Claim.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
     inapprovals = Claim.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').values_list('claim_id', 'claim_date', 'proposal__budget__budget_distributor__distributor_name', 'proposal__channel', 'total_claim', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1])
     inapproval_count = Claim.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
     opens = Claim.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
@@ -5292,7 +5359,7 @@ def claim_add(request, _area, _distributor, _program):
         if int(request.POST.get('amount')) > int(proposal.balance) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
-            add_proposals = Proposal.objects.filter(status='OPEN', area=selected_area, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor).exclude(
+            add_proposals = Proposal.objects.filter(status='OPEN', area=selected_area, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor, additional=True).exclude(
                 proposal_id=proposal.proposal_id).order_by('-proposal_id') if selected_program != '0' else None
         else:
             if form.is_valid():
@@ -5307,15 +5374,16 @@ def claim_add(request, _area, _distributor, _program):
                     'add_proposal') if request.POST.get('add_proposal') else ''
                 draft.additional_amount = difference if request.POST.get(
                     'add_proposal') else 0
+                draft.is_tax = True if request.POST.get('is_tax') else False
                 draft.save()
 
                 sum_amount = Claim.objects.filter(
-                    proposal_id=draft.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                    proposal_id=draft.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
                 sum_add_amount = Claim.objects.filter(additional_proposal=draft.proposal_id).exclude(
-                    status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+                    status__in=['REJECTED']).aggregate(Sum('additional_amount'))
 
                 sum_amount2 = Claim.objects.filter(
-                    proposal_id=draft.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                    proposal_id=draft.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
                 sum_add_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
                     Sum('additional_amount'))
 
@@ -5483,12 +5551,11 @@ def claim_update(request, _tab, _id):
         if int(request.POST.get('amount')) > (int(program.proposal.balance) + int(claim.amount)) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
-            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
+            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor, additional=True).exclude(
                 proposal_id=proposal.proposal_id)
         else:
             if form.is_valid():
                 draft = form.save(commit=False)
-                draft.status = 'PENDING'
                 draft.total_claim = Decimal(request.POST.get('amount'))
                 draft.amount = proposal.balance + amount_before if request.POST.get(
                     'add_proposal') else Decimal(request.POST.get('amount'))
@@ -5499,15 +5566,16 @@ def claim_update(request, _tab, _id):
                     draft.additional_proposal = ''
                 draft.additional_amount = difference if request.POST.get(
                     'add_proposal') else 0
+                draft.is_tax = True if request.POST.get('is_tax') else False
                 draft.save()
 
                 sum_amount = Claim.objects.filter(
-                    proposal_id=draft.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                    proposal_id=draft.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
                 sum_add_amount = Claim.objects.filter(additional_proposal=draft.proposal_id).exclude(
-                    status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+                    status__in=['REJECTED']).aggregate(Sum('additional_amount'))
 
                 sum_amount2 = Claim.objects.filter(
-                    proposal_id=draft.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                    proposal_id=draft.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
                 sum_add_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
                     Sum('additional_amount'))
 
@@ -5539,31 +5607,9 @@ def claim_update(request, _tab, _id):
                         proposal3.balance = proposal3.total_cost - proposal3.proposal_claim
                         proposal3.save()
 
-                mail_sent = ClaimRelease.objects.filter(
-                    claim_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
-                if mail_sent[0] == False:
-                    email = ClaimRelease.objects.filter(
-                        claim_id=_id).order_by('sequence').values_list('claim_approval_email', flat=True)
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            "SELECT username FROM apps_claimrelease INNER JOIN apps_user ON apps_claimrelease.claim_approval_id = apps_user.user_id WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'N' ORDER BY sequence LIMIT 1")
-                        approver = cursor.fetchone()
-
-                    subject = 'Claim Approval'
-                    msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
-                        'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
-                        '\n\nThank you.'
-                    send_email(subject, msg, [email[0]])
-
-                    # update mail sent to true
-                    release = ClaimRelease.objects.filter(
-                        claim_id=_id).order_by('sequence').first()
-                    release.mail_sent = True
-                    release.save()
-
                 return HttpResponseRedirect(reverse('claim-view', args=[_tab, _id]))
     else:
-        form = FormClaimUpdate(instance=claim)
+        form = FormClaimUpdate(instance=claim, initial={'add_proposal': ''})
 
     err = form.errors
     context = {
@@ -5596,12 +5642,12 @@ def claim_delete(request, _tab, _id):
     claim.delete()
 
     sum_amount = Claim.objects.filter(
-        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
     sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
-        status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+        status__in=['REJECTED']).aggregate(Sum('additional_amount'))
 
     sum_amount2 = Claim.objects.filter(
-        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
     sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
         Sum('additional_amount'))
 
@@ -5694,6 +5740,8 @@ def claim_release_update(request, _id):
     _due_date = claim.due_date
     _amount = claim.amount
     _remarks = claim.remarks
+    _depo = claim.depo
+    _claim_period = claim.claim_period
     _additional_proposal = claim.additional_proposal
     _additional_amount = claim.additional_amount
 
@@ -5705,7 +5753,7 @@ def claim_release_update(request, _id):
         if int(request.POST.get('amount')) > (int(proposal.balance) + int(claim.amount)) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
-            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor).exclude(
+            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor, additional=True).exclude(
                 proposal_id=proposal.proposal_id).order_by('-proposal_id')
         else:
             if form.is_valid():
@@ -5716,6 +5764,9 @@ def claim_release_update(request, _id):
                 due_date = _due_date if form.cleaned_data['due_date'] != _due_date else None
                 claim_amount = _amount if form.cleaned_data['amount'] != _amount else None
                 remarks = _remarks if form.cleaned_data['remarks'] != _remarks else None
+                depo = _depo if form.cleaned_data['depo'] != _depo else None
+                claim_period = _claim_period if form.cleaned_data[
+                    'claim_period'] != _claim_period else None
                 additional_proposal = _additional_proposal if request.POST.get(
                     'add_proposal') != _additional_proposal else None
                 add_amount = _additional_amount if request.POST.get(
@@ -5730,15 +5781,16 @@ def claim_release_update(request, _id):
                     parent.additional_proposal = ''
                 parent.additional_amount = difference if request.POST.get(
                     'add_proposal') else 0
+                parent.is_tax = True if request.POST.get('is_tax') else False
                 parent.save()
 
                 sum_amount = Claim.objects.filter(
-                    proposal_id=parent.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                    proposal_id=parent.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
                 sum_add_amount = Claim.objects.filter(additional_proposal=parent.proposal_id).exclude(
-                    status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+                    status__in=['REJECTED']).aggregate(Sum('additional_amount'))
 
                 sum_amount2 = Claim.objects.filter(
-                    proposal_id=parent.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+                    proposal_id=parent.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
                 sum_add_amount2 = Claim.objects.filter(additional_proposal=parent.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
                     Sum('additional_amount'))
 
@@ -5833,10 +5885,24 @@ def claim_release_update(request, _id):
 
                 if remarks:
                     msg += '\nBEFORE\n'
-                    msg += 'Remarks: ' + str(remarks) + '\n'
+                    msg += 'Invoice Description: ' + str(remarks) + '\n'
                     msg += '\nAFTER\n'
-                    msg += 'Remarks: ' + \
+                    msg += 'Invoice Description: ' + \
                         form.cleaned_data['remarks'] + '\n'
+
+                if depo:
+                    msg += '\nBEFORE\n'
+                    msg += 'Depo: ' + str(depo) + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Depo: ' + \
+                        form.cleaned_data['depo'] + '\n'
+
+                if claim_period:
+                    msg += '\nBEFORE\n'
+                    msg += 'Claim Period: ' + str(claim_period) + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Claim Period: ' + \
+                        form.cleaned_data['claim_period'] + '\n'
 
                 if additional_proposal:
                     msg += '\nBEFORE\n'
@@ -5844,7 +5910,7 @@ def claim_release_update(request, _id):
                         str(additional_proposal) + '\n'
                     msg += '\nAFTER\n'
                     msg += 'Additional Proposal: ' + \
-                        request.POST.get('additional_proposal') + '\n'
+                        request.POST.get('add_proposal') + '\n'
 
                 if add_amount:
                     msg += '\nBEFORE\n'
@@ -5852,7 +5918,7 @@ def claim_release_update(request, _id):
                         str(add_amount) + '\n'
                     msg += '\nAFTER\n'
                     msg += 'Additional Amount: ' + \
-                        request.POST.get('additional_amount') + '\n'
+                        request.POST.get('add_amount') + '\n'
 
                 msg += '\nNote: ' + \
                     str(release.revise_note) + '\n\nClick the following link to view the claim.\n' + host.url + 'claim/view/inapproval/' + str(_id) + '/' + \
@@ -6057,12 +6123,12 @@ def claim_release_reject(request, _id):
     claim.save()
 
     sum_amount = Claim.objects.filter(
-        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
     sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
-        status__in=['REJECTED', 'DRAFT']).aggregate(Sum('additional_amount'))
+        status__in=['REJECTED']).aggregate(Sum('additional_amount'))
 
     sum_amount2 = Claim.objects.filter(
-        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(Sum('amount'))
+        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
     sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
         Sum('additional_amount'))
 
@@ -6201,10 +6267,16 @@ def claim_print(request, _id):
     pdf_file.drawString(160, y, '{:,}'.format(claim.total))
     y -= 10
     pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Remarks')
+    pdf_file.drawString(25, y, 'Invoice Description')
     pdf_file.drawString(150, y, ': ')
     pdf_file.setFont('Helvetica', 8)
     pdf_file.drawString(160, y, str(claim.remarks))
+    y -= 10
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(25, y, 'Claim Period')
+    pdf_file.drawString(150, y, ': ')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(160, y, str(claim.claim_period))
 
     y -= 50
     col_width = (page_width[0] - 50) / 11
@@ -6461,18 +6533,27 @@ def claim_matrix_delete(request, _id, _channel, _arg):
 @role_required(allowed_roles='CL')
 def cl_index(request, _tab):
     cl = CL.objects.all()
-    drafts = CL.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
     draft_count = CL.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).count
-    inapprovals = CL.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
     inapproval_count = CL.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).count
-    opens = CL.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-cl_id').all
     open_count = CL.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).count
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT cl_id, cl_date, area_id, distributor_name, sum_total_claim FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id LEFT JOIN (SELECT cl_id_id, sum(total_claim) AS sum_total_claim FROM apps_cldetail INNER JOIN apps_claim ON apps_cldetail.claim_id = apps_claim.claim_id WHERE apps_claim.status = 'OPEN' GROUP BY cl_id_id) AS q_cldetail ON apps_cl.cl_id = q_cldetail.cl_id_id WHERE apps_cl.status = 'OPEN' AND apps_cl.area_id IN (SELECT area_id FROM apps_areauser WHERE user_id = '" + str(request.user.user_id) + "') ORDER BY cl_id")
+        opens = cursor.fetchall()
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT cl_id, cl_date, area_id, distributor_name, sum_total_claim, status FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id LEFT JOIN (SELECT cl_id_id, sum(total_claim) AS sum_total_claim FROM apps_cldetail INNER JOIN apps_claim ON apps_cldetail.claim_id = apps_claim.claim_id WHERE apps_claim.status = 'OPEN' GROUP BY cl_id_id) AS q_cldetail ON apps_cl.cl_id = q_cldetail.cl_id_id WHERE apps_cl.status = 'DRAFT' AND apps_cl.area_id IN (SELECT area_id FROM apps_areauser WHERE user_id = '" + str(request.user.user_id) + "') ORDER BY cl_id")
+        drafts = cursor.fetchall()
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT cl_id, cl_date, area_id, distributor_name, sum_total_claim, cl_approval_name FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id LEFT JOIN (SELECT cl_id_id, sum(total_claim) AS sum_total_claim FROM apps_cldetail INNER JOIN apps_claim ON apps_cldetail.claim_id = apps_claim.claim_id WHERE apps_claim.status = 'OPEN' GROUP BY cl_id_id) AS q_cldetail ON apps_cl.cl_id = q_cldetail.cl_id_id INNER JOIN (SELECT cl_id_id, MIN(sequence) AS seq FROM apps_clrelease WHERE cl_approval_status = 'N' GROUP BY cl_id_id) AS q_clrelease ON apps_cl.cl_id = q_clrelease.cl_id_id INNER JOIN apps_clrelease ON q_clrelease.cl_id_id = apps_clrelease.cl_id_id AND q_clrelease.seq = apps_clrelease.sequence WHERE apps_cl.status = 'IN APPROVAL' AND apps_cl.area_id IN (SELECT area_id FROM apps_areauser WHERE user_id = '" + str(request.user.user_id) + "') ORDER BY cl_id")
+        inapprovals = cursor.fetchall()
 
     context = {
         'data': cl,
@@ -6575,6 +6656,9 @@ def cl_view(request, _tab, _id):
     claim = Claim.objects.filter(status='OPEN', area_id=cl.area_id, proposal__budget__budget_distributor=cl.distributor_id).exclude(
         cldetail__claim_id__in=CLDetail.objects.exclude(cl_id__status='REJECTED').values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'cldetail__claim_id')
 
+    sum_cl_detail = CLDetail.objects.filter(
+        cl_id=_id).aggregate(total_claim=Sum('claim_id__total_claim'))
+
     highest_approval = CLRelease.objects.filter(
         cl_id=_id).aggregate(Max('sequence'))
     highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
@@ -6604,6 +6688,7 @@ def cl_view(request, _tab, _id):
         'data': cl,
         'cl_detail': cl_detail,
         'claim': claim,
+        'sum_cl_detail': sum_cl_detail,
         'tab': _tab,
         'approval': approval,
         'status': cl.status,
@@ -6683,7 +6768,7 @@ def cl_delete(request, _tab, _id):
 def cl_release_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT apps_cl.cl_id, apps_cl.cl_date, apps_cl.area_id, apps_distributor.distributor_name, apps_cl.status, apps_clrelease.sequence FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id INNER JOIN apps_clrelease ON apps_cl.cl_id = apps_clrelease.cl_id_id INNER JOIN (SELECT cl_id_id, MIN(sequence) AS seq FROM apps_clrelease WHERE cl_approval_status = 'N' GROUP BY cl_id_id ORDER BY sequence ASC) AS q_group ON apps_clrelease.cl_id_id = q_group.cl_id_id AND apps_clrelease.sequence = q_group.seq WHERE (apps_cl.status = 'PENDING' OR apps_cl.status = 'IN APPROVAL') AND apps_clrelease.cl_approval_id = '" + str(request.user.user_id) + "'")
+            "SELECT apps_cl.cl_id, apps_cl.cl_date, apps_cl.area_id, apps_distributor.distributor_name, sum_total_claim, apps_cl.status, apps_clrelease.sequence FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id INNER JOIN apps_clrelease ON apps_cl.cl_id = apps_clrelease.cl_id_id INNER JOIN (SELECT cl_id_id, MIN(sequence) AS seq FROM apps_clrelease WHERE cl_approval_status = 'N' GROUP BY cl_id_id ORDER BY sequence ASC) AS q_group ON apps_clrelease.cl_id_id = q_group.cl_id_id AND apps_clrelease.sequence = q_group.seq LEFT JOIN (SELECT cl_id_id, sum(total_claim) AS sum_total_claim FROM apps_cldetail INNER JOIN apps_claim ON apps_cldetail.claim_id = apps_claim.claim_id WHERE apps_claim.status = 'OPEN' GROUP BY cl_id_id) AS q_cldetail ON apps_cl.cl_id = q_cldetail.cl_id_id WHERE (apps_cl.status = 'PENDING' OR apps_cl.status = 'IN APPROVAL') AND apps_clrelease.cl_approval_id = '" + str(request.user.user_id) + "'")
         release = cursor.fetchall()
 
     context = {
@@ -6708,6 +6793,9 @@ def cl_release_view(request, _id, _is_revise):
     claim = Claim.objects.filter(status='OPEN', area_id=cl.area_id, proposal__budget__budget_distributor=cl.distributor_id).exclude(
         cldetail__claim_id__in=CLDetail.objects.all().values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'cldetail__claim_id')
 
+    sum_cl_detail = CLDetail.objects.filter(
+        cl_id=_id).aggregate(total_claim=Sum('claim_id__total_claim'))
+
     if request.POST:
         check = request.POST.getlist('checks[]')
         for i in claim:
@@ -6726,6 +6814,7 @@ def cl_release_view(request, _id, _is_revise):
         'data': cl,
         'cl_detail': cl_detail,
         'claim': claim,
+        'sum_cl_detail': sum_cl_detail,
         'approved': approved,
         'is_revise': _is_revise,
         'segment': 'cl_release',
@@ -7107,6 +7196,7 @@ def cl_archive_index(request):
 def cl_print(request, _id):
     cl = CL.objects.get(cl_id=_id)
     cl_detail = CLDetail.objects.filter(cl_id=_id)
+    area = AreaSales.objects.get(area_id=cl.area_id)
     detail_sum = Claim.objects.filter(
         claim_id__in=cl_detail.values_list('claim_id')).aggregate(total=Sum('total_claim'))
     approver = CLRelease.objects.filter(
@@ -7131,8 +7221,9 @@ def cl_print(request, _id):
 
     # Add header
     y = 500
-    pdf_file.drawString(25, y, 'Jakarta, ' + cl.cl_date.strftime('%d %B %Y'))
-    pdf_file.drawRightString(800, y, 'No. ' + cl.cl_id)
+    pdf_file.drawString(25, y, area.base_city + ', ' +
+                        cl.cl_date.strftime('%d %B %Y'))
+    pdf_file.drawRightString(815, y, 'No. ' + cl.cl_id)
 
     y -= 25
     pdf_file.drawString(25, y, 'Kepada Yth.')
@@ -7157,34 +7248,40 @@ def cl_print(request, _id):
     title_x = 25 + (25 - title_width) / 2
     pdf_file.drawString(title_x, y, title)
 
-    pdf_file.rect(50, y-5, 150, 15, stroke=True)
+    pdf_file.rect(50, y-5, 50, 15, stroke=True)
+    title = 'Depo'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 50 + (50 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    pdf_file.rect(100, y-5, 120, 15, stroke=True)
     title = 'No. Invoice'
     title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
-    title_x = 50 + (150 - title_width) / 2
+    title_x = 100 + (120 - title_width) / 2
     pdf_file.drawString(title_x, y, title)
 
-    pdf_file.rect(200, y-5, 225, 15, stroke=True)
+    pdf_file.rect(220, y-5, 245, 15, stroke=True)
     title = 'Deskripsi'
     title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
-    title_x = 200 + (225 - title_width) / 2
+    title_x = 220 + (245 - title_width) / 2
     pdf_file.drawString(title_x, y, title)
 
-    pdf_file.rect(425, y-5, 75, 15, stroke=True)
+    pdf_file.rect(465, y-5, 60, 15, stroke=True)
     title = 'Nilai Klaim'
     title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
-    title_x = 425 + (75 - title_width) / 2
+    title_x = 465 + (60 - title_width) / 2
     pdf_file.drawString(title_x, y, title)
 
-    pdf_file.rect(500, y-5, 150, 15, stroke=True)
+    pdf_file.rect(525, y-5, 145, 15, stroke=True)
     title = 'No. Surat Program'
     title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
-    title_x = 500 + (150 - title_width) / 2
+    title_x = 525 + (145 - title_width) / 2
     pdf_file.drawString(title_x, y, title)
 
-    pdf_file.rect(650, y-5, 150, 15, stroke=True)
+    pdf_file.rect(670, y-5, 145, 15, stroke=True)
     title = 'No. Proposal'
     title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
-    title_x = 650 + (150 - title_width) / 2
+    title_x = 670 + (145 - title_width) / 2
     pdf_file.drawString(title_x, y, title)
 
     pdf_file.setFont("Helvetica", 8)
@@ -7197,23 +7294,25 @@ def cl_print(request, _id):
         title_width = pdf_file.stringWidth(title, 'Helvetica', 8)
         title_x = 25 + (25 - title_width) / 2
         pdf_file.drawString(title_x, y, title)
-        pdf_file.rect(50, y - 5, 150, 15, stroke=True)
-        pdf_file.drawString(55, y, i.claim.invoice)
-        pdf_file.rect(200, y - 5, 225, 15, stroke=True)
+        pdf_file.rect(50, y - 5, 50, 15, stroke=True)
+        pdf_file.drawString(55, y, i.claim.depo if i.claim.depo else '')
+        pdf_file.rect(100, y - 5, 120, 15, stroke=True)
+        pdf_file.drawString(105, y, i.claim.invoice)
+        pdf_file.rect(220, y - 5, 245, 15, stroke=True)
         remarks = Truncator(i.claim.remarks).chars(55)
-        pdf_file.drawString(205, y, remarks)
-        pdf_file.rect(425, y - 5, 75, 15, stroke=True)
-        pdf_file.drawRightString(495, y, "{:,}".format(i.claim.total_claim))
-        pdf_file.rect(500, y - 5, 150, 15, stroke=True)
-        pdf_file.drawString(505, y, i.claim.program_id)
-        pdf_file.rect(650, y - 5, 150, 15, stroke=True)
-        pdf_file.drawString(655, y, i.claim.proposal_id)
+        pdf_file.drawString(225, y, remarks)
+        pdf_file.rect(465, y - 5, 60, 15, stroke=True)
+        pdf_file.drawRightString(520, y, "{:,}".format(i.claim.total_claim))
+        pdf_file.rect(525, y - 5, 145, 15, stroke=True)
+        pdf_file.drawString(530, y, i.claim.program_id)
+        pdf_file.rect(670, y - 5, 145, 15, stroke=True)
+        pdf_file.drawString(675, y, i.claim.proposal_id)
 
     y -= 15
     pdf_file.setFont("Helvetica-Bold", 8)
-    pdf_file.rect(25, y - 5, 775, 15, stroke=True)
-    pdf_file.drawRightString(420, y, 'TOTAL')
-    pdf_file.drawRightString(495, y, "{:,}".format(detail_sum['total']))
+    pdf_file.rect(25, y - 5, 790, 15, stroke=True)
+    pdf_file.drawRightString(460, y, 'Total')
+    pdf_file.drawRightString(520, y, "{:,}".format(detail_sum.get('total')))
 
     y -= 25
     pdf_file.setFont("Helvetica", 8)
@@ -7221,9 +7320,10 @@ def cl_print(request, _id):
         25, y, 'Demikian surat konfirmasi ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkann terima kasih.')
 
     y -= 25
-    pdf_file.drawString(25, y, 'Hormat Kami,')
-
     col_width = (page_width[0] - 50) / 11
+    pdf_file.drawString(25, y, 'Hormat Kami,')
+    pdf_file.drawString(25 + (col_width * 2), y, 'Mengetahui,')
+
     for i in range(1, approver.count() + 1):
         if approver:
             sign_path = User.objects.get(user_id=approver[i - 1].cl_approval_id).signature.path if User.objects.get(
@@ -7246,6 +7346,60 @@ def cl_print(request, _id):
     y -= 95
     pdf_file.setFont("Helvetica-Bold", 8)
     pdf_file.drawString(25, y, 'Cc : Finance Department')
+
+    y -= 25
+    pdf_file.setLineWidth(0.5)
+    pdf_file.line(25, y, 815, y)
+
+    y -= 15
+    pdf_file.setFont("Helvetica-Bold", 7)
+    pdf_file.drawString(
+        25, y, 'PT. ABC PRESIDENT INDONESIA (www.abcpresident.com)')
+    pdf_file.drawString(25, y - 10, 'Head Office : ')
+    title_x = pdf_file.stringWidth('Head Office : ', 'Helvetica-Bold', 7)
+    pdf_file.setFont("Helvetica", 7)
+    address = 'EightyEight@Kasablanka Office Tower A Lt. 31 Jl. Casablanca Raya Kav. 88 Jakarta Selatan 12870 '
+    pdf_file.drawString(25 + title_x, y - 10, address)
+    address_x = pdf_file.stringWidth(address, 'Helvetica', 7)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    pdf_file.drawString(25 + title_x + address_x, y - 10, 'Tel : ')
+    tel_x = pdf_file.stringWidth('Tel : ', 'Helvetica-Bold', 7)
+    pdf_file.setFont("Helvetica", 7)
+    tel = '+62 21 2982 0168 (Hunting) '
+    ph_x = pdf_file.stringWidth(tel, 'Helvetica', 7)
+    pdf_file.drawString(25 + title_x + address_x + tel_x, y - 10, tel)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    fax_x = pdf_file.stringWidth('Fax : ', 'Helvetica-Bold', 7)
+    pdf_file.drawString(25 + title_x + address_x +
+                        tel_x + ph_x, y - 10, 'Fax : ')
+    pdf_file.setFont("Helvetica", 7)
+    fax = '+62 21 2982 0166 '
+    pdf_file.drawString(25 + title_x + address_x +
+                        tel_x + ph_x + fax_x, y - 10, fax)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    factory = 'Factory : '
+    factory_x = pdf_file.stringWidth(factory, 'Helvetica-Bold', 7)
+    pdf_file.drawString(25, y - 20, factory)
+    pdf_file.setFont("Helvetica", 7)
+    factory_address = 'Desa Walabar Kec. Klari, Karawang Timur 41371, Jawa Barat, Indonesia '
+    pdf_file.drawString(25 + factory_x, y - 20, factory_address)
+    factory_address_x = pdf_file.stringWidth(factory_address, 'Helvetica', 7)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    pdf_file.drawString(25 + factory_x + factory_address_x, y - 20, 'Tel : ')
+    factory_tel_x = pdf_file.stringWidth('Tel : ', 'Helvetica-Bold', 7)
+    pdf_file.setFont("Helvetica", 7)
+    factory_tel = '+62 267 431 422 (Hunting) '
+    factory_ph_x = pdf_file.stringWidth(factory_tel, 'Helvetica', 7)
+    pdf_file.drawString(25 + factory_x + factory_address_x +
+                        factory_tel_x, y - 20, factory_tel)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    factory_fax_x = pdf_file.stringWidth('Fax : ', 'Helvetica-Bold', 7)
+    pdf_file.drawString(25 + factory_x + factory_address_x +
+                        factory_tel_x + factory_ph_x, y - 20, 'Fax : ')
+    pdf_file.setFont("Helvetica", 7)
+    factory_fax = '+62 267 431 421'
+    pdf_file.drawString(25 + factory_x + factory_address_x +
+                        factory_tel_x + factory_ph_x + factory_fax_x, y - 20, factory_fax)
 
     pdf_file.save()
 

@@ -140,30 +140,30 @@
                                                 Distributor</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Channel</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Wait for Approval</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {% for item in inapprovals %}
-                                        <tr data-href="{% url 'program-view' 'inapproval' item.program_id %}" class="cursor-pointer">
+                                        <tr data-href="{% url 'program-view' 'inapproval' item.0 %}" class="cursor-pointer">
                                             <td>
                                                 <div class="d-flex pe-2 py-0">
                                                     <div class="d-flex flex-column justify-content-center">
-                                                        <h6 class="mb-0 text-sm">{{ item.program_id }}</h6>
+                                                        <h6 class="mb-0 text-sm">{{ item.0 }}</h6>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm">{{ item.program_date|date:"d M Y" }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.1|date:"d M Y" }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm">{{ item.proposal.budget.budget_distributor }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.2 }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm">{{ item.proposal.channel }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.3 }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm">{{ item.status }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.4 }}</h6>
                                             </td>
                                         </tr>
                                         {% endfor %}

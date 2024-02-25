@@ -47,7 +47,7 @@
                         <div class="modal-dialog modal-dialog-centered" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h5 class="modal-title" id="ModalLabel">Upping Price Update Notes</h5>
+                                    <h5 class="modal-title" id="ModalLabel">Budget Update Notes</h5>
                                 </div>
                                 <div class="modal-body border-bottom-0">
                                     <div class="pl-lg-0">
@@ -89,12 +89,18 @@
                                         </div>
                                     </div>
                                     <div class="shadow-none">
-                                        <label class="form-control-label" for="budget_distributor">Distributor</label>
-                                        <input type="text" class="form-control-sm" name="budget_distributor" value="{{ data.budget_distributor }}" disabled/>
-                                    </div>
+                                        {{ form.budget_notes.label_tag }}{{ form.budget_notes }}        
+                                        <div class="text-sm text-danger">
+                                            {{ form.budget_notes.errors }}
+                                        </div>
+                                    </div>                                                                                                                                                    
                                 </div>
                                 <div class="col-md-6">
                                     <div class="row">
+                                        <div class="shadow-none">
+                                            <label class="form-control-label" for="budget_distributor">Distributor</label>
+                                            <input type="text" class="form-control-sm" name="budget_distributor" value="{{ data.budget_distributor }}" disabled/>
+                                        </div>
                                         <div class="col-md-6">
                                             <div class="shadow-none">
                                                 {{ form.budget_amount.label_tag }}

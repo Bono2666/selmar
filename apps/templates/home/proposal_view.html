@@ -256,6 +256,9 @@
                                     <div class="text-sm text-danger">
                                         {{ form.remarks.errors }}
                                     </div>
+                                    <div class="form-group shadow-none mt-2 mb-0 me-1 text-end">
+                                        <label class="form-control-label">Additional Proposal</label>&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" class="border mt-1" name="additional" {% if data.additional %}checked{% endif %} {% if crud == 'view' %}disabled{% endif %}/>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -34,52 +34,68 @@
                             </div>
                             {% endif %}
                             <div class="row">
-                                <div class="col-md-4">
-                                    <div class="shadow-none">
-                                        {{ form.budget_year.label_tag }}
-                                        {{ form.budget_year }}
-                                        <div class="text-sm text-danger">
-                                            {{ form.budget_year.errors }}
+                                <div class="col-md-9">
+                                    <div class="row">
+                                        <div class="col-md-2">
+                                            <div class="shadow-none">
+                                                {{ form.budget_year.label_tag }}
+                                                {{ form.budget_year }}
+                                                <div class="text-sm text-danger">
+                                                    {{ form.budget_year.errors }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="shadow-none">
+                                                {{ form.budget_month.label_tag }}
+                                                {{ form.budget_month }}
+                                                <div class="text-sm text-danger">
+                                                    {{ form.budget_month.errors }}
+                                                </div>
+                                            </div>
+                                            <div class="d-none">
+                                                {{ form.budget_area.label_tag }}
+                                                <select name="budget_area" id="budget_area" class="form-control form-select-sm">
+                                                    <option value="{{ selected_area }}">{{ selected_area }}</option>
+                                                </select>
+                                                <div class="text-sm text-danger">
+                                                    {{ form.budget_area.errors }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="shadow-none">
+                                                {{ form.budget_distributor.label_tag }}
+                                                <select name="budget_distributor" id="budget_distributor" class="form-control form-select-sm">
+                                                    <option value="">-- Select Distributor --</option>
+                                                    {% for item in distributor %}
+                                                    <option value="{{ item.distributor_id }}">{{ item.distributor_name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <div class="text-sm text-danger">
+                                                    {{ form.budget_distributor.errors }}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="shadow-none">
-                                        {{ form.budget_month.label_tag }}
-                                        {{ form.budget_month }}
-                                        <div class="text-sm text-danger">
-                                            {{ form.budget_month.errors }}
-                                        </div>
-                                    </div>
-                                    <div class="d-none">
-                                        {{ form.budget_area.label_tag }}
-                                        <select name="budget_area" id="budget_area" class="form-control form-select-sm">
-                                            <option value="{{ selected_area }}">{{ selected_area }}</option>
-                                        </select>
-                                        <div class="text-sm text-danger">
-                                            {{ form.budget_area.errors }}
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="shadow-none">
+                                                {{ form.budget_notes.label_tag }}
+                                                <div class="input-group input-group-alternative">
+                                                    {{ form.budget_notes }}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="shadow-none">
-                                        {{ form.budget_distributor.label_tag }}
-                                        <select name="budget_distributor" id="budget_distributor" class="form-control form-select-sm">
-                                            <option value="">-- Select Distributor --</option>
-                                            {% for item in distributor %}
-                                            <option value="{{ item.distributor_id }}">{{ item.distributor_name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <div class="text-sm text-danger">
-                                            {{ form.budget_distributor.errors }}
-                                        </div>
-                                    </div>
+                                <div class="col-md-3">
                                     <div class="shadow-none">
                                         {{ form.budget_amount.label_tag }}
                                         <div class="input-group input-group-alternative">
                                             {{ form.budget_amount }}
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
                                     <div class="shadow-none">
                                         {{ form.budget_upping.label_tag }}
                                         <div class="input-group input-group-alternative">
