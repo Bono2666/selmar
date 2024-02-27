@@ -191,6 +191,10 @@
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title" id="ModalLabel">Select Claim</h5>
+                                <span class="text-end mt-2 mb-0">
+                                    <label for="select-all">Select All</label>&nbsp;&nbsp;
+                                    <input type="checkbox" id="select-all" class="cursor-pointer border mt-1 me-2 mb-0" />
+                                </span>
                             </div>
                             <form method="post" action="{% url 'cl-view' tab data.cl_id %}" enctype="multipart/form-data">
                                 {% csrf_token %}
@@ -202,6 +206,8 @@
                                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                         Claim</th>
                                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Remarks</th>
+                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Date</th>
+                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Amount</th>
                                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
                                                 </tr>
                                             </thead>
@@ -218,12 +224,22 @@
                                                     <td>
                                                         <div class="d-flex pe-2 py-0">
                                                             <div class="d-flex flex-column justify-content-center">
-                                                                <h6 class="mb-0 text-sm">{{ item.1 }}</h6>
+                                                                <h6 class="mb-0 text-sm">{{ item.1|truncatechars:30 }}</h6>
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <input type="checkbox" class="cursor-pointer border" name="checks[]" value="{{ item.0 }}"/>                                                    
+                                                        <div class="d-flex pe-2 py-0">
+                                                            <div class="d-flex flex-column justify-content-center">
+                                                                <h6 class="mb-0 text-sm">{{ item.2|date:'d/m/Y' }}</h6>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <h6 class="mb-0 text-sm text-end">{{ item.3|intcomma }}</h6>
+                                                    </td>
+                                                    <td>
+                                                        <input type="checkbox" class="cursor-pointer border" name="checks[]" id="checks[]" value="{{ item.0 }}"/>                                                    
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -352,6 +368,38 @@
             'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
         });
         $('#claimTable').DataTable();
+
+        document.getElementById("select-all").addEventListener("click", function() {
+            if (this.checked) {
+                let checks = document.getElementsByName('checks[]');
+                for (var check of checks) {
+                    check.checked = true;
+                }
+            } else {
+                let checks = document.getElementsByName('checks[]');
+                for (var check of checks) {
+                    check.checked = false;
+                }
+            }
+        });
+
+        let checks = document.getElementsByName('checks[]');
+        let selectAll = document.getElementById('select-all');
+        for (let check of checks) {
+            check.addEventListener("click", function() {
+                let count = 0;
+                for (let check of checks) {
+                    if (check.checked) {
+                        count++;
+                    }
+                }
+                if (count == checks.length) {
+                    selectAll.checked = true;
+                } else {
+                    selectAll.checked = false;
+                }
+            });
+        }
 
         let btn = document.getElementsByClassName('paginate_button');
         for (var button of btn) {

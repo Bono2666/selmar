@@ -6294,8 +6294,8 @@ def claim_print(request, _id):
     title = '{:,}'.format(claim.amount)
     pdf_file.drawRightString(810, y, title)
 
+    y -= 10
     if claim.additional_proposal:
-        y -= 10
         title = claim.additional_proposal
         title_width = pdf_file.stringWidth(title, 'Helvetica', 8)
         title_x = 120 + (155 - title_width) / 2
@@ -6750,7 +6750,7 @@ def cl_view(request, _tab, _id):
     cl = CL.objects.get(cl_id=_id)
     cl_detail = CLDetail.objects.filter(cl_id=_id)
     claim = Claim.objects.filter(status='OPEN', area_id=cl.area_id, proposal__budget__budget_distributor=cl.distributor_id).exclude(
-        cldetail__claim_id__in=CLDetail.objects.exclude(cl_id__status='REJECTED').values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'cldetail__claim_id')
+        cldetail__claim_id__in=CLDetail.objects.exclude(cl_id__status='REJECTED').values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'claim_date', 'total_claim', 'cldetail__claim_id')
 
     sum_cl_detail = CLDetail.objects.filter(
         cl_id=_id).aggregate(total_claim=Sum('claim_id__total_claim'))
