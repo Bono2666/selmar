@@ -4663,21 +4663,33 @@ def program_add(request, _area, _distributor, _proposal):
             else:
                 _height = 15
 
+            approver_signature = ''
+            for approver in range(print_approvers.count()):
+                approver_signature += '<td style="padding-left: 3; height: 50"><img style="flex: 0 0 auto;" src="' + \
+                    str(host.url) + 'apps/media/' + str(
+                        print_approvers[approver].approver.signature) + '" alt="Signature" width="120" height="70" /></td>'
+
+            approver_name = ''
+            for approver in range(print_approvers.count()):
+                approver_name += '<td style="padding-left: 3; height: 15"><span style="text-decoration: underline;">' + \
+                    print_approvers[approver].approver.username + \
+                    '</span></td>'
+
+            approver_position = ''
+            for approver in range(print_approvers.count()):
+                approver_position += '<td style="padding-left: 3; height: 15">' + \
+                    print_approvers[approver].approver.position.position_name + '</td>'
+
             if no_save:
                 form = FormProgram()
             else:
                 form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 3;"><b>' + area.base_city + ', ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
                                             'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3; width: 22%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 3; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Produk</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Periode</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.period_start.strftime("%d %b") + ' - ' + proposal.period_end.strftime("%d %b %Y") + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Detail Qty</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;"></td></tr></table>' +
-                                            # '<table style="width: 100%; height: 15; padding-left: 7; margin-top: 4;"><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40; background-color: red; color: white;">No.</td><td style="text-align: center; border: 1 solid; width: 100; background-color: red; color: white;">Pengambilan</td><td style="text-align: center; border: 1 solid; width: 160; background-color: red; color: white;">Add Diskon (on faktur)</td><td style="border: 0;"></td></tr><tr><td style="border: 0;"></td><td style="text-align: center; border: 1 solid; width: 40;">1.</td><td style="padding-left: 2; border: 1 solid; width: 100;">8 karton</td><td style="padding-left: 2; border: 1 solid; width: 160;">3%</td><td style="border: 0;"></td></tr></table>' +
                                             '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'approval':
-                                            '<p><br /><br />Hormat Kami,</p>' +
-                                            '<table style="width: 100%; height: 50"><tbody><tr><td style="padding-left: 3; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[0].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[1].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[2].approver.signature) + '" alt="Signature" width="120" height="70" /></td><td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + str(host.url) + 'apps/media/' + str(print_approvers[3].approver.signature) + '" alt="Signature" width="120" height="70" /></td></tr>' +
-                                            '<tr><td style="padding-left: 3; height: 15"><span style="text-decoration: underline;">' + print_approvers[0].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[1].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[2].approver.username + '</span></td><td style="padding-left: 0; height: 15"><span style="text-decoration: underline;">' + print_approvers[3].approver.username + '</span></td></tr>' +
-                                            '<tr><td style="padding-left: 3; height: 15">' + print_approvers[0].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + print_approvers[1].approver.position.position_name + \
-                                                '</td><td style="padding-left: 0; height: 15">' + \
-                                            print_approvers[2].approver.position.position_name + '</td><td style="padding-left: 0; height: 15">' + \
-                                                print_approvers[3].approver.position.position_name + \
-                                            '</td></tr></tbody></table><br /><br /><hr>',
+                                            '<p><br />Hormat Kami,</p>' +
+                                            '<table style="width: 100%; height: 50"><tbody><tr>' + approver_signature + '</tr><tr>' +
+                                                approver_name + '</tr><tr>' + approver_position +
+                                            '</tr></tbody></table><br /><hr>',
                                             'footer': '<p style="line-height: 1.05;"><strong><span style="font-size: 6pt;">PT. ABC PRESIDENT INDONESIA (www.abcpresident.com)<br />Head Office : </span></strong><span style="font-size: 6pt;">EightyEight@Kasablanka Office Tower A Lt. 31 Jl. Casablanca Raya Kav. 88 Jakarta Selatan 12870 <strong>Tel : </strong>+62 21 2982 0168 (Hunting) <strong>Fax : </strong>+62 21 2982 0166<br /><strong>Factory : </strong>Desa Walabar Kec. Klari, Karawang Timur 41371, Jawa Barat, Indonesia <strong>Tel : </strong>+62 267 431 422 (Hunting) <strong>Fax : </strong>+62 267 431 421<br /></span></p>'})
         else:
             form = FormProgram()
@@ -5160,12 +5172,9 @@ def program_print(request, _id):
             "SELECT signature, program_approval_name, position_name FROM apps_user INNER JOIN apps_programrelease ON user_id = program_approval_id INNER JOIN apps_position ON program_approval_position = apps_position.position_id WHERE program_id = '" + str(_id) + "' AND program_approval_status = 'Y' AND printed = True ORDER BY sequence")
         approvers = cursor.fetchall()
 
-    for approver in approvers:
-        name_length = len(approver[1])
-
     html_file = 'home/program_print.html'
     context = {'data': program, 'approvers': approvers,
-               'host': host.url, 'space': '0' * 20}
+               'host': host.url, 'space': '0' * 10}
     template = get_template(html_file)
     html = template.render(context)
 
@@ -5176,7 +5185,6 @@ def program_print(request, _id):
     pisa.CreatePDF(html, dest=response)
 
     return response
-    # return render(request, html_file, context)
 
 
 @login_required(login_url='/login/')
@@ -5537,6 +5545,7 @@ def claim_update(request, _tab, _id):
     program = Program.objects.get(program_id=claim.program_id)
     proposal = Proposal.objects.get(proposal_id=program.proposal.proposal_id)
 
+    print(request.POST.get('add_proposal'))
     message = '0'
     add_prop = '0'
     difference = 0
@@ -5548,7 +5557,7 @@ def claim_update(request, _tab, _id):
         form = FormClaimUpdate(request.POST, request.FILES, instance=claim)
         difference = int(request.POST.get('amount')) - \
             (int(proposal.balance) + int(claim.amount))
-        if int(request.POST.get('amount')) > (int(program.proposal.balance) + int(claim.amount)) and request.POST.get('add_proposal') == '':
+        if int(request.POST.get('amount')) > (int(program.proposal.balance) + int(claim.amount)) and request.POST.get('add_proposals') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
             add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor, additional=True).exclude(
@@ -5558,14 +5567,14 @@ def claim_update(request, _tab, _id):
                 draft = form.save(commit=False)
                 draft.total_claim = Decimal(request.POST.get('amount'))
                 draft.amount = proposal.balance + amount_before if request.POST.get(
-                    'add_proposal') else Decimal(request.POST.get('amount'))
+                    'add_proposals') else Decimal(request.POST.get('amount'))
                 if int(request.POST.get('amount')) > (int(proposal.balance) + int(amount_before)):
                     draft.additional_proposal = request.POST.get(
-                        'add_proposal')
+                        'add_proposals')
                 else:
                     draft.additional_proposal = ''
                 draft.additional_amount = difference if request.POST.get(
-                    'add_proposal') else 0
+                    'add_proposals') else 0
                 draft.is_tax = True if request.POST.get('is_tax') else False
                 draft.save()
 
@@ -5609,7 +5618,7 @@ def claim_update(request, _tab, _id):
 
                 return HttpResponseRedirect(reverse('claim-view', args=[_tab, _id]))
     else:
-        form = FormClaimUpdate(instance=claim, initial={'add_proposal': ''})
+        form = FormClaimUpdate(instance=claim)
 
     err = form.errors
     context = {
@@ -5739,6 +5748,7 @@ def claim_release_update(request, _id):
     _invoice_date = claim.invoice_date
     _due_date = claim.due_date
     _amount = claim.amount
+    _is_tax = claim.is_tax
     _remarks = claim.remarks
     _depo = claim.depo
     _claim_period = claim.claim_period
@@ -5750,7 +5760,7 @@ def claim_release_update(request, _id):
             request.POST, request.FILES, instance=claim)
         difference = int(request.POST.get('amount')) - \
             (int(proposal.balance) + int(claim.amount))
-        if int(request.POST.get('amount')) > (int(proposal.balance) + int(claim.amount)) and request.POST.get('add_proposal') == '':
+        if int(request.POST.get('amount')) > (int(proposal.balance) + int(claim.amount)) and request.POST.get('add_proposals') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
             add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor, additional=True).exclude(
@@ -5763,24 +5773,26 @@ def claim_release_update(request, _id):
                     'invoice_date'] != _invoice_date else None
                 due_date = _due_date if form.cleaned_data['due_date'] != _due_date else None
                 claim_amount = _amount if form.cleaned_data['amount'] != _amount else None
+                is_tax = _is_tax if request.POST.get(
+                    'is_tax') != _is_tax else False
                 remarks = _remarks if form.cleaned_data['remarks'] != _remarks else None
                 depo = _depo if form.cleaned_data['depo'] != _depo else None
                 claim_period = _claim_period if form.cleaned_data[
                     'claim_period'] != _claim_period else None
                 additional_proposal = _additional_proposal if request.POST.get(
-                    'add_proposal') != _additional_proposal else None
+                    'add_proposals') != _additional_proposal else None
                 add_amount = _additional_amount if request.POST.get(
                     'add_amount') != _additional_amount else None
                 parent.total_claim = Decimal(request.POST.get('amount'))
                 parent.amount = proposal.balance + amount_before if request.POST.get(
-                    'add_proposal') else Decimal(request.POST.get('amount'))
+                    'add_proposals') else Decimal(request.POST.get('amount'))
                 if int(request.POST.get('amount')) > (int(proposal.balance) + int(amount_before)):
                     parent.additional_proposal = request.POST.get(
-                        'add_proposal')
+                        'add_proposals')
                 else:
                     parent.additional_proposal = ''
                 parent.additional_amount = difference if request.POST.get(
-                    'add_proposal') else 0
+                    'add_proposals') else 0
                 parent.is_tax = True if request.POST.get('is_tax') else False
                 parent.save()
 
@@ -5878,10 +5890,17 @@ def claim_release_update(request, _id):
 
                 if claim_amount:
                     msg += '\nBEFORE\n'
-                    msg += 'Amount: ' + str(claim_amount) + '\n'
+                    msg += 'Amount: ' + '{:,}'.format(claim_amount) + '\n'
                     msg += '\nAFTER\n'
                     msg += 'Amount: ' + \
-                        str(form.cleaned_data['amount']) + '\n'
+                        '{:,}'.format(form.cleaned_data['amount']) + '\n'
+
+                if is_tax:
+                    msg += '\nBEFORE\n'
+                    msg += 'Using Tax: ' + str(is_tax) + '\n'
+                    msg += '\nAFTER\n'
+                    msg += 'Using Tax: ' + \
+                        str(request.POST.get('is_tax')) + '\n'
 
                 if remarks:
                     msg += '\nBEFORE\n'
@@ -5910,7 +5929,7 @@ def claim_release_update(request, _id):
                         str(additional_proposal) + '\n'
                     msg += '\nAFTER\n'
                     msg += 'Additional Proposal: ' + \
-                        request.POST.get('add_proposal') + '\n'
+                        request.POST.get('add_proposals') + '\n'
 
                 if add_amount:
                     msg += '\nBEFORE\n'
@@ -6179,8 +6198,7 @@ def claim_print(request, _id):
     logo_width = 60
     logo_height = 60
     page_width = landscape(A4)
-    logo_x = (page_width[0] - logo_width) / 2
-    pdf_file.drawImage(logo_path, logo_x, 515,
+    pdf_file.drawImage(logo_path, 25, 515,
                        width=logo_width, height=logo_height)
 
     # Add title in the center of page width
@@ -6188,95 +6206,123 @@ def claim_print(request, _id):
     title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 11)
     title_x = (page_width[0] - title_width) / 2
     pdf_file.setFont('Helvetica-Bold', 11)
-    pdf_file.drawString(title_x, 500, title)
+    pdf_file.drawString(title_x, 545, title)
+
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(615, 550, 'No.')
+    pdf_file.drawString(670, 550, ':')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(680, 550, claim_id)
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(615, 540, 'Date')
+    pdf_file.drawString(670, 540, ':')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(680, 540, claim.claim_date.strftime('%d %b %Y'))
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawString(615, 530, 'No. Invoice')
+    pdf_file.drawString(670, 530, ':')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawString(680, 530, str(claim.invoice))
 
     # Write the claim details
-    y = 450
+    y = 500
     pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Claim No.')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, str(claim.claim_id))
-    pdf_file.setFont('Helvetica-Bold', 8)
-    y -= 10
-    pdf_file.drawString(25, y, 'Claim Date')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, claim.claim_date.strftime('%d %b %Y'))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Proposal No.')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, str(claim.proposal.proposal_id))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Program Name')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, str(claim.proposal.program_name))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Invoice No.')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, str(claim.invoice))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Invoice Date')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, claim.invoice_date.strftime('%d %b %Y'))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Due Date')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, claim.due_date.strftime('%d %b %Y'))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Amount')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, '{:,}'.format(claim.total_claim))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Additional Proposal')
+    pdf_file.drawString(25, y, 'Pay To')
     pdf_file.drawString(150, y, ': ')
     pdf_file.setFont('Helvetica', 8)
     pdf_file.drawString(160, y, str(
-        claim.additional_proposal if claim.additional_proposal else '-'))
+        claim.proposal.budget.budget_distributor.distributor_name))
+    pdf_file.setFont('Helvetica-Bold', 8)
+    y -= 20
+    pdf_file.rect(25, y - 5, 25, 15)
+    title = 'No.'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 25 + (25 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+    pdf_file.rect(50, y - 5, 70, 15)
+    title = 'Date'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 50 + (70 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+    pdf_file.rect(120, y - 5, 155, 15)
+    title = 'Proposal No.'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 120 + (155 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+    pdf_file.rect(275, y - 5, 390, 15)
+    title = 'Description'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 275 + (390 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+    pdf_file.rect(665, y - 5, 50, 15)
+    title = 'Curr'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 665 + (50 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+    pdf_file.rect(715, y - 5, 100, 15)
+    title = 'Amount'
+    title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 8)
+    title_x = 715 + (100 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+
+    y -= 15
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.rect(25, y - 20, 25, 30)
+    title = '1'
+    title_width = pdf_file.stringWidth(title, 'Helvetica', 8)
+    title_x = 25 + (25 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+    pdf_file.rect(50, y - 20, 70, 30)
+    title = claim.invoice_date.strftime('%d %b %Y')
+    title_width = pdf_file.stringWidth(title, 'Helvetica', 8)
+    title_x = 50 + (70 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+    pdf_file.rect(120, y - 20, 155, 30)
+    title = str(claim.proposal.proposal_id)
+    title_width = pdf_file.stringWidth(title, 'Helvetica', 8)
+    title_x = 120 + (155 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+    pdf_file.rect(275, y - 20, 390, 30)
+    title = str(claim.remarks)
+    pdf_file.drawString(280, y, title)
+    pdf_file.rect(665, y - 20, 50, 30)
+    title = 'IDR'
+    title_width = pdf_file.stringWidth(title, 'Helvetica', 8)
+    title_x = 665 + (50 - title_width) / 2
+    pdf_file.drawString(title_x, y, title)
+    pdf_file.rect(715, y - 20, 100, 30)
+    title = '{:,}'.format(claim.amount)
+    pdf_file.drawRightString(810, y, title)
+
+    if claim.additional_proposal:
+        y -= 10
+        title = claim.additional_proposal
+        title_width = pdf_file.stringWidth(title, 'Helvetica', 8)
+        title_x = 120 + (155 - title_width) / 2
+        pdf_file.drawString(title_x, y, title)
+        pdf_file.drawString(280, y, 'Additional Proposal')
+        pdf_file.drawRightString(
+            810, y, '{:,}'.format(claim.additional_amount))
+
+    y -= 20
+    pdf_file.rect(25, y - 5, 690, 15)
+    pdf_file.setFont('Helvetica-Bold', 8)
+    title = 'TOTAL'
+    pdf_file.drawRightString(710, y, title)
+    pdf_file.rect(715, y - 5, 100, 15)
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawRightString(810, y, '{:,}'.format(claim.total_claim))
+
+    y -= 15
+    pdf_file.setFont('Helvetica-Bold', 8)
+    pdf_file.drawRightString(710, y, 'PPN')
+    pdf_file.setFont('Helvetica', 8)
+    pdf_file.drawRightString(810, y, '{:,}'.format(claim.tax))
     y -= 10
     pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Additional Amount')
-    pdf_file.drawString(150, y, ': ')
+    pdf_file.drawRightString(710, y, 'TOTAL PAYMENT')
     pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, '{:,}'.format(
-        claim.additional_amount) if claim.additional_amount else '-')
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Tax')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, '{:,}'.format(claim.tax))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Total Amount')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, '{:,}'.format(claim.total))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Invoice Description')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, str(claim.remarks))
-    y -= 10
-    pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(25, y, 'Claim Period')
-    pdf_file.drawString(150, y, ': ')
-    pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(160, y, str(claim.claim_period))
+    pdf_file.drawRightString(810, y, '{:,}'.format(claim.total))
 
     y -= 50
     col_width = (page_width[0] - 50) / 11

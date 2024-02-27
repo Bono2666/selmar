@@ -445,6 +445,7 @@ class FormBudget(ModelForm):
         self.fields['budget_notes'].label = 'Budget Description'
         self.fields['budget_notes'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 4})
+        self.fields['budget_notes'].required = False
 
     class Meta:
         model = Budget
@@ -473,6 +474,7 @@ class FormBudgetUpdate(ModelForm):
         self.fields['budget_notes'].label = 'Budget Description'
         self.fields['budget_notes'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 4, 'readonly': 'readonly'})
+        self.fields['budget_notes'].required = False
 
     class Meta:
         model = Budget
@@ -492,6 +494,7 @@ class FormNewBudgetUpdate(ModelForm):
         self.fields['budget_notes'].label = 'Budget Description'
         self.fields['budget_notes'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 4})
+        self.fields['budget_notes'].required = False
 
     class Meta:
         model = Budget
