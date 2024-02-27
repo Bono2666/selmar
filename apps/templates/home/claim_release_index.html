@@ -15,6 +15,14 @@
                     <div class="col-6 d-flex align-items-center">
                         <h4 class="mb-2">Claim List Awaiting Approval</h4>
                     </div>
+                    <div class="col-6 d-flex justify-content-end">
+                        <button type="button" class="btn btn-sm px-3 py-0 bg-gradient-danger my-1 {% if not btn_release.approve %}{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-approve"><i class="fas fa-check"></i>&nbsp;&nbsp;Bulk Approve</button>
+                        &nbsp;&nbsp;&nbsp;&nbsp;
+                        <span class="text-end mt-2">
+                            <label for="select-all">Select All</label>&nbsp;&nbsp;
+                            <input type="checkbox" id="select-all" class="cursor-pointer border mt-1 me-3 mb-0" />
+                        </span>
+                    </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
                     <div class="table-responsive p-0">
@@ -31,6 +39,7 @@
                                         Channel</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">Amount</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -53,15 +62,36 @@
                                         <h6 class="mb-0 text-sm">{{ item.3 }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.4|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.4|intcomma }}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">{{ item.5 }}</h6>
+                                    </td>
+                                    <td>
+                                        <input type="checkbox" class="cursor-pointer border" name="check[]" id="check[]">
                                     </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                <div class="modal fade" id="confirm-approve" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    Are you sure you want to approve the selected claims?
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="" role="button" id="bulk-approve" class="btn btn-sm bg-gradient-danger text-white">Approve</a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -77,8 +107,46 @@
     $(document).ready( function () {
         $('#relTable').DataTable();
         
-        $(document).on('click', 'tbody tr', function() {
-            window.location = $(this).data('href');
+        $(document).on('click', 'tbody tr td:not(:last-child)', function() {
+            window.location = $(this).parent().data('href');
+        });
+
+        document.getElementById("select-all").addEventListener("click", function() {
+            let checks = document.getElementsByName('check[]');
+            for (var check of checks) {
+                check.checked = this.checked;
+            }
+        });
+
+        let checks = document.getElementsByName('check[]');
+        let selectAll = document.getElementById('select-all');
+        for (let check of checks) {
+            check.addEventListener("click", function() {
+                let count = 0;
+                for (let check of checks) {
+                    if (check.checked) {
+                        count++;
+                    }
+                }
+                if (count == checks.length) {
+                    selectAll.checked = true;
+                } else {
+                    selectAll.checked = false;
+                }
+            });
+        }
+
+        let bulkApprove = document.getElementById('bulk-approve');
+        bulkApprove.addEventListener("click", function() {
+            let checks = document.getElementsByName('check[]');
+            let claimNos = [];
+            for (let check of checks) {
+                if (check.checked) {
+                    claimNos.push(check.parentElement.parentElement.children[0].children[0].children[0].innerText);
+                }
+            }
+            let url = "{% url 'claim-release-bulk-approve' %}?claim_nos=" + claimNos;
+            bulkApprove.href = url;
         });
 
         let btn = document.getElementsByClassName('paginate_button');

@@ -6034,6 +6034,70 @@ def claim_release_approve(request, _id):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='CLAIM-RELEASE')
+def claim_release_bulk_approve(request):
+    claim_nos = request.GET.get('claim_nos')
+    _ids = claim_nos.split(',')
+    for _id in _ids:
+        claim = Claim.objects.get(claim_id=_id)
+        release = ClaimRelease.objects.get(
+            claim_id=_id, claim_approval_id=request.user.user_id)
+        release.claim_approval_status = 'Y'
+        release.claim_approval_date = timezone.now()
+        release.save()
+
+        highest_approval = ClaimRelease.objects.filter(
+            claim_id=_id, limit__gt=claim.total_claim).aggregate(Min('sequence')) if ClaimRelease.objects.filter(claim_id=_id, limit__gt=claim.total_claim).count() > 0 else ClaimRelease.objects.filter(claim_id=_id).aggregate(Max('sequence'))
+        highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+            'sequence__min') else highest_approval.get('sequence__max') + 1
+        if highest_sequence:
+            approval = ClaimRelease.objects.filter(
+                claim_id=_id, sequence__lt=highest_sequence).order_by('sequence').last()
+        else:
+            approval = ClaimRelease.objects.filter(
+                claim_id=_id).order_by('sequence').last()
+
+        if release.sequence == approval.sequence:
+            claim.status = 'OPEN'
+
+            recipients = []
+
+            maker = claim.entry_by
+            maker_mail = User.objects.get(user_id=maker).email
+            recipients.append(maker_mail)
+
+            approvers = ClaimRelease.objects.filter(
+                claim_id=_id, notif=True, claim_approval_status='Y')
+            for i in approvers:
+                recipients.append(i.claim_approval_email)
+
+            subject = 'Claim Approved'
+            msg = 'Dear All,\n\nClaim No. ' + str(_id) + ' has been approved.\n\nClick the following link to view the claim.\n' + host.url + 'claim/view/open/' + str(_id) + \
+                '\n\nThank you.'
+            recipient_list = list(dict.fromkeys(recipients))
+            send_email(subject, msg, recipient_list)
+        else:
+            claim.status = 'IN APPROVAL'
+
+            email = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='N').order_by(
+                'sequence').values_list('claim_approval_email', flat=True)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT claim_approval_name FROM apps_claimrelease WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                approver = cursor.fetchone()
+
+            subject = 'Claim Approval'
+            msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
+                'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
+                '\n\nThank you.'
+            send_email(subject, msg, [email[0]])
+
+        claim.save()
+
+    return HttpResponseRedirect(reverse('claim-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='CLAIM-RELEASE')
 def claim_release_return(request, _id):
     recipients = []
     draft = False

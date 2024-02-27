@@ -254,6 +254,8 @@ urlpatterns = [
          views.claim_release_update, name='claim-release-update'),
     path('claim_release/approve/<path:_id>/',
          views.claim_release_approve, name='claim-release-approve'),
+    path('claim_release/bulk-approve/', views.claim_release_bulk_approve,
+         name='claim-release-bulk-approve'),
     path('claim_release/return/<path:_id>/',
          views.claim_release_return, name='claim-release-return'),
     path('claim_release/reject/<path:_id>/',
