@@ -1161,7 +1161,7 @@ class FormClaimUpdate(ModelForm):
         self.fields['claim_date'].label = 'Date'
         self.fields['claim_date'].widget = forms.DateInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['claim_date'].input_formats = ['%d/%m/%Y']
+        self.fields['claim_date']
         self.fields['invoice'].label = 'Invoice No.'
         self.fields['invoice'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})

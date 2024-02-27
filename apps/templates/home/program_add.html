@@ -175,7 +175,7 @@
                                 <tr>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Proposal</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
                                         Balance</th>
                                 </tr>
                             </thead>
@@ -190,9 +190,9 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="d-flex pe-2 py-0">
-                                            <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.balance|intcomma }}</h6>
+                                        <div class="py-0">
+                                            <div>
+                                                <h6 class="mb-0 text-sm text-end">{{ item.balance|intcomma }}</h6>
                                             </div>
                                         </div>
                                     </td>

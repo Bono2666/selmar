@@ -4689,7 +4689,7 @@ def program_add(request, _area, _distributor, _proposal):
                                             '<p><br />Hormat Kami,</p>' +
                                             '<table style="width: 100%; height: 50"><tbody><tr>' + approver_signature + '</tr><tr>' +
                                                 approver_name + '</tr><tr>' + approver_position +
-                                            '</tr></tbody></table><br /><hr>',
+                                            '</tr></tbody></table><br />',
                                             'footer': '<p style="line-height: 1.05;"><strong><span style="font-size: 6pt;">PT. ABC PRESIDENT INDONESIA (www.abcpresident.com)<br />Head Office : </span></strong><span style="font-size: 6pt;">EightyEight@Kasablanka Office Tower A Lt. 31 Jl. Casablanca Raya Kav. 88 Jakarta Selatan 12870 <strong>Tel : </strong>+62 21 2982 0168 (Hunting) <strong>Fax : </strong>+62 21 2982 0166<br /><strong>Factory : </strong>Desa Walabar Kec. Klari, Karawang Timur 41371, Jawa Barat, Indonesia <strong>Tel : </strong>+62 267 431 422 (Hunting) <strong>Fax : </strong>+62 267 431 421<br /></span></p>'})
         else:
             form = FormProgram()
@@ -6198,7 +6198,7 @@ def claim_print(request, _id):
     logo_width = 60
     logo_height = 60
     page_width = landscape(A4)
-    pdf_file.drawImage(logo_path, 25, 515,
+    pdf_file.drawImage(logo_path, 25, 500,
                        width=logo_width, height=logo_height)
 
     # Add title in the center of page width
@@ -6206,26 +6206,26 @@ def claim_print(request, _id):
     title_width = pdf_file.stringWidth(title, 'Helvetica-Bold', 11)
     title_x = (page_width[0] - title_width) / 2
     pdf_file.setFont('Helvetica-Bold', 11)
-    pdf_file.drawString(title_x, 545, title)
+    pdf_file.drawString(title_x, 530, title)
 
     pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(615, 550, 'No.')
-    pdf_file.drawString(670, 550, ':')
+    pdf_file.drawString(615, 535, 'No.')
+    pdf_file.drawString(670, 535, ':')
     pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(680, 550, claim_id)
+    pdf_file.drawString(680, 535, claim_id)
     pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(615, 540, 'Date')
-    pdf_file.drawString(670, 540, ':')
+    pdf_file.drawString(615, 525, 'Date')
+    pdf_file.drawString(670, 525, ':')
     pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(680, 540, claim.claim_date.strftime('%d %b %Y'))
+    pdf_file.drawString(680, 525, claim.claim_date.strftime('%d %b %Y'))
     pdf_file.setFont('Helvetica-Bold', 8)
-    pdf_file.drawString(615, 530, 'No. Invoice')
-    pdf_file.drawString(670, 530, ':')
+    pdf_file.drawString(615, 515, 'No. Invoice')
+    pdf_file.drawString(670, 515, ':')
     pdf_file.setFont('Helvetica', 8)
-    pdf_file.drawString(680, 530, str(claim.invoice))
+    pdf_file.drawString(680, 515, str(claim.invoice))
 
     # Write the claim details
-    y = 500
+    y = 485
     pdf_file.setFont('Helvetica-Bold', 8)
     pdf_file.drawString(25, y, 'Pay To')
     pdf_file.drawString(150, y, ': ')
@@ -6457,6 +6457,56 @@ def claim_print(request, _id):
             pdf_file.drawString(title_x, y - 80, title)
         else:
             pass
+
+    y = 50
+    pdf_file.setFont("Helvetica-Bold", 7)
+    pdf_file.drawString(
+        25, y, 'PT. ABC PRESIDENT INDONESIA (www.abcpresident.com)')
+    pdf_file.drawString(25, y - 10, 'Head Office : ')
+    title_x = pdf_file.stringWidth('Head Office : ', 'Helvetica-Bold', 7)
+    pdf_file.setFont("Helvetica", 7)
+    address = 'EightyEight@Kasablanka Office Tower A Lt. 31 Jl. Casablanca Raya Kav. 88 Jakarta Selatan 12870 '
+    pdf_file.drawString(25 + title_x, y - 10, address)
+    address_x = pdf_file.stringWidth(address, 'Helvetica', 7)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    pdf_file.drawString(25 + title_x + address_x, y - 10, 'Tel : ')
+    tel_x = pdf_file.stringWidth('Tel : ', 'Helvetica-Bold', 7)
+    pdf_file.setFont("Helvetica", 7)
+    tel = '+62 21 2982 0168 (Hunting) '
+    ph_x = pdf_file.stringWidth(tel, 'Helvetica', 7)
+    pdf_file.drawString(25 + title_x + address_x + tel_x, y - 10, tel)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    fax_x = pdf_file.stringWidth('Fax : ', 'Helvetica-Bold', 7)
+    pdf_file.drawString(25 + title_x + address_x +
+                        tel_x + ph_x, y - 10, 'Fax : ')
+    pdf_file.setFont("Helvetica", 7)
+    fax = '+62 21 2982 0166 '
+    pdf_file.drawString(25 + title_x + address_x +
+                        tel_x + ph_x + fax_x, y - 10, fax)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    factory = 'Factory : '
+    factory_x = pdf_file.stringWidth(factory, 'Helvetica-Bold', 7)
+    pdf_file.drawString(25, y - 20, factory)
+    pdf_file.setFont("Helvetica", 7)
+    factory_address = 'Desa Walabar Kec. Klari, Karawang Timur 41371, Jawa Barat, Indonesia '
+    pdf_file.drawString(25 + factory_x, y - 20, factory_address)
+    factory_address_x = pdf_file.stringWidth(factory_address, 'Helvetica', 7)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    pdf_file.drawString(25 + factory_x + factory_address_x, y - 20, 'Tel : ')
+    factory_tel_x = pdf_file.stringWidth('Tel : ', 'Helvetica-Bold', 7)
+    pdf_file.setFont("Helvetica", 7)
+    factory_tel = '+62 267 431 422 (Hunting) '
+    factory_ph_x = pdf_file.stringWidth(factory_tel, 'Helvetica', 7)
+    pdf_file.drawString(25 + factory_x + factory_address_x +
+                        factory_tel_x, y - 20, factory_tel)
+    pdf_file.setFont("Helvetica-Bold", 7)
+    factory_fax_x = pdf_file.stringWidth('Fax : ', 'Helvetica-Bold', 7)
+    pdf_file.drawString(25 + factory_x + factory_address_x +
+                        factory_tel_x + factory_ph_x, y - 20, 'Fax : ')
+    pdf_file.setFont("Helvetica", 7)
+    factory_fax = '+62 267 431 421'
+    pdf_file.drawString(25 + factory_x + factory_address_x +
+                        factory_tel_x + factory_ph_x + factory_fax_x, y - 20, factory_fax)
 
     pdf_file.save()
 
@@ -7393,11 +7443,7 @@ def cl_print(request, _id):
     pdf_file.setFont("Helvetica-Bold", 8)
     pdf_file.drawString(25, y, 'Cc : Finance Department')
 
-    y -= 25
-    pdf_file.setLineWidth(0.5)
-    pdf_file.line(25, y, 815, y)
-
-    y -= 15
+    y = 50
     pdf_file.setFont("Helvetica-Bold", 7)
     pdf_file.drawString(
         25, y, 'PT. ABC PRESIDENT INDONESIA (www.abcpresident.com)')
