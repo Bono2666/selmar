@@ -207,7 +207,12 @@
         $('#inapprovalTable').DataTable();
 
         $(document).on('click', 'tbody tr', function() {
-            window.location = $(this).data('href');
+            var href = $(this).data('href');
+            if(href) { // Check if href data exists
+                window.location = href;
+            } else {
+                console.log("No data in href");
+            }
         });
 
         let btn = document.getElementsByClassName('paginate_button');

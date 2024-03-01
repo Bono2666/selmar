@@ -1,0 +1,208 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} View Budget Transfer {% endblock title %}
+
+{% block content %}
+
+{% load humanize %}
+
+
+<div class="container-fluid mt-0">
+    <div class="row">
+        <div class="col-xl-12 order-xl-1">
+            <form action="{% url 'budget-transfer-update' data.transfer_id data.area data.distributor data.channel_from %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row">
+                            <div class="col-6 d-flex align-items-center">
+                                <h4 class="mb-2">Budget Transfer No. {{ data.transfer_id }}</h4>
+                            </div>
+                            <div class="col-6 text-end">
+                                <a href="{% if crud == 'view' %}{% url 'budget-transfer-index' tab %}{% else %}{% url 'budget-transfer-view' tab data.transfer_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
+                                <a href="{% url 'budget-transfer-update' data.transfer_id selected_area selected_distributor selected_channel %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if status != 'DRAFT' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
+                                <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
+                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.transfer_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if status == 'DRAFT' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if hundreds == 0 %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.budget_status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="confirm-submit" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    Are you sure you want to submit budget transfer no: <strong>{{ data.transfer_id }}</strong>?
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'budget-transfer-submit' data.transfer_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Submit</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="approval" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Approval Status</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    <table class="table border cell-border align-items-center mb-0" id="releaseTable">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for item in approval %}
+                                        <tr>
+                                            <td class="d-none">
+                                                <div class="d-flex pe-2 py-0">
+                                                    <div class="d-flex flex-column justify-content-center">
+                                                        <h6 class="mb-0 cursor-default text-sm">{{ item.sequence }}</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex pe-2 py-0">
+                                                    <div class="d-flex flex-column justify-content-center">
+                                                        <h6 class="mb-0 cursor-default text-sm" data-toggle="tooltip" data-original-title="{{ item.transfer_approval_name }}">{{ item.transfer_approval_position }}</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex pe-2 py-0">
+                                                    <div class="d-flex flex-column justify-content-center">
+                                                        <h6 class="mb-0 cursor-default text-sm">{% if item.transfer_approval_date %}{{ item.transfer_approval_date }}{% else %}Waiting for approval ...{% endif %}</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex py-0">
+                                                    <div class="d-flex flex-column justify-content-center">
+                                                        <i class="mb-0 cursor-default text-sm fas {% if item.transfer_approval_status == 'Y' %}fa-check text-danger{% else %}fa-clock{% endif %}"></i>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="confirm-{{ data.transfer_id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    Are you sure you want to delete this budget transfer no: <strong>{{ data.transfer_id }}</strong>?
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'budget-transfer-delete' data.transfer_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Delete
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="pl-lg-0">
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <div class="shadow-none">
+                                        {{ form.date.label_tag }}
+                                        {{ form.date }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="shadow-none">
+                                        {{ form.area.label_tag }}
+                                        {{ form.area }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="shadow-none">
+                                        {{ form.distributor.label_tag }}
+                                        {{ form.distributor }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="shadow-none">
+                                        {{ form.channel_from.label_tag }}
+                                        {{ form.channel_from }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="shadow-none">
+                                        {{ form.channel_to.label_tag }}
+                                        <select name="channel_to" id="channel_to" class="form-control form-select-sm" {% if crud == 'view' %}disabled{% endif %}>
+                                            <option value="">-- Select Channel To --</option>
+                                            {% for item in channel_to %}
+                                            <option value="{{ item.0 }}">{{ item.0 }} - {{ item.1 }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="shadow-none">
+                                        {{ form.amount.label_tag }}
+                                        {{ form.amount|intcomma }}
+                                        <span class="text-sm text-danger"> Maximum amount is {{ budget_balance|intcomma }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    $(document).ready( function () {
+        $('#releaseTable').DataTable({
+            'searching': false,
+            'lengthChange': false,
+            'paging': false,
+            'info': false,
+            'cell-border': true,
+        });
+      
+        btn = document.getElementsByClassName('paginate_button');
+        for (var i = 0; i < btn.length; i++) {
+            btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
+    } );
+</script>
+{% endblock javascripts %}

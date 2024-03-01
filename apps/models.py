@@ -334,7 +334,12 @@ class BudgetDetail(models.Model):
         max_digits=12, decimal_places=0, default=0)
     budget_claim = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
-    budget_balance = models.DecimalField(max_digits=12, decimal_places=0)
+    budget_transfer_minus = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0, null=True)
+    budget_transfer_plus = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0, null=True)
+    budget_balance = models.DecimalField(
+        max_digits=12, decimal_places=0)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True)
@@ -348,7 +353,8 @@ class BudgetDetail(models.Model):
 
     def save(self, *args, **kwargs):
         self.budget_total = self.budget_amount + self.budget_upping
-        self.budget_balance = self.budget_total - self.budget_proposed
+        self.budget_balance = self.budget_total - self.transfer_minus + \
+            self.transfer_plus - self.budget_proposed
         if not self.entry_date:
             self.entry_date = timezone.now()
             self.entry_by = get_current_user().user_id
@@ -368,7 +374,7 @@ class BudgetTransfer(models.Model):
         Channel, on_delete=models.CASCADE, related_name='channel_to')
     amount = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
-    status = models.CharField(max_length=15, default='PENDING')
+    status = models.CharField(max_length=15, default='DRAFT')
     seq_number = models.IntegerField(default=0)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)

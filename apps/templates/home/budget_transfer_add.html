@@ -1,0 +1,133 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Add New Budget Transfer {% endblock title %}
+
+{% block content %}
+
+<div class="container-fluid mt-0">
+    <div class="row">
+        <div class="col-xl-12 order-xl-1">
+            <form action="{% url 'budget-transfer-add' selected_area selected_distributor %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row">
+                            <div class="col-6 d-flex align-items-center">
+                                <h4 class="mb-2">Add New Budget Transfer</h4>
+                            </div>
+                            <div class="col-6 text-end">
+                                <button type="submit" class="btn btn-sm bg-gradient-danger mb-0" {% if no_save %}disabled{% endif %}{% if selected_channel == '0' %}disabled{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
+                                <a href="{% url 'budget-transfer-index' 'open' %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;Cancel</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="pl-lg-0">
+                            {% if message %}
+                            <div class="alert text-danger text-sm text-bg-light" role="alert">
+                                {{ message }}
+                            </div>
+                            {% endif %}
+                            {% if form.errors %}
+                            <div class="alert text-danger text-sm text-bg-light" role="alert">
+                                {{ msg }}
+                            </div>
+                            {% endif %}
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <div class="shadow-none">
+                                        {{ form.date.label_tag }}
+                                        {{ form.date }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="shadow-none">
+                                        {{ form.area.label_tag }}
+                                        <select name="area" id="area" class="form-control form-select-sm">
+                                            <option value="">-- Select Area --</option>
+                                            {% for item in area %}
+                                            <option value="{% url 'budget-transfer-add' item.0 '0' '0' %}" {% if item.0 == selected_area %}selected{% endif %}>{{ selected_area }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="shadow-none">
+                                        {{ form.distributor.label_tag }}
+                                        <select name="distributor" id="distributor" class="form-control form-select-sm">
+                                            <option value="">-- Select Distributor --</option>
+                                            {% for item in distributor %}
+                                            <option value="{% url 'budget-transfer-add' selected_area item.distributor '0' %}">{{ item.distributor.distributor_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="shadow-none">
+                                        {{ form.channel_from.label_tag }}
+                                        <select name="channel_from" id="channel_from" class="form-control form-select-sm">
+                                            <option value="">-- Select Channel From --</option>
+                                            {% for item in channel %}
+                                            <option value="{{ item.0 }}">{{ item.0 }} = {{ item.2 }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="shadow-none">
+                                        {{ form.channel_to.label_tag }}
+                                        <select name="channel_to" id="channel_to" class="form-control form-select-sm">
+                                            <option value="">-- Select Channel To --</option>
+                                            {% for item in channel_to %}
+                                            <option value="{{ item.0 }}">{{ item.0 }} - {{ item.1 }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="shadow-none">
+                                        {{ form.amount.label_tag }}
+                                        {{ form.amount|intcomma }}
+                                        <span class="text-sm text-danger"> Maximum amount is {{ budget_balance|intcomma }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    let closing = "{{ closing }}";
+    let closingPeriod = "{{ closing_period }}";
+
+    $(document).ready(function() {
+        $('#areaTable').DataTable({
+            "paging": false,
+            "info": false,
+            "searching": false,
+            "lengthChange": false,
+        });
+    });
+
+    $(document).on('click', 'tbody tr', function() {
+        window.location = $(this).data('href');
+    });
+</script>
+{% endblock javascripts %}

@@ -573,6 +573,8 @@ class FormBudgetTransfer(ModelForm):
         super(FormBudgetTransfer, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['date'].label = 'Date'
+        self.fields['area'].label = 'Area'
+        self.fields['distributor'].label = 'Distributor'
         self.fields['channel_from'].label = 'From Channel'
         self.fields['channel_to'].label = 'To Channel'
         self.fields['amount'].label = 'Amount'
@@ -585,7 +587,8 @@ class FormBudgetTransfer(ModelForm):
 
     class Meta:
         model = BudgetTransfer
-        fields = ['date', 'channel_from', 'channel_to', 'amount']
+        fields = ['date', 'area', 'distributor',
+                  'channel_from', 'channel_to', 'amount']
 
 
 class FormBudgetTransferView(ModelForm):
@@ -619,6 +622,10 @@ class FormBudgetTransferUpdate(ModelForm):
         self.fields['channel_to'].label = 'To Channel'
         self.fields['amount'].label = 'Amount'
         self.fields['date'].widget = forms.DateInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['area'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['distributor'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['channel_from'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})

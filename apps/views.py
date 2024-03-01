@@ -1711,7 +1711,7 @@ def export_budget_to_excel(request):
 
 
 @login_required(login_url='/login/')
-@role_required(allowed_roles='BUDGET-TRANSFER')
+@role_required(allowed_roles='TRANSFER')
 def budget_transfer_index(request, _tab):
     drafts = BudgetTransfer.objects.filter(status='DRAFT', area_id__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').all
@@ -1734,18 +1734,18 @@ def budget_transfer_index(request, _tab):
         'approved': approved,
         'approved_count': approved_count,
         'tab': _tab,
-        'segment': 'budget_transfer',
-        'group_segment': 'budget',
+        'segment': 'transfer',
+        'group_segment': 'transfer',
         'crud': 'index',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-TRANSFER') if not request.user.is_superuser else Auth.objects.all(),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='TRANSFER') if not request.user.is_superuser else Auth.objects.all(),
     }
 
     return render(request, 'home/budget_transfer_index.html', context)
 
 
 @login_required(login_url='/login/')
-@role_required(allowed_roles='BUDGET-TRANSFER')
+@role_required(allowed_roles='TRANSFER')
 def budget_transfer_add(request, _area, _distributor, _channel):
     selected_area = _area
     selected_distributor = _distributor
@@ -1753,12 +1753,27 @@ def budget_transfer_add(request, _area, _distributor, _channel):
     area = AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', 'area__area_name')
     distributor = Budget.objects.get(
-        budget_status='OPEN', budget_area=selected_area).values_list('budget_distributor_id', 'budget_distributor__distributor_name', 'budget_id')
+        budget_status='OPEN', budget_area=selected_area).values_list('budget_distributor_id', 'budget_distributor__distributor_name', 'budget_id') if selected_area != '0' else None
     channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
-        'budget_id', flat=True), budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance')
+        'budget_id', flat=True), budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance') if selected_distributor != '0' else None
+    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
+        'budget_id', flat=True)).exclude(budget_channel_id=selected_channel).values_list('budget_channel_id', 'budget_channel__channel_name') if selected_channel != '0' else None
+    budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
+        'budget_id', flat=True), budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
+    period = Closing.objects.get(document='BUDGET')
+    no_save = False
+    message = ''
+
+    if selected_area != '0':
+        approvers = BudgetTransferMatrix.objects.filter(
+            area_id=_area).order_by('sequence')
+        if approvers.count() == 0:
+            message = "No budget transfer's approver found for this area."
+            no_save = True
 
     try:
-        _no = BudgetTransfer.objects.all().order_by('seq_number').last()
+        _no = BudgetTransfer.objects.filter(
+            date__year=datetime.datetime.now().year).latest('seq_number')
     except Program.DoesNotExist:
         _no = None
     if _no is None:
@@ -1766,18 +1781,34 @@ def budget_transfer_add(request, _area, _distributor, _channel):
     else:
         format_no = '{:04d}'.format(_no.seq_number + 1)
 
-    _id = 'TRF-6' + format_no + '/' + proposal.channel + '/' + selected_area + '/' + \
-        str(proposal.budget.budget_distributor.distributor_id) + '/' + \
-        datetime.datetime.now().strftime('%m/%Y') if selected_proposal != '0' else 'SBS-3' + format_no + '/' + selected_area + '/0' + \
-        datetime.datetime.now().strftime('%m/%Y')
-
     if request.POST:
         form = FormBudgetTransfer(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
-            return HttpResponseRedirect(reverse('budget-transfer-index', args=['pending', ]))
+            if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
+                message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'
+                no_save = True
+            else:
+                _id = 'TRF-6' + format_no + '/' + selected_area + '/' + \
+                    selected_distributor + '/' + period.month_open + '/' + period.year_open
+                draft = form.save(commit=False)
+                draft.transfer_id = _id
+                draft.seq_number = _no.seq_number + 1 if _no else 1
+                draft.area_id = selected_area
+                draft.distributor_id = selected_distributor
+                draft.channel_from_id = selected_channel
+                draft.channel_to_id = request.POST.get('channel_to')
+                draft.save()
 
-    form = FormBudgetTransfer()
+                transfer_from = BudgetTransfer.objects.filter(
+                    area_id=selected_area, distributor_id=selected_distributor, channel_from_id=selected_channel).aggregate(Sum('amount'))['amount__sum']
+                budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                                      budget_distributor_id=selected_distributor).values_list('budget_id', flat=True), budget_channel_id=selected_channel)
+                budget_detail.budget_transfer_minus = transfer_from['amount__sum']
+                budget_detail.save()
+
+                return HttpResponseRedirect(reverse('budget-transfer-view', args=['draft', _id]))
+
+    form = FormBudgetTransfer(initial={'date': datetime.datetime.now().date()})
 
     msg = form.errors
     context = {
@@ -1789,13 +1820,154 @@ def budget_transfer_add(request, _area, _distributor, _channel):
         'area': area,
         'distributor': distributor,
         'channel': channel,
-        'segment': 'budget_transfer',
-        'group_segment': 'budget',
+        'channel_to': channel_to,
+        'budget_balance': budget_balance,
+        'message': message,
+        'no_save': no_save,
+        'segment': 'transfer',
+        'group_segment': 'transfer',
         'crud': 'add',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-TRANSFER') if not request.user.is_superuser else Auth.objects.all(),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='TRANSFER') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/budget_transfer_add.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER')
+def budget_transfer_view(request, _tab, _id):
+    transfer = BudgetTransfer.objects.get(transfer_id=_id)
+    form = FormBudgetTransferView(instance=transfer)
+    approval = BudgetTransferRelease.objects.filter(
+        transfer_id=_id).order_by('sequence')
+
+    context = {
+        'form': form,
+        'data': transfer,
+        'tab': _tab,
+        'status': transfer.status,
+        'approval': approval,
+        'segment': 'transfer',
+        'group_segment': 'transfer',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='TRANSFER') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/budget_transfer_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER')
+def budget_transfer_update(request, _id, _area, _distributor, _channel):
+    selected_area = _area
+    selected_distributor = _distributor
+    selected_channel = _channel
+    transfer = BudgetTransfer.objects.get(transfer_id=_id)
+    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
+        'budget_id', flat=True)).exclude(budget_channel_id=selected_channel).values_list('budget_channel_id', 'budget_channel__channel_name') if selected_channel != '0' else None
+    budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
+        'budget_id', flat=True), budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
+    no_save = False
+    message = ''
+
+    if request.POST:
+        form = FormBudgetTransferUpdate(
+            request.POST, request.FILES, instance=transfer)
+        if form.is_valid():
+            if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
+                message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'
+                no_save = True
+            else:
+                update = form.save(commit=False)
+                update.channel_to_id = request.POST.get('channel_to')
+                update.save()
+
+                transfer_from = BudgetTransfer.objects.filter(
+                    area_id=selected_area, distributor_id=selected_distributor, channel_from_id=selected_channel).aggregate(Sum('amount'))['amount__sum']
+                budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                                      budget_distributor_id=selected_distributor).values_list('budget_id', flat=True), budget_channel_id=selected_channel)
+                budget_detail.budget_transfer_minus = transfer_from['amount__sum']
+                budget_detail.save()
+
+                return HttpResponseRedirect(reverse('budget-transfer-view', args=['draft', _id]))
+    else:
+        form = FormBudgetTransferUpdate(instance=transfer)
+
+    context = {
+        'form': form,
+        'data': transfer,
+        'selected_area': selected_area,
+        'selected_distributor': selected_distributor,
+        'selected_channel': selected_channel,
+        'channel_to': channel_to,
+        'budget_balance': budget_balance,
+        'message': message,
+        'no_save': no_save,
+        'segment': 'transfer',
+        'group_segment': 'transfer',
+        'crud': 'update',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='TRANSFER') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/budget_transfer_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER')
+def budget_transfer_delete(request, _id):
+    transfer = BudgetTransfer.objects.get(transfer_id=_id)
+    transfer.delete()
+    return HttpResponseRedirect(reverse('budget-transfer-index', args=['draft', ]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER')
+def budget_transfer_submit(request, _id):
+    transfer = BudgetTransfer.objects.get(transfer_id=_id)
+    transfer.status = 'IN APPROVAL'
+    transfer.save()
+
+    approvers = BudgetTransferMatrix.objects.filter(
+        area_id=transfer.area_id).order_by('sequence')
+    for approver in approvers:
+        BudgetTransferRelease.objects.create(
+            transfer_id=_id, sequence=approver.sequence, transfer_approval_id=approver.approver_id, transfer_approval_name=approver.approver__username, transfer_approval_email=approver.approver__email, transfer_approval_position=approver.approver__position__position_name)
+
+    email = BudgetTransferRelease.objects.filter(
+        transfer_id=_id).order_by('sequence').values_list('transfer_approval_email', flat=True)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT username FROM apps_budgettransferrelease INNER JOIN apps_user ON apps_budgettransferrelease.transfer_approval_id = apps_user.user_id WHERE transfer_id = '" + str(_id) + "' AND transfer_approval_status = 'N' ORDER BY sequence LIMIT 1")
+        approver = cursor.fetchone()
+
+    subject = 'Budget Transfer Approval'
+    message = 'Dear ' + approver[0] + ',\n\nYou have a new budget transfer to approve. Please check your budget transfer release list.\n\n' + \
+        'Click this link to approve, revise or return this budget transfer.\n' + host.url + 'budget_transfer_release/view/' + str(_id) + '/NONE/' + \
+        '\n\nThank you.'
+    send_email(subject, message, list(email))
+
+    return HttpResponseRedirect(reverse('budget-transfer-index', args=['inapproval', ]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER-RELEASE')
+def budget_transfer_release_index(request):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT apps_budgettransfer.transfer_id, apps_area.area_name, apps_distributor.distributor_name, apps_channel.channel_name, apps_budgettransfer.amount, apps_budgettransfer.status, apps_budgettransferrelease.sequence FROM apps_area INNER JOIN apps_budgettransfer ON apps_area.area_id = apps_budgettransfer.area_id INNER JOIN apps_distributor ON apps_area.area_id = apps_distributor.distributor_area_id INNER JOIN apps_channel ON apps_distributor.distributor_id = apps_channel.channel_distributor_id INNER JOIN apps_budgettransferrelease ON apps_budgettransfer.transfer_id = apps_budgettransferrelease.transfer_id INNER JOIN (SELECT transfer_id, MIN(sequence) AS seq FROM apps_budgettransferrelease WHERE transfer_approval_status = 'N' GROUP BY transfer_id ORDER BY sequence ASC) AS q_group ON apps_budgettransferrelease.transfer_id = q_group.transfer_id AND apps_budgettransferrelease.sequence = q_group.seq WHERE (apps_budgettransfer.status = 'IN APPROVAL') AND apps_budgettransferrelease.transfer_approval_id = '" + str(request.user.user_id) + "'")
+        release = cursor.fetchall()
+
+    context = {
+        'data': release,
+        'segment': 'transfer_release',
+        'group_segment': 'transfer',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='TRANSFER-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/budget_transfer_release_index.html', context)
 
 
 @login_required(login_url='/login/')
@@ -3979,7 +4151,8 @@ def proposal_add(request, _area, _budget, _channel):
             no_save = True
 
     try:
-        _no = Proposal.objects.all().order_by('seq_number').last()
+        _no = Proposal.objects.filter(
+            proposal_date__year=datetime.datetime.now().year).latest('seq_number')
     except Proposal.DoesNotExist:
         _no = None
     if _no is None:
@@ -4594,7 +4767,8 @@ def program_add(request, _area, _distributor, _proposal):
             no_save = True
 
     try:
-        _no = Program.objects.all().order_by('seq_number').last()
+        _no = Program.objects.filter(
+            program_date__year=datetime.datetime.now().year).latest('seq_number')
     except Program.DoesNotExist:
         _no = None
     if _no is None:
@@ -4658,33 +4832,33 @@ def program_add(request, _area, _distributor, _proposal):
                     prod += ', '
 
             len_prog = len(proposal.program_name)
-            if len_prog > 85:
-                _height = 30
+            if len_prog > 110:
+                _height = 24
             else:
-                _height = 15
+                _height = 12
 
             approver_signature = ''
             for approver in range(print_approvers.count()):
-                approver_signature += '<td style="padding-left: 3; height: 50"><img style="flex: 0 0 auto;" src="' + \
+                approver_signature += '<td style="padding-left: 0; height: 50"><img style="flex: 0 0 auto;" src="' + \
                     str(host.url) + 'apps/media/' + str(
                         print_approvers[approver].approver.signature) + '" alt="Signature" width="120" height="70" /></td>'
 
             approver_name = ''
             for approver in range(print_approvers.count()):
-                approver_name += '<td style="padding-left: 3; height: 15"><span style="text-decoration: underline;">' + \
+                approver_name += '<td style="padding-left: 0; height: 12"><span style="text-decoration: underline;">' + \
                     print_approvers[approver].approver.username + \
                     '</span></td>'
 
             approver_position = ''
             for approver in range(print_approvers.count()):
-                approver_position += '<td style="padding-left: 3; height: 15">' + \
+                approver_position += '<td style="padding-left: 0; height: 12">' + \
                     print_approvers[approver].approver.position.position_name + '</td>'
 
             if no_save:
                 form = FormProgram()
             else:
-                form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 3;"><b>' + area.base_city + ', ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
-                                            'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 15;"><tr><td style="padding-left: 3; width: 22%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 3; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Produk</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Periode</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.period_start.strftime("%d %b") + ' - ' + proposal.period_end.strftime("%d %b %Y") + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 3; width: 22%; height: 15; vertical-align: top;">Detail Qty</td><td style="padding-left: 3; width: 2%; height: 15; vertical-align: top;">: </td><td style="padding-left: 3; width: 76%; height: 15; vertical-align: top;"></td></tr></table>' +
+                form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 12;"><tr><td style="padding-left: 0;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 0;"><b>' + area.base_city + ', ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
+                                            'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 12;"><tr><td style="padding-left: 0; width: 15%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 0; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Produk</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Periode</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + proposal.period_start.strftime("%d %b") + ' - ' + proposal.period_end.strftime("%d %b %Y") + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Detail Qty</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;"></td></tr></table>' +
                                             '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'approval':
                                             '<p><br />Hormat Kami,</p>' +
                                             '<table style="width: 100%; height: 50"><tbody><tr>' + approver_signature + '</tr><tr>' +
@@ -5348,7 +5522,8 @@ def claim_add(request, _area, _distributor, _program):
             message = "No claim's approver found for this area and channel."
 
     try:
-        _no = Claim.objects.all().order_by('seq_number').last()
+        _no = Claim.objects.filter(
+            claim_date__year=datetime.datetime.now().year).latest('seq_number')
     except Claim.DoesNotExist:
         _no = None
     if _no is None:
@@ -6754,7 +6929,8 @@ def cl_add(request, _area, _distributor):
             message = "No communication letter's approver found for this area."
 
     try:
-        _no = CL.objects.all().order_by('seq_number').last()
+        _no = CL.objects.filter(
+            cl_date__year=datetime.datetime.now().year).latest('seq_number')
     except CL.DoesNotExist:
         _no = None
     if _no is None:
