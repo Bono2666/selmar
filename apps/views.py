@@ -1721,9 +1721,9 @@ def budget_transfer_index(request, _tab):
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').all
     inapprovals_count = BudgetTransfer.objects.filter(status='IN APPROVAL', area_id__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').count
-    approved = BudgetTransfer.objects.filter(status='APPROVED', area_id__in=AreaUser.objects.filter(
+    approved = BudgetTransfer.objects.filter(status='OPEN', area_id__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').all
-    approved_count = BudgetTransfer.objects.filter(status='APPROVED', area_id__in=AreaUser.objects.filter(
+    approved_count = BudgetTransfer.objects.filter(status='OPEN', area_id__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').count
 
     context = {
@@ -1943,7 +1943,7 @@ def budget_transfer_submit(request, _id):
 
     subject = 'Budget Transfer Approval'
     message = 'Dear ' + approver[0] + ',\n\nYou have a new budget transfer to approve. Please check your budget transfer release list.\n\n' + \
-        'Click this link to approve, revise or return this budget transfer.\n' + host.url + 'budget_transfer_release/view/' + str(_id) + '/NONE/' + \
+        'Click this link to approve, revise or return this budget transfer.\n' + host.url + 'budget_transfer_release/view/' + str(_id) + '/0/' + \
         '\n\nThank you.'
     send_email(subject, message, list(email))
 
@@ -1955,7 +1955,7 @@ def budget_transfer_submit(request, _id):
 def budget_transfer_release_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT apps_budgettransfer.transfer_id, apps_area.area_name, apps_distributor.distributor_name, apps_channel.channel_name, apps_budgettransfer.amount, apps_budgettransfer.status, apps_budgettransferrelease.sequence FROM apps_area INNER JOIN apps_budgettransfer ON apps_area.area_id = apps_budgettransfer.area_id INNER JOIN apps_distributor ON apps_area.area_id = apps_distributor.distributor_area_id INNER JOIN apps_channel ON apps_distributor.distributor_id = apps_channel.channel_distributor_id INNER JOIN apps_budgettransferrelease ON apps_budgettransfer.transfer_id = apps_budgettransferrelease.transfer_id INNER JOIN (SELECT transfer_id, MIN(sequence) AS seq FROM apps_budgettransferrelease WHERE transfer_approval_status = 'N' GROUP BY transfer_id ORDER BY sequence ASC) AS q_group ON apps_budgettransferrelease.transfer_id = q_group.transfer_id AND apps_budgettransferrelease.sequence = q_group.seq WHERE (apps_budgettransfer.status = 'IN APPROVAL') AND apps_budgettransferrelease.transfer_approval_id = '" + str(request.user.user_id) + "'")
+            "SELECT apps_budgettransfer.transfer_id, apps_budgettransfer.date, apps_budgettransfer.area, apps_distributor.distributor_name, apps_budgettransfer.amount, apps_budgettransfer.status, apps_budgettransferrelease.sequence FROM apps_distributor INNER JOIN apps_budgettransfer ON apps_distributor.distributor_id = apps_budgettransfer.distributor_id INNER JOIN apps_budgettransferrelease ON apps_budgettransfer.transfer_id = apps_budgettransferrelease.transfer_id INNER JOIN (SELECT transfer_id, MIN(sequence) AS seq FROM apps_budgettransferrelease WHERE transfer_approval_status = 'N' GROUP BY transfer_id ORDER BY sequence ASC) AS q_group ON apps_budgettransferrelease.transfer_id = q_group.transfer_id AND apps_budgettransferrelease.sequence = q_group.seq WHERE (apps_budgettransfer.status = 'IN APPROVAL') AND apps_budgettransferrelease.transfer_approval_id = '" + str(request.user.user_id) + "'")
         release = cursor.fetchall()
 
     context = {
@@ -1971,11 +1971,76 @@ def budget_transfer_release_index(request):
 
 
 @login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER-RELEASE')
+def budget_transfer_release_view(request, _id, _is_revise):
+    transfer = BudgetTransfer.objects.get(transfer_id=_id)
+    form = FormBudgetTransferView(instance=transfer)
+    approval = BudgetTransferRelease.objects.filter(
+        transfer_id=_id).order_by('sequence')
+
+    approved = BudgetTransferRelease.objects.get(
+        transfer_id=_id, transfer_approval_id=request.user.user_id).transfer_approval_status
+
+    context = {
+        'form': form,
+        'data': transfer,
+        'approval': approval,
+        'is_revise': _is_revise,
+        'approved': approved,
+        'segment': 'transfer_release',
+        'group_segment': 'transfer',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='TRANSFER-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/budget_transfer_release_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER-RELEASE')
+def budget_transfer_release_approve(request, _id):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT transfer_id, MAX(sequence) AS seq FROM apps_budgettransferrelease GROUP BY transfer_id HAVING transfer_id = '" + str(_id) + "'")
+        max_seq = cursor.fetchone()
+
+    release = BudgetTransferRelease.objects.get(
+        transfer_id=_id, transfer_approval_id=request.user.user_id)
+    release.transfer_approval_status = 'Y'
+    release.transfer_approval_date = timezone.now()
+    release.save()
+
+    transfer = BudgetTransfer.objects.get(transfer_id=_id)
+    if release.sequence == max_seq[0][1]:
+        transfer.status = 'OPEN'
+    else:
+        transfer.status = 'IN APPROVAL'
+
+    email = BudgetTransferRelease.objects.filter(transfer_id=_id, transfer_approval_status='N').order_by(
+        'sequence').values_list('transfer_approval_email', flat=True)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT transfer_approval_name FROM apps_budgettransferrelease WHERE transfer_id = '" + str(_id) + "' AND transfer_approval_status = 'N' ORDER BY sequence LIMIT 1")
+        approver = cursor.fetchone()
+
+    subject = 'Budget Transfer Approval'
+    message = 'Dear ' + approver[0] + ',\n\nYou have a new budget transfer to approve. Please check your budget transfer release list.\n\n' + \
+        'Click this link to approve, revise or return this budget transfer.\n' + host.url + 'budget_transfer_release/view/' + str(_id) + '/0/' + \
+        '\n\nThank you.'
+    send_email(subject, message, [email[0]])
+
+    transfer.save()
+
+    return HttpResponseRedirect(reverse('budget-transfer-release-index'))
+
+
+@login_required(login_url='/login/')
 @role_required(allowed_roles='BUDGET-RELEASE')
 def budget_release_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT apps_budget.budget_id, apps_distributor.distributor_name, apps_budget.budget_amount, apps_budget.budget_upping, apps_budget.budget_total, apps_budget.budget_status, apps_budgetrelease.sequence FROM apps_distributor INNER JOIN apps_budget ON apps_distributor.distributor_id = apps_budget.budget_distributor_id INNER JOIN apps_budgetrelease ON apps_budget.budget_id = apps_budgetrelease.budget_id INNER JOIN (SELECT budget_id, MIN(sequence) AS seq FROM apps_budgetrelease WHERE budget_approval_status = 'N' GROUP BY budget_id ORDER BY sequence ASC) AS q_group ON apps_budgetrelease.budget_id = q_group.budget_id AND apps_budgetrelease.sequence = q_group.seq WHERE (apps_budget.budget_status = 'PENDING' OR apps_budget.budget_status = 'IN APPROVAL') AND apps_budgetrelease.budget_approval_id = '" + str(request.user.user_id) + "'")
+            "SELECT apps_budget.budget_id, apps_distributor.distributor_name, apps_budget.budget_amount, apps_budget.budget_upping, apps_budget.budget_total, apps_budget.budget_status, apps_budgetrelease.sequence FROM apps_distributor INNER JOIN apps_budget ON apps_distributor.distributor_id = apps_budget.budget_distributor_id INNER JOIN apps_budgetrelease ON apps_budget.budget_id = apps_budgetrelease.budget_id INNER JOIN (SELECT budget_id, MIN(sequence) AS seq FROM apps_budgetrelease WHERE budget_approval_status = 'N' GROUP BY budget_id ORDER BY sequence ASC) AS q_group ON apps_budgetrelease.budget_id = q_group.budget_id AND apps_budgetrelease.sequence = q_group.seq WHERE (apps_budget.budget_status = 'IN APPROVAL') AND apps_budgetrelease.budget_approval_id = '" + str(request.user.user_id) + "'")
         release = cursor.fetchall()
 
     context = {

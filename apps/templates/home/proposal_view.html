@@ -188,7 +188,7 @@
                                         <select name="division" id="division" class="form-control form-select-sm" {% if crud != 'update' %}disabled{% endif %}>
                                             <option value="">Select Division</option>
                                             {% for item in divs %}
-                                            <option value="{{ item.division_id }}" {% if item.division == form.division_id %}selected{% endif %}>{{ item.division_name }}</option>
+                                            <option value="{{ item.division_id }}" {% if item.division_id == data.division_id %}selected{% endif %}>{{ item.division_name }}</option>
                                             {% endfor %}
                                         </select>
                                         <div class="text-sm text-danger">

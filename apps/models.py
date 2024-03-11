@@ -353,8 +353,8 @@ class BudgetDetail(models.Model):
 
     def save(self, *args, **kwargs):
         self.budget_total = self.budget_amount + self.budget_upping
-        self.budget_balance = self.budget_total - self.transfer_minus + \
-            self.transfer_plus - self.budget_proposed
+        self.budget_balance = self.budget_total - self.budget_transfer_minus + \
+            self.budget_transfer_plus - self.budget_proposed
         if not self.entry_date:
             self.entry_date = timezone.now()
             self.entry_by = get_current_user().user_id
