@@ -5722,7 +5722,7 @@ def claim_index(request, _tab):
     inapproval_count = Claim.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
     opens = Claim.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').all
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').values_list('claim_id', 'cldetail__cl_id', 'claim_date', 'proposal__budget__budget_distributor__distributor_name', 'proposal__channel', 'total_claim', 'status')
     open_count = Claim.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-claim_id').count
 
