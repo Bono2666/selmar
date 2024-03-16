@@ -279,15 +279,33 @@
                         <table class="table hover cursor-pointer align-items-center mb-3" id="programTable">
                             <thead>
                                 <tr>
+                                    <th
+                                        class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Proposal</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Program</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Program Name</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Channel</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Period Start</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Period End</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
+                                        Balance</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for item in programs %}
                                 <tr data-href="{% url 'claim-add' selected_area selected_distributor item.program_id %}" class="cursor-pointer">
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.proposal_id }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
@@ -298,7 +316,35 @@
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.proposal.program_name|truncatechars:72 }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.proposal.program_name|truncatechars:30 }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.proposal.channel }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.proposal.period_start|date:"d M Y" }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.proposal.period_end|date:"d M Y" }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm text-end">{{ item.proposal.balance|intcomma }}</h6>
                                             </div>
                                         </div>
                                     </td>
@@ -363,6 +409,7 @@
         $('#programTable').DataTable({
             "info": false,
             "lengthChange": false,
+            "scrollX": true,
         });
     });
 

@@ -1785,7 +1785,8 @@ def budget_transfer_add(request, _area, _distributor, _channel, _message):
         form = FormBudgetTransfer(request.POST, request.FILES)
         if form.is_valid():
             if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
-                message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'
+                message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'.replace(
+                    '25', '')
                 no_save = True
 
                 return HttpResponseRedirect(reverse('budget-transfer-add', args=[selected_area, selected_distributor, selected_channel, message]))
@@ -1908,7 +1909,8 @@ def budget_transfer_update(request, _id, _area, _distributor, _channel, _message
             request.POST, request.FILES, instance=transfer)
         if form.is_valid():
             if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
-                message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'
+                message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'.replace(
+                    '25', '')
                 no_save = True
 
                 return HttpResponseRedirect(reverse('budget-transfer-update', args=[_id, selected_area, selected_distributor, selected_channel, message]))
