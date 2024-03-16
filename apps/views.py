@@ -1763,7 +1763,6 @@ def budget_transfer_add(request, _area, _distributor, _channel, _message):
                                               budget_status='OPEN').budget_id, budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
     period = Closing.objects.get(document='BUDGET')
     no_save = False
-    message = _message
 
     # if selected_area != '0':
     #     approvers = BudgetTransferMatrix.objects.filter(
@@ -1838,7 +1837,7 @@ def budget_transfer_add(request, _area, _distributor, _channel, _message):
         'channel': channel,
         'channel_to': channel_to,
         'budget_balance': budget_balance,
-        'message': message,
+        'message': _message,
         'no_save': no_save,
         'segment': 'transfer',
         'group_segment': 'transfer',
@@ -1903,7 +1902,6 @@ def budget_transfer_update(request, _id, _area, _distributor, _channel, _message
                                                                            budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
     amount = transfer.amount if _channel == transfer.channel_from_id else 0
     no_save = False
-    message = _message
 
     if request.POST:
         form = FormBudgetTransferUpdate(
@@ -1954,7 +1952,7 @@ def budget_transfer_update(request, _id, _area, _distributor, _channel, _message
         'channel_to': channel_to,
         'budget_balance': budget_balance + amount,
         'msg': msg,
-        'message': message,
+        'message': _message,
         'no_save': no_save,
         'segment': 'transfer',
         'group_segment': 'transfer',
