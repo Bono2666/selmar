@@ -201,7 +201,11 @@
 
 <script>
     $(document).ready( function () {
-        $('#openTable').DataTable();
+        $('#openTable').DataTable(
+            {
+                "scrollX": true,
+            }
+        );
         $('#draftTable').DataTable();
         $('#pendingTable').DataTable();
         $('#inapprovalTable').DataTable();
