@@ -27,6 +27,7 @@ from xhtml2pdf import pisa
 from django.template.loader import get_template
 from django.utils.text import Truncator
 import os
+from datetime import date
 
 
 @login_required(login_url='/login/')
@@ -1721,7 +1722,7 @@ def budget_transfer_index(request, _tab):
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').all
     inapprovals_count = BudgetTransfer.objects.filter(status='IN APPROVAL', area_id__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').count
-    approved = BudgetTransfer.objects.filter(status='OPEN', area_id__in=AreaUser.objects.filter(
+    approved = BudgetTransfer.objects.filter(area_id__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').all
     approved_count = BudgetTransfer.objects.filter(status='OPEN', area_id__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-date').count
@@ -1746,35 +1747,35 @@ def budget_transfer_index(request, _tab):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='TRANSFER')
-def budget_transfer_add(request, _area, _distributor, _channel):
+def budget_transfer_add(request, _area, _distributor, _channel, _message):
     selected_area = _area
     selected_distributor = _distributor
     selected_channel = _channel
     area = AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', 'area__area_name')
-    distributor = Budget.objects.get(
+    distributor = Budget.objects.filter(
         budget_status='OPEN', budget_area=selected_area).values_list('budget_distributor_id', 'budget_distributor__distributor_name', 'budget_id') if selected_area != '0' else None
-    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
-        'budget_id', flat=True), budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance') if selected_distributor != '0' else None
-    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
-        'budget_id', flat=True)).exclude(budget_channel_id=selected_channel).values_list('budget_channel_id', 'budget_channel__channel_name') if selected_channel != '0' else None
-    budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
-        'budget_id', flat=True), budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
+    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor, budget_area=selected_area, budget_status='OPEN').budget_id,
+                                          budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance') if selected_distributor != '0' else None
+    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor, budget_area=selected_area, budget_status='OPEN').budget_id).exclude(
+        budget_channel_id=selected_channel).values_list('budget_channel_id', 'budget_channel__channel_name') if selected_channel != '0' else None
+    budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor, budget_area=selected_area,
+                                              budget_status='OPEN').budget_id, budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
     period = Closing.objects.get(document='BUDGET')
     no_save = False
-    message = ''
+    message = _message
 
-    if selected_area != '0':
-        approvers = BudgetTransferMatrix.objects.filter(
-            area_id=_area).order_by('sequence')
-        if approvers.count() == 0:
-            message = "No budget transfer's approver found for this area."
-            no_save = True
+    # if selected_area != '0':
+    #     approvers = BudgetTransferMatrix.objects.filter(
+    #         area_id=_area).order_by('sequence')
+    # if approvers.count() == 0:
+    #     message = "No budget transfer's approver found for this area."
+    #     no_save = True
 
     try:
         _no = BudgetTransfer.objects.filter(
             date__year=datetime.datetime.now().year).latest('seq_number')
-    except Program.DoesNotExist:
+    except BudgetTransfer.DoesNotExist:
         _no = None
     if _no is None:
         format_no = '{:04d}'.format(1)
@@ -1787,11 +1788,16 @@ def budget_transfer_add(request, _area, _distributor, _channel):
             if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
                 message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'
                 no_save = True
+
+                return HttpResponseRedirect(reverse('budget-transfer-add', args=[selected_area, selected_distributor, selected_channel, message]))
             else:
                 _id = 'TRF-6' + format_no + '/' + selected_area + '/' + \
-                    selected_distributor + '/' + period.month_open + '/' + period.year_open
+                    selected_distributor + '/' + \
+                    '{:02d}'.format(int(period.month_open)) + \
+                    '/' + period.year_open
                 draft = form.save(commit=False)
                 draft.transfer_id = _id
+                draft.date = date.fromisoformat(request.POST.get('date'))
                 draft.seq_number = _no.seq_number + 1 if _no else 1
                 draft.area_id = selected_area
                 draft.distributor_id = selected_distributor
@@ -1799,20 +1805,30 @@ def budget_transfer_add(request, _area, _distributor, _channel):
                 draft.channel_to_id = request.POST.get('channel_to')
                 draft.save()
 
+                period = Closing.objects.get(document='BUDGET')
+
                 transfer_from = BudgetTransfer.objects.filter(
-                    area_id=selected_area, distributor_id=selected_distributor, channel_from_id=selected_channel).aggregate(Sum('amount'))['amount__sum']
+                    area_id=selected_area, distributor_id=selected_distributor, channel_from_id=selected_channel, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
                 budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
-                                                                                      budget_distributor_id=selected_distributor).values_list('budget_id', flat=True), budget_channel_id=selected_channel)
-                budget_detail.budget_transfer_minus = transfer_from['amount__sum']
+                                                                                      budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=selected_channel)
+                budget_detail.budget_transfer_minus = transfer_from if transfer_from else 0
                 budget_detail.save()
 
-                return HttpResponseRedirect(reverse('budget-transfer-view', args=['draft', _id]))
+                transfer_to = BudgetTransfer.objects.filter(
+                    area_id=selected_area, distributor_id=selected_distributor, channel_to_id=draft.channel_to_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
+                channel_to = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                                   budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=draft.channel_to_id)
+                channel_to.budget_transfer_plus = transfer_to if transfer_to else 0
+                channel_to.save()
 
-    form = FormBudgetTransfer(initial={'date': datetime.datetime.now().date()})
+                return HttpResponseRedirect(reverse('budget-transfer-index', args=['draft', ]))
+    else:
+        form = FormBudgetTransfer(
+            initial={'date': datetime.datetime.now().date()})
 
-    msg = form.errors
+    # msg = form.errors
     context = {
-        'msg': msg,
+        # 'msg': msg,
         'form': form,
         'selected_area': selected_area,
         'selected_distributor': selected_distributor,
@@ -1837,15 +1853,30 @@ def budget_transfer_add(request, _area, _distributor, _channel):
 @role_required(allowed_roles='TRANSFER')
 def budget_transfer_view(request, _tab, _id):
     transfer = BudgetTransfer.objects.get(transfer_id=_id)
+    amount = transfer.amount
+    transfer.amount = '{:,}'.format(transfer.amount)
     form = FormBudgetTransferView(instance=transfer)
     approval = BudgetTransferRelease.objects.filter(
         transfer_id=_id).order_by('sequence')
+    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor, budget_area=transfer.area, budget_status='OPEN').budget_id,
+                                          budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance')
+    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor_id, budget_area=transfer.area_id, budget_status='OPEN').budget_id).exclude(
+        budget_channel_id=transfer.channel_from).values_list('budget_channel_id', 'budget_channel__channel_name')
+    budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor,
+                                              budget_area=transfer.area, budget_status='OPEN').budget_id, budget_channel_id=transfer.channel_from).budget_balance
+    selected_channel = transfer.channel_from_id
+    message = '0'
 
     context = {
         'form': form,
         'data': transfer,
+        'channel': channel,
+        'channel_to': channel_to,
+        'selected_channel': selected_channel,
+        'budget_balance': budget_balance + amount,
         'tab': _tab,
         'status': transfer.status,
+        'message': message,
         'approval': approval,
         'segment': 'transfer',
         'group_segment': 'transfer',
@@ -1859,17 +1890,20 @@ def budget_transfer_view(request, _tab, _id):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='TRANSFER')
-def budget_transfer_update(request, _id, _area, _distributor, _channel):
+def budget_transfer_update(request, _id, _area, _distributor, _channel, _message):
     selected_area = _area
     selected_distributor = _distributor
     selected_channel = _channel
     transfer = BudgetTransfer.objects.get(transfer_id=_id)
-    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
-        'budget_id', flat=True)).exclude(budget_channel_id=selected_channel).values_list('budget_channel_id', 'budget_channel__channel_name') if selected_channel != '0' else None
-    budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor).values_list(
-        'budget_id', flat=True), budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
+    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor, budget_area=transfer.area, budget_status='OPEN').budget_id,
+                                          budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance')
+    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor_id, budget_area=transfer.area_id, budget_status='OPEN').budget_id).exclude(
+        budget_channel_id=_channel).values_list('budget_channel_id', 'budget_channel__channel_name')
+    budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                           budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
+    amount = transfer.amount if _channel == transfer.channel_from_id else 0
     no_save = False
-    message = ''
+    message = _message
 
     if request.POST:
         form = FormBudgetTransferUpdate(
@@ -1878,30 +1912,48 @@ def budget_transfer_update(request, _id, _area, _distributor, _channel):
             if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
                 message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'
                 no_save = True
+
+                return HttpResponseRedirect(reverse('budget-transfer-update', args=[_id, selected_area, selected_distributor, selected_channel, message]))
             else:
+                period = Closing.objects.get(document='BUDGET')
+
                 update = form.save(commit=False)
+                update.channel_from_id = selected_channel
                 update.channel_to_id = request.POST.get('channel_to')
                 update.save()
 
-                transfer_from = BudgetTransfer.objects.filter(
-                    area_id=selected_area, distributor_id=selected_distributor, channel_from_id=selected_channel).aggregate(Sum('amount'))['amount__sum']
-                budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
-                                                                                      budget_distributor_id=selected_distributor).values_list('budget_id', flat=True), budget_channel_id=selected_channel)
-                budget_detail.budget_transfer_minus = transfer_from['amount__sum']
-                budget_detail.save()
+                all_channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(
+                    budget_distributor_id=transfer.distributor, budget_area=transfer.area, budget_status='OPEN').budget_id)
+                for i in all_channel:
+                    transfer_from = BudgetTransfer.objects.filter(
+                        area_id=selected_area, distributor_id=selected_distributor, channel_from_id=i.budget_channel_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
+                    budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                                          budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=i.budget_channel_id)
+                    budget_detail.budget_transfer_minus = transfer_from if transfer_from else 0
+                    budget_detail.save()
+
+                    transfer_to = BudgetTransfer.objects.filter(
+                        area_id=selected_area, distributor_id=selected_distributor, channel_to_id=i.budget_channel_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
+                    channel_to = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                                       budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=i.budget_channel_id)
+                    channel_to.budget_transfer_plus = transfer_to if transfer_to else 0
+                    channel_to.save()
 
                 return HttpResponseRedirect(reverse('budget-transfer-view', args=['draft', _id]))
     else:
         form = FormBudgetTransferUpdate(instance=transfer)
 
+    msg = form.errors
     context = {
         'form': form,
         'data': transfer,
         'selected_area': selected_area,
         'selected_distributor': selected_distributor,
         'selected_channel': selected_channel,
+        'channel': channel,
         'channel_to': channel_to,
-        'budget_balance': budget_balance,
+        'budget_balance': budget_balance + amount,
+        'msg': msg,
         'message': message,
         'no_save': no_save,
         'segment': 'transfer',
@@ -1918,6 +1970,23 @@ def budget_transfer_update(request, _id, _area, _distributor, _channel):
 def budget_transfer_delete(request, _id):
     transfer = BudgetTransfer.objects.get(transfer_id=_id)
     transfer.delete()
+
+    period = Closing.objects.get(document='BUDGET')
+
+    transfer_from = BudgetTransfer.objects.filter(
+        area_id=transfer.area, distributor_id=transfer.distributor, channel_from_id=transfer.channel_from, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
+    budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=transfer.area,
+                                                                          budget_distributor_id=transfer.distributor, budget_status='OPEN').budget_id, budget_channel_id=transfer.channel_from)
+    budget_detail.budget_transfer_minus = transfer_from if transfer_from else 0
+    budget_detail.save()
+
+    transfer_to = BudgetTransfer.objects.filter(
+        area_id=transfer.area, distributor_id=transfer.distributor, channel_to_id=transfer.channel_to_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
+    channel_to = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=transfer.area,
+                                                                       budget_distributor_id=transfer.distributor, budget_status='OPEN').budget_id, budget_channel_id=transfer.channel_to_id)
+    channel_to.budget_transfer_plus = transfer_to if transfer_to else 0
+    channel_to.save()
+
     return HttpResponseRedirect(reverse('budget-transfer-index', args=['draft', ]))
 
 
@@ -2033,6 +2102,140 @@ def budget_transfer_release_approve(request, _id):
     transfer.save()
 
     return HttpResponseRedirect(reverse('budget-transfer-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER-RELEASE')
+def budget_transfer_release_return(request, _id):
+    recipients = []
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT transfer_id, email FROM apps_budgettransfer INNER JOIN apps_user ON apps_budgettransfer.entry_by = apps_user.user_id WHERE transfer_id = '" + str(_id) + "'")
+        entry_mail = cursor.fetchone()
+        recipients.append(entry_mail[1])
+
+        cursor.execute(
+            "SELECT transfer_id, email FROM apps_budgettransfer INNER JOIN apps_user ON apps_budgettransfer.update_by = apps_user.user_id WHERE transfer_id = '" + str(_id) + "'")
+        update_mail = cursor.fetchone()
+        recipients.append(update_mail[1])
+
+        cursor.execute(
+            "SELECT transfer_id, transfer_approval_email FROM apps_budgettransferrelease WHERE transfer_id = '" + str(_id) + "' AND transfer_approval_status = 'Y'")
+        approver_mail = cursor.fetchall()
+        for mail in approver_mail:
+            recipients.append(mail[1])
+
+    try:
+        release = BudgetTransferRelease.objects.filter(
+            transfer_id=_id, transfer_approval_status='Y')
+        for r in release:
+            r.transfer_approval_status = 'N'
+            r.transfer_approval_date = None
+            r.update_note = ''
+            r.save()
+    except BudgetTransferRelease.DoesNotExist:
+        pass
+
+    note = BudgetTransferRelease.objects.get(
+        transfer_id=_id, transfer_approval_id=request.user.user_id)
+    note.return_note = request.POST.get('return_note')
+    note.save()
+
+    transfer = BudgetTransfer.objects.get(transfer_id=_id)
+    transfer.status = 'DRAFT'
+    transfer.save()
+
+    subject = 'Budget Transfer Return'
+    message = 'Dear All, \n\nBudget Transfer No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
+        request.POST.get('return_note') + '\n\nClick this link to revise this budget transfer.\n' + host.url + 'budget_transfer/view/draft/' + str(_id) + \
+        '\n\nThank you.'
+    recipient_list = list(dict.fromkeys(recipients))
+    send_email(subject, message, recipient_list)
+
+    return HttpResponseRedirect(reverse('budget-transfer-release-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER-APPROVAL')
+def budget_transfer_matrix_index(request):
+    areas = AreaSales.objects.all()
+
+    context = {
+        'data': areas,
+        'segment': 'transfer_approval',
+        'group_segment': 'approval',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='TRANSFER-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/budget_transfer_matrix_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER-APPROVAL')
+def budget_transfer_matrix_view(request, _area):
+    area = AreaSales.objects.get(area_id=_area)
+    approvers = BudgetTransferMatrix.objects.filter(area_id=_area)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT user_id, username, position_name, q_transferapprover.approver_id FROM apps_user INNER JOIN apps_position ON apps_user.position_id = apps_position.position_id LEFT JOIN (SELECT * FROM apps_budgettransfermatrix WHERE area_id = '" + str(_area) + "') AS q_transferapprover ON apps_user.user_id = q_transferapprover.approver_id WHERE q_transferapprover.approver_id IS NULL")
+        users = cursor.fetchall()
+
+    if request.POST:
+        check = request.POST.getlist('checks[]')
+        for i in users:
+            if str(i[0]) in check:
+                try:
+                    approver = BudgetTransferMatrix(
+                        area_id=_area, approver_id=i[0])
+                    approver.save()
+                except IntegrityError:
+                    continue
+            else:
+                BudgetTransferMatrix.objects.filter(
+                    area_id=_area, approver_id=i[0]).delete()
+
+        return HttpResponseRedirect(reverse('budget-transfer-matrix-view', args=[_area]))
+
+    context = {
+        'data': area,
+        'users': users,
+        'approvers': approvers,
+        'segment': 'transfer_approval',
+        'group_segment': 'approval',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='TRANSFER-APPROVAL') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/budget_transfer_matrix_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER-APPROVAL')
+def budget_transfer_matrix_update(request, _area, _id):
+    approvers = BudgetTransferMatrix.objects.get(
+        area_id=_area, approver_id=_id)
+
+    if request.POST:
+        approvers.sequence = int(request.POST.get('sequence'))
+        approvers.save()
+
+        return HttpResponseRedirect(reverse('budget-transfer-matrix-view', args=[_area]))
+
+    return render(request, 'home/budget_transfer_matrix_view.html')
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='TRANSFER-APPROVAL')
+def budget_transfer_matrix_delete(request, _area, _id):
+    approvers = BudgetTransferMatrix.objects.get(
+        area_id=_area, approver_id=_id)
+    approvers.delete()
+
+    return HttpResponseRedirect(reverse('budget-transfer-matrix-view', args=[_area]))
 
 
 @login_required(login_url='/login/')
@@ -4855,12 +5058,6 @@ def program_add(request, _area, _distributor, _proposal):
             draft.proposal_id = selected_proposal
             draft.seq_number = _no.seq_number + 1 if _no else 1
             draft.entry_pos = request.user.position.position_id
-            deadline_str = request.POST.get('deadline')
-            # assuming the date is in 'YYYY-MM-DD' format
-            deadline_date = datetime.datetime.strptime(
-                deadline_str, '%Y-%m-%d').date()
-            draft.disclaimer = '<p><strong><em>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline_date.strftime(
-                '%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</em></strong></p>'
             draft.save()
 
             for approver in approvers:
@@ -4919,12 +5116,17 @@ def program_add(request, _area, _distributor, _proposal):
                 approver_position += '<td style="padding-left: 0; height: 12">' + \
                     print_approvers[approver].approver.position.position_name + '</td>'
 
+            bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+            bln = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+                   'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des']
+
             if no_save:
                 form = FormProgram()
             else:
-                form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'content': '<b><table style="width: 100%; height: 12;"><tr><td style="padding-left: 0;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 0;"><b>' + area.base_city + ', ' + datetime.datetime.now().strftime('%-d %B %Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br><br><br>' + '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
-                                            'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 12;"><tr><td style="padding-left: 0; width: 15%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 0; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Produk</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Periode</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + proposal.period_start.strftime("%d %b") + ' - ' + proposal.period_end.strftime("%d %b %Y") + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Detail Qty</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;"></td></tr></table>' +
-                                            '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'approval':
+                form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'header': '<b><table style="width: 100%; height: 12;"><tr><td style="padding-left: 0;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 0;"><b>' + area.base_city + ', ' + datetime.datetime.now().strftime('%-d') + ' ' + bulan[int(datetime.datetime.now().strftime('%m')) - 1] + ' ' + datetime.datetime.now().strftime('%Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br>', 'content': '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
+                                            'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 12;"><tr><td style="padding-left: 0; width: 15%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 0; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Produk</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Periode</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + proposal.period_start.strftime("%-d") + ' ' + bln[int(proposal.period_start.strftime('%m')) - 1] + ' - ' + proposal.period_end.strftime("%d") + ' ' + bln[int(proposal.period_end.strftime('%m')) - 1] + ' ' + proposal.period_end.strftime("%Y") + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Detail Qty</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;"></td></tr></table>' +
+                                            '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'disclaimer': '<p><strong><em>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline.strftime('%d') + ' ' + bulan[int(deadline.strftime('%m')) - 1] + ' ' + deadline.strftime('%Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</em></strong></p>', 'approval':
                                             '<p><br />Hormat Kami,</p>' +
                                             '<table style="width: 100%; height: 50"><tbody><tr>' + approver_signature + '</tr><tr>' +
                                                 approver_name + '</tr><tr>' + approver_position +
@@ -5033,12 +5235,6 @@ def program_update(request, _tab, _id):
             request.POST, request.FILES, instance=program)
         if form.is_valid():
             update = form.save(commit=False)
-            deadline_str = request.POST.get('deadline')
-            # assuming the date is in 'YYYY-MM-DD' format
-            deadline_date = datetime.datetime.strptime(
-                deadline_str, '%Y-%m-%d').date()
-            update.disclaimer = '<p><strong><em>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline_date.strftime(
-                '%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</em></strong></p>'
             update.save()
 
             return HttpResponseRedirect(reverse('program-view', args=[_tab, _id]))
@@ -5129,12 +5325,6 @@ def program_release_update(request, _id):
             request.POST, request.FILES, instance=program)
         if form.is_valid():
             update = form.save(commit=False)
-            deadline_str = request.POST.get('deadline')
-            # assuming the date is in 'YYYY-MM-DD' format
-            deadline_date = datetime.datetime.strptime(
-                deadline_str, '%Y-%m-%d').date()
-            update.disclaimer = '<p><strong><em>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline_date.strftime(
-                '%d %B %Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</em></strong></p>'
             deadline = _deadline if form.cleaned_data['deadline'] != _deadline else None
             content = _content if form.cleaned_data['content'] != _content else None
             update.save()

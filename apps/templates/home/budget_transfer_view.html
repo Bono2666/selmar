@@ -6,25 +6,24 @@
 
 {% load humanize %}
 
-
 <div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
-            <form action="{% url 'budget-transfer-update' data.transfer_id data.area data.distributor data.channel_from %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'budget-transfer-update' data.transfer_id data.area_id data.distributor_id selected_channel message %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="card">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-6 d-flex align-items-center">
+                            <div class="col-7 d-flex align-items-center">
                                 <h4 class="mb-2">Budget Transfer No. {{ data.transfer_id }}</h4>
                             </div>
-                            <div class="col-6 text-end">
-                                <a href="{% if crud == 'view' %}{% url 'budget-transfer-index' tab %}{% else %}{% url 'budget-transfer-view' tab data.transfer_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
-                                <a href="{% url 'budget-transfer-update' data.transfer_id selected_area selected_distributor selected_channel %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if status != 'DRAFT' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
+                            <div class="col-5 text-end">
+                                <a href="{% if crud == 'view' %}{% url 'budget-transfer-index' tab %}{% else %}{% url 'budget-transfer-view' 'open' data.transfer_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
+                                <a href="{% url 'budget-transfer-update' data.transfer_id data.area_id data.distributor_id data.channel_from_id '0' %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if status != 'DRAFT' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.transfer_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
-                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if status == 'DRAFT' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
-                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if hundreds == 0 %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.budget_status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button>
+                                <!-- <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" {% if data.status == 'DRAFT' %}hidden{% endif %} data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if hundreds == 0 %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button> -->
                             </div>
                         </div>
                     </div>
@@ -124,6 +123,11 @@
                     </div>
                     <div class="card-body">
                         <div class="pl-lg-0">
+                            <!-- {% if form.errors %}
+                            <div class="alert text-danger text-sm text-bg-light" role="alert">
+                                {{ msg }}
+                            </div>
+                            {% endif %} -->
                             <div class="row">
                                 <div class="col-md-2">
                                     <div class="shadow-none">
@@ -133,26 +137,30 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="shadow-none">
-                                        {{ form.area.label_tag }}
-                                        {{ form.area }}
+                                        <label class="text-muted text-xs">Area</label>
+                                        <input type="text" name="area" id="area" class="form-control form-control-sm" value="{{ data.area.area_name }}" disabled>
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-8">
+                                <div class="col-md-6">
                                     <div class="shadow-none">
-                                        {{ form.distributor.label_tag }}
-                                        {{ form.distributor }}
+                                        <label class="text-muted text-xs">Distributor</label>
+                                        <input type="text" name="distributor" id="distributor" class="form-control form-control-sm" value="{{ data.distributor.distributor_name }}" disabled>
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-4">
-                                    <div class="shadow-none">
-                                        {{ form.channel_from.label_tag }}
-                                        {{ form.channel_from }}
+                                    <div class="shadow-none">   
+                                        <label class="form-control-label" for="channel_from">Channel From</label>
+                                        <select name="channel_from" id="channel_from" class="form-control form-select-sm" {% if crud == 'view' %}disabled{% endif %} onchange="window.location.href = this.value;">
+                                            {% for item in channel %}
+                                            <option value="{% url 'budget-transfer-update' data.transfer_id data.area_id data.distributor_id item.0 '0' %}" {% if item.0 == selected_channel %}selected{% endif %}>{{ item.0 }} = {{ item.2|intcomma }}</option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -160,10 +168,10 @@
                                 <div class="col-4">
                                     <div class="shadow-none">
                                         {{ form.channel_to.label_tag }}
-                                        <select name="channel_to" id="channel_to" class="form-control form-select-sm" {% if crud == 'view' %}disabled{% endif %}>
+                                        <select name="channel_to" id="channel_to" class="form-control form-select-sm" {% if crud == 'view' %}disabled{% endif %} required>
                                             <option value="">-- Select Channel To --</option>
                                             {% for item in channel_to %}
-                                            <option value="{{ item.0 }}">{{ item.0 }} - {{ item.1 }}</option>
+                                            <option value="{{ item.0 }}" {% if item.0 == data.channel_to_id %}selected{% endif %}>{{ item.0 }} - {{ item.1 }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -173,8 +181,10 @@
                                 <div class="col-4">
                                     <div class="shadow-none">
                                         {{ form.amount.label_tag }}
-                                        {{ form.amount|intcomma }}
-                                        <span class="text-sm text-danger"> Maximum amount is {{ budget_balance|intcomma }}</span>
+                                        {{ form.amount }}
+                                        <label class="text-muted text-xs">
+                                            <span class="text-danger">*</span> Maximum amount is {% if budget_balance %}{{ budget_balance|intcomma }}{% else %}0{% endif %}
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -185,11 +195,38 @@
         </div>
     </div>
 </div>
+<div class="container">
+    <div class="modal fade" id="popup-message" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalLabel">Warning</h5>
+                </div>
+                <div class="modal-body border-bottom-0">
+                    Transfer amount is greater than the budget balance or less than or equal to 0.
+                </div>
+                <div class="modal-footer border-0">
+                    <a href="{% url 'budget-transfer-update' data.transfer_id data.area_id data.distributor_id data.channel_from_id '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-check"></i>&nbsp;&nbsp;Ok</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock content %}
 
 {% block javascripts %}
 <script>
+    let message = "{{ message }}";
+
+    // if (message != '0') {
+    //     $('#popup-message').modal({
+    //         backdrop: 'static',
+    //         keyboard: false
+    //     });
+    // }
+
     $(document).ready( function () {
         $('#releaseTable').DataTable({
             'searching': false,

@@ -4,10 +4,12 @@
 
 {% block content %}
 
+{% load humanize %}
+
 <div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
-            <form action="{% url 'budget-transfer-add' selected_area selected_distributor %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'budget-transfer-add' selected_area selected_distributor selected_channel message %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="card">
                     <div class="card-header">
@@ -23,16 +25,16 @@
                     </div>
                     <div class="card-body">
                         <div class="pl-lg-0">
-                            {% if message %}
+                            {% if message != '0' %}
                             <div class="alert text-danger text-sm text-bg-light" role="alert">
                                 {{ message }}
                             </div>
                             {% endif %}
-                            {% if form.errors %}
+                            <!-- {% if form.errors %}
                             <div class="alert text-danger text-sm text-bg-light" role="alert">
                                 {{ msg }}
                             </div>
-                            {% endif %}
+                            {% endif %} -->
                             <div class="row">
                                 <div class="col-md-2">
                                     <div class="shadow-none">
@@ -44,11 +46,11 @@
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="shadow-none">
-                                        {{ form.area.label_tag }}
-                                        <select name="area" id="area" class="form-control form-select-sm">
+                                        <label class="form-control-label" for="area">Area</label>
+                                        <select name="area" id="area" class="form-control form-select-sm" onchange="window.location.href = this.value;">
                                             <option value="">-- Select Area --</option>
                                             {% for item in area %}
-                                            <option value="{% url 'budget-transfer-add' item.0 '0' '0' %}" {% if item.0 == selected_area %}selected{% endif %}>{{ selected_area }}</option>
+                                            <option value="{% url 'budget-transfer-add' item.0 '0' '0' '0' %}" {% if item.0 == selected_area %}selected{% endif %}>{{ item.1 }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -57,11 +59,11 @@
                             <div class="row">
                                 <div class="col-md-8">
                                     <div class="shadow-none">
-                                        {{ form.distributor.label_tag }}
-                                        <select name="distributor" id="distributor" class="form-control form-select-sm">
+                                        <label class="form-control-label" for="distributor">Distributor</label>
+                                        <select name="distributor" id="distributor" class="form-control form-select-sm" onchange="window.location.href = this.value;">
                                             <option value="">-- Select Distributor --</option>
                                             {% for item in distributor %}
-                                            <option value="{% url 'budget-transfer-add' selected_area item.distributor '0' %}">{{ item.distributor.distributor_name }}</option>
+                                            <option value="{% url 'budget-transfer-add' selected_area item.0 '0' '0' %}" {% if item.0 == selected_distributor %}selected{% endif %}>{{ item.1 }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -70,11 +72,11 @@
                             <div class="row">
                                 <div class="col-4">
                                     <div class="shadow-none">
-                                        {{ form.channel_from.label_tag }}
-                                        <select name="channel_from" id="channel_from" class="form-control form-select-sm">
+                                        <label class="form-control-label" for="channel_from">Channel From</label>
+                                        <select name="channel_from" id="channel_from" class="form-control form-select-sm" onchange="window.location.href = this.value;">
                                             <option value="">-- Select Channel From --</option>
                                             {% for item in channel %}
-                                            <option value="{{ item.0 }}">{{ item.0 }} = {{ item.2 }}</option>
+                                            <option value="{% url 'budget-transfer-add' selected_area selected_distributor item.0 '0' %}" {% if item.0 == selected_channel %}selected{% endif %}>{{ item.0 }} = {{ item.2|intcomma }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -97,8 +99,10 @@
                                 <div class="col-4">
                                     <div class="shadow-none">
                                         {{ form.amount.label_tag }}
-                                        {{ form.amount|intcomma }}
-                                        <span class="text-sm text-danger"> Maximum amount is {{ budget_balance|intcomma }}</span>
+                                        {{ form.amount }}
+                                        <label class="text-muted text-xs">
+                                            <span class="text-danger">*</span> Maximum amount is {% if budget_balance %}{{ budget_balance|intcomma }}{% else %}0{% endif %}
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -109,6 +113,24 @@
         </div>
     </div>
 </div>
+<div class="container">
+    <div class="modal fade" id="popup-message" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalLabel">Warning</h5>
+                </div>
+                <div class="modal-body border-bottom-0">
+                    Transfer amount is greater than the budget balance or less than or equal to 0.
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-sm bg-gradient-dark mb-0" data-bs-dismiss="modal"><i class="fas fa-check"></i>&nbsp;&nbsp;Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock content %}
 
@@ -116,6 +138,14 @@
 <script>
     let closing = "{{ closing }}";
     let closingPeriod = "{{ closing_period }}";
+    let message = "{{ message }}";
+
+    // if (message != '0') {
+    //     $('#popup-message').modal({
+    //         backdrop: 'static',
+    //         keyboard: false
+    //     });
+    // }
 
     $(document).ready(function() {
         $('#areaTable').DataTable({

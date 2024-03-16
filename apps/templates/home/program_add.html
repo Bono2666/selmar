@@ -47,6 +47,11 @@
                                 </div>
                             </div>
                             <div class="row mt-3">
+                                <div class="col-md-12">
+                                    {{ form.header }}
+                                </div>
+                            </div>
+                            <div class="row mt-3">
                                 {{ form.area }}
                                 <div class="col-md-12">
                                     <div class="shadow-none">
@@ -61,6 +66,11 @@
                                             {{ form.footer }}
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    {{ form.disclaimer }}
                                 </div>
                             </div>
                         </div>
@@ -260,9 +270,29 @@
         window.location = $(this).data('href');
     });
 
-    // tinyMCE.init({
-    //     selector: '#id_content',    
-    //     readonly: 1,
-    // });
+    tinyMCE.init({
+        selector: '#id_header',    
+        readonly: 1,
+        width: '75%',
+        height: 150,
+        content_style: "body { font-size: 10pt; overflow: hidden; }", // Add overflow: hidden to disable scroll
+        menubar: false,
+        statusbar: false,
+        toolbar: false,
+        autoresize_min_height: 150,
+        autoresize_max_height: 150,
+        autoresize_bottom_margin: 0, // Keep this line to disable scroll
+    });
+
+    tinyMCE.init({
+        selector: '#id_disclaimer',    
+        readonly: 1,
+        width: '75%',
+        height: 80,
+        content_style: "body { font-size: 10pt; }",
+        menubar: false,
+        statusbar: false,
+        toolbar: false,        
+    });
 </script>
 {% endblock javascripts %}

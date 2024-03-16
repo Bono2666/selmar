@@ -7,6 +7,10 @@ from django.forms import DateInput
 from tinymce.widgets import TinyMCE
 
 
+class DateInput(forms.DateInput):
+    input_type = 'date'
+
+
 class FormUser(UserCreationForm):
     def __init__(self, *args, **kwargs):
         super(FormUser, self).__init__(*args, **kwargs)
@@ -573,22 +577,18 @@ class FormBudgetTransfer(ModelForm):
         super(FormBudgetTransfer, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['date'].label = 'Date'
-        self.fields['area'].label = 'Area'
-        self.fields['distributor'].label = 'Distributor'
-        self.fields['channel_from'].label = 'From Channel'
         self.fields['channel_to'].label = 'To Channel'
         self.fields['amount'].label = 'Amount'
-        self.fields['date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['channel_from'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['amount'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
 
     class Meta:
         model = BudgetTransfer
-        fields = ['date', 'area', 'distributor',
-                  'channel_from', 'channel_to', 'amount']
+        fields = ['date', 'channel_to', 'amount']
+
+        widgets = {
+            'date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
+        }
 
 
 class FormBudgetTransferView(ModelForm):
@@ -596,21 +596,24 @@ class FormBudgetTransferView(ModelForm):
         super(FormBudgetTransferView, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['date'].label = 'Date'
+        self.fields['area'].label = 'Area'
+        self.fields['distributor'].label = 'Distributor'
         self.fields['channel_from'].label = 'From Channel'
         self.fields['channel_to'].label = 'To Channel'
         self.fields['amount'].label = 'Amount'
-        self.fields['date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['channel_from'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['channel_to'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['amount'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
 
     class Meta:
         model = BudgetTransfer
-        fields = ['date', 'channel_from', 'channel_to', 'amount']
+        fields = ['date', 'area', 'distributor',
+                  'channel_from', 'channel_to', 'amount']
+
+        widgets = {
+            'date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy', 'readonly': 'readonly'}),
+        }
 
 
 class FormBudgetTransferUpdate(ModelForm):
@@ -618,23 +621,18 @@ class FormBudgetTransferUpdate(ModelForm):
         super(FormBudgetTransferUpdate, self).__init__(*args, **kwargs)
         self.label_suffix = ''
         self.fields['date'].label = 'Date'
-        self.fields['channel_from'].label = 'From Channel'
         self.fields['channel_to'].label = 'To Channel'
         self.fields['amount'].label = 'Amount'
-        self.fields['date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['area'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['distributor'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['channel_from'].widget = forms.TextInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['amount'].widget = forms.NumberInput(
             attrs={'class': 'form-control-sm no-spinners'})
 
     class Meta:
         model = BudgetTransfer
-        fields = ['channel_from', 'channel_to', 'amount']
+        fields = ['date', 'channel_to', 'amount']
+
+        widgets = {
+            'date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
+        }
 
 
 class FormProposalMatrix(ModelForm):
@@ -782,10 +780,6 @@ class FormDivisionView(ModelForm):
     class Meta:
         model = Division
         fields = ['division_id', 'division_name']
-
-
-class DateInput(forms.DateInput):
-    input_type = 'date'
 
 
 class FormProposal(ModelForm):
@@ -1014,12 +1008,14 @@ class FormProgram(ModelForm):
 
     class Meta:
         model = Program
-        fields = ['area', 'deadline', 'content',
+        fields = ['area', 'deadline', 'header', 'content', 'disclaimer',
                   'approval', 'footer']
 
         widgets = {
             'deadline': DateInput(attrs={'class': 'form-control form-control-sm'}),
-            'content': TinyMCE(attrs={'cols': 80, 'rows': 30}),
+            'header': TinyMCE(attrs={'cols': 80, 'rows': 5, 'readonly': 'readonly'}),
+            'content': TinyMCE(attrs={'cols': 80, 'rows': 40}),
+            'disclaimer': TinyMCE(attrs={'cols': 80, 'rows': 2, 'readonly': 'readonly'}),
             'approval': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 3}),
             'footer': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 3}),
         }
@@ -1033,11 +1029,13 @@ class FormProgramView(ModelForm):
 
     class Meta:
         model = Program
-        fields = ['deadline', 'content']
+        fields = ['deadline', 'header', 'content', 'disclaimer']
 
         widgets = {
             'deadline': DateInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
-            'content': TinyMCE(attrs={'cols': 80, 'rows': 30, 'readonly': 'readonly'}),
+            'header': TinyMCE(attrs={'cols': 80, 'rows': 5, 'readonly': 'readonly'}),
+            'content': TinyMCE(attrs={'cols': 80, 'rows': 40, 'readonly': 'readonly'}),
+            'disclaimer': TinyMCE(attrs={'cols': 80, 'rows': 2, 'readonly': 'readonly'}),
         }
 
 
@@ -1049,11 +1047,13 @@ class FormProgramUpdate(ModelForm):
 
     class Meta:
         model = Program
-        fields = ['deadline', 'content']
+        fields = ['deadline', 'header', 'content', 'disclaimer']
 
         widgets = {
             'deadline': DateInput(attrs={'class': 'form-control form-control-sm'}),
-            'content': TinyMCE(attrs={'cols': 80, 'rows': 30}),
+            'header': TinyMCE(attrs={'cols': 80, 'rows': 5, 'readonly': 'readonly'}),
+            'content': TinyMCE(attrs={'cols': 80, 'rows': 40}),
+            'disclaimer': TinyMCE(attrs={'cols': 80, 'rows': 2, 'readonly': 'readonly'}),
         }
 
 

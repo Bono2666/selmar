@@ -115,11 +115,11 @@
                 <span class="nav-link-text ms-1 {% if 'TRANSFER' not in role and not request.user.is_superuser %}disabled{% endif %}">List</span>
               </a>
             </li>
-            <li class="nav-item {% if segment == 'transfer_release' %}active{% endif %} list-unstyled">
+            <!-- <li class="nav-item {% if segment == 'transfer_release' %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'TRANSFER-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'budget-transfer-release-index' %}"{% endif %}>
                 <span class="nav-link-text ms-1 {% if 'TRANSFER-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Release</span>
               </a>
-            </li>
+            </li> -->
           </ul>
         </div>
       </li>
@@ -433,6 +433,11 @@
                 <span class="nav-link-text ms-1 {% if 'BUDGET-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}">Budget Approval</span>
               </a>
             </li>
+            <!-- <li class="nav-item {% if 'transfer_approval' in segment %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'TRANSFER-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'budget-transfer-matrix-index' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'TRANSFER-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}">Transfer Approval</span>
+              </a>
+            </li> -->
             <li class="nav-item {% if 'proposal_matrix' in segment %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'PROPOSAL-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'proposal-matrix-index' %}"{% endif %}>
                 <span class="nav-link-text ms-1 {% if 'PROPOSAL-APPROVAL' not in role and not request.user.is_superuser %}disabled{% endif %}">Proposal Approval</span>

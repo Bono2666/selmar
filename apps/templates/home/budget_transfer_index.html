@@ -16,13 +16,13 @@
                         <h4>Budget Transfer</h4>
                     </div>
                     <div class="col-6 text-end">
-                        <a class="btn btn-sm bg-gradient-danger mb-0 {% if not btn.add and not request.user.is_superuser %}disabled{% endif %}" href=""><i class="fas fa-plus"></i>&nbsp;&nbsp;New Budget Transfer</a>
+                        <a class="btn btn-sm bg-gradient-danger mb-0 {% if not btn.add and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'budget-transfer-add' '0' '0' '0' '0' %}"><i class="fas fa-plus"></i>&nbsp;&nbsp;New Budget Transfer</a>
                     </div>
                 </div>
-                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <!-- <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link text-sm text-body {% if tab == 'approved' %}active{% endif %}" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-tab-pane" type="button"
-                            role="tab" aria-controls="approved-tab-pane" aria-selected="true">Completed {% if approved_count > 0 %}({{ approved_count }}){% endif %}</button>
+                        <button class="nav-link text-sm text-body {% if tab == 'open' %}active{% endif %}" id="open-tab" data-bs-toggle="tab" data-bs-target="#open-tab-pane" type="button"
+                            role="tab" aria-controls="open-tab-pane" aria-selected="true">Completed {% if approved_count > 0 %}({{ approved_count }}){% endif %}</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link text-sm text-body {% if tab == 'draft' %}active{% endif %}" id="draft-tab" data-bs-toggle="tab" data-bs-target="#draft-tab-pane" type="button"
@@ -32,12 +32,12 @@
                         <button class="nav-link text-sm text-body {% if tab == 'inapproval' %}active{% endif %}" id="inapproval-tab" data-bs-toggle="tab" data-bs-target="#inapproval-tab-pane" type="button"
                             role="tab" aria-controls="inapproval-tab-pane" aria-selected="false">In Approval {% if inapprovals_count > 0 %}({{ inapprovals_count }}){% endif %}</button>
                     </li>
-                </ul>
-                <div class="tab-content pt-4" id="myTabContent">
-                    <div class="tab-pane fade {% if tab == 'open' %}show active{% endif %}" id="approved-tab-pane" role="tabpanel" aria-labelledby="approved-tab" tabindex="0">
+                </ul> -->
+                <!-- <div class="tab-content pt-4" id="myTabContent">
+                    <div class="tab-pane fade {% if tab == 'open' %}show active{% endif %}" id="open-tab-pane" role="tabpanel" aria-labelledby="open-tab" tabindex="0">
                         <div class="card-body px-0 pt-0 pb-2">
                             <div class="table-responsive p-0">
-                                <table class="table hover align-items-center mb-0" id="approvedTable">
+                                <table class="table hover align-items-center mb-0" id="openTable">
                                     <thead>
                                         <tr>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Budget Transfer No.
@@ -102,7 +102,7 @@
                                     </thead>
                                     <tbody>
                                         {% for item in drafts %}
-                                        <tr data-href="" class="cursor-pointer">
+                                        <tr data-href="{% url 'budget-transfer-view' tab item.transfer_id %}" class="cursor-pointer">
                                             <td>
                                                 <div class="d-flex pe-2 py-0">
                                                     <div class="d-flex flex-column justify-content-center">
@@ -181,6 +181,53 @@
                             </div>
                         </div>
                     </div>
+                </div> -->
+                <div class="card-body px-0 pt-0 pb-2">
+                    <div class="table-responsive p-0">
+                        <table class="table hover align-items-center mb-0" id="openTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Budget Transfer No.
+                                    </th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Date</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Area</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Distributor</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">
+                                        Amount</th>
+                                    <!-- <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Status</th> -->
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in approved %}
+                                <tr data-href="{% url 'budget-transfer-view' tab item.transfer_id %}" class="cursor-pointer">
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.transfer_id }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.date|date:"d M Y" }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.area.area_name }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.distributor.distributor_name }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.amount|intcomma }}</h6>
+                                    </td>
+                                    <!-- <td>
+                                        <h6 class="mb-0 text-sm">COMPLETED</h6>
+                                    </td> -->
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -193,7 +240,7 @@
 
 <script>
     $(document).ready( function () {
-        $('#approvedTable').DataTable();
+        $('#openTable').DataTable();
         $('#draftTable').DataTable();
         $('#pendingTable').DataTable();
         $('#inapprovalTable').DataTable();

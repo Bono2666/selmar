@@ -787,6 +787,7 @@ class Program(models.Model):
     area = models.ForeignKey(AreaSales, on_delete=models.CASCADE, null=True)
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, null=True)
     deadline = models.DateTimeField(null=True)
+    header = HTMLField(null=True)
     content = HTMLField()
     approval = HTMLField(null=True)
     footer = HTMLField(null=True)
