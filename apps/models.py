@@ -667,7 +667,7 @@ class Proposal(models.Model):
     objectives = models.TextField()
     mechanism = models.TextField()
     remarks = models.CharField(max_length=200, null=True)
-    additional = models.BooleanField(default=False)
+    reference = models.CharField(max_length=50, null=True)
     total_cost = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     proposal_claim = models.DecimalField(

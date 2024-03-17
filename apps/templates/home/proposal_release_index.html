@@ -24,6 +24,8 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Proposal No.
                                     </th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Reference Proposal</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Date</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Channel</th>
@@ -42,6 +44,9 @@
                                                 <h6 class="mb-0 text-sm">{{ item.0 }}</h6>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.6 %}{{ item.6 }}{% endif %}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">{{ item.1|date:"d M Y" }}</h6>

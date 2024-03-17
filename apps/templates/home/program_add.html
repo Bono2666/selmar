@@ -171,7 +171,7 @@
     </div>
 </div>
 <div class="container">
-    <div class="modal fade" id="dialog-popup3" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    <div class="modal modal-lg fade" id="dialog-popup3" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -185,6 +185,14 @@
                                 <tr>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Proposal</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Program Name</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Channel</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Period Start</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Period End</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
                                         Balance</th>
                                 </tr>
@@ -196,6 +204,34 @@
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
                                                 <h6 class="mb-0 text-sm">{{ item.proposal_id }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="py-0">
+                                            <div>
+                                                <h6 class="mb-0 text-sm">{{ item.program_name|truncatechars:30 }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="py-0">
+                                            <div>
+                                                <h6 class="mb-0 text-sm">{{ item.channel }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="py-0">
+                                            <div>
+                                                <h6 class="mb-0 text-sm">{{ item.period_start|date:"d M Y" }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="py-0">
+                                            <div>
+                                                <h6 class="mb-0 text-sm">{{ item.period_end|date:"d M Y" }}</h6>
                                             </div>
                                         </div>
                                     </td>
@@ -267,7 +303,12 @@
     });
 
     $(document).on('click', 'tbody tr', function() {
-        window.location = $(this).data('href');
+        var href = $(this).data('href');
+        if(href) { // Check if href data exists
+            window.location = href;
+        } else {
+            console.log("No data in href");
+        }
     });
 
     tinyMCE.init({

@@ -256,8 +256,14 @@
                                     <div class="text-sm text-danger">
                                         {{ form.remarks.errors }}
                                     </div>
-                                    <div class="form-group shadow-none mt-2 mb-0 me-1 text-end">
-                                        <label class="form-control-label">Additional Proposal</label>&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" class="border mt-1" name="additional" {% if data.additional %}checked{% endif %} {% if crud == 'view' %}disabled{% endif %}/>
+                                    <div class="form-group shadow-none">
+                                        {{ form.reference.label_tag }}
+                                        <select name="reference" id="reference" class="form-control form-select-sm" {% if crud != 'update' %}disabled{% endif %}>
+                                            <option value="">Select Reference Proposal</option>
+                                            {% for item in refs %}
+                                            <option value="{{ item.proposal_id }}" {% if item.proposal_id == data.reference %}selected{% endif %}>{{ item.proposal_id }} - {{ item.program_name|truncatechars:50 }}</option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                 </div>
                             </div>

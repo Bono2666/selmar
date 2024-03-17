@@ -1381,6 +1381,13 @@ def budget_view(request, _tab, _id, _msg):
     budget.budget_upping = '{:,}'.format(budget.budget_upping)
     budget.budget_total = '{:,}'.format(budget.budget_total)
     form = FormBudgetView(instance=budget)
+    total_transfer_minus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_transfer_minus'))['total']
+    total_transfer_plus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_transfer_plus'))['total']
+    total_proposed = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_proposed'))['total']
+
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
     hundreds = 0
     for i in budget_detail:
@@ -1416,6 +1423,9 @@ def budget_view(request, _tab, _id, _msg):
         'form': form,
         'data': budget,
         'hundreds': hundreds,
+        'total_transfer_minus': total_transfer_minus,
+        'total_transfer_plus': total_transfer_plus,
+        'total_proposed': total_proposed,
         'status': budget.budget_status,
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
@@ -2263,7 +2273,7 @@ def budget_release_index(request):
 def proposal_release_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT apps_proposal.proposal_id, apps_proposal.proposal_date, apps_proposal.channel, apps_division.division_name, apps_proposal.total_cost, apps_proposal.status, apps_proposalrelease.sequence FROM apps_division INNER JOIN apps_proposal ON apps_division.division_id = apps_proposal.division_id INNER JOIN apps_proposalrelease ON apps_proposal.proposal_id = apps_proposalrelease.proposal_id INNER JOIN (SELECT proposal_id, MIN(sequence) AS seq FROM apps_proposalrelease WHERE proposal_approval_status = 'N' GROUP BY proposal_id ORDER BY sequence ASC) AS q_group ON apps_proposalrelease.proposal_id = q_group.proposal_id AND apps_proposalrelease.sequence = q_group.seq WHERE (apps_proposal.status = 'PENDING' OR apps_proposal.status = 'IN APPROVAL') AND apps_proposalrelease.proposal_approval_id = '" + str(request.user.user_id) + "'")
+            "SELECT apps_proposal.proposal_id, apps_proposal.proposal_date, apps_proposal.channel, apps_division.division_name, apps_proposal.total_cost, apps_proposal.status, apps_proposal.reference, apps_proposalrelease.sequence FROM apps_division INNER JOIN apps_proposal ON apps_division.division_id = apps_proposal.division_id INNER JOIN apps_proposalrelease ON apps_proposal.proposal_id = apps_proposalrelease.proposal_id INNER JOIN (SELECT proposal_id, MIN(sequence) AS seq FROM apps_proposalrelease WHERE proposal_approval_status = 'N' GROUP BY proposal_id ORDER BY sequence ASC) AS q_group ON apps_proposalrelease.proposal_id = q_group.proposal_id AND apps_proposalrelease.sequence = q_group.seq WHERE (apps_proposal.status = 'PENDING' OR apps_proposal.status = 'IN APPROVAL') AND apps_proposalrelease.proposal_approval_id = '" + str(request.user.user_id) + "'")
         release = cursor.fetchall()
 
     context = {
@@ -2288,6 +2298,7 @@ def budget_release_view(request, _id, _msg, _is_revise):
     budget.budget_upping = '{:,}'.format(budget.budget_upping)
     budget.budget_total = '{:,}'.format(budget.budget_total)
     form = FormBudgetView(instance=budget)
+
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
     for detail in budget_detail:
         detail.budget_amount = '{:,}'.format(detail.budget_amount)
@@ -2337,6 +2348,8 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
         budget=proposal.budget, budget_channel=proposal.channel)
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
+    refs = Proposal.objects.filter(
+        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference__isnull=True).exclude(proposal_id=_id).order_by('-proposal_date')
     form_attachment = FormProposalAttachment()
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     form_incremental = FormIncrementalSales()
@@ -2364,6 +2377,7 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
     context = {
         'form': form,
         'divs': divs,
+        'refs': refs,
         'formAttachment': form_attachment,
         'attachment': attachment,
         'formInc': form_incremental,
@@ -2512,6 +2526,8 @@ def budget_release_update(request, _id):
 def proposal_release_update(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     divs = Division.objects.all()
+    refs = Proposal.objects.filter(
+        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference__isnull=True).exclude(proposal_id=_id).order_by('-proposal_date')
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     cost = ProjectedCost.objects.filter(proposal_id=_id)
@@ -2543,7 +2559,7 @@ def proposal_release_update(request, _id):
     _obj = proposal.objectives
     _mech = proposal.mechanism
     _rem = proposal.remarks
-    _add = proposal.additional
+    _add = proposal.reference
 
     if request.POST:
         form = FormProposalUpdate(
@@ -2566,9 +2582,9 @@ def proposal_release_update(request, _id):
                 objectives = _obj if form.cleaned_data['objectives'] != _obj else None
                 mechanism = _mech if form.cleaned_data['mechanism'] != _mech else None
                 remarks = _rem if form.cleaned_data['remarks'] != _rem else None
-                additional = _add if request.POST.get(
-                    'additional') != _add else None
-                parent.additional = 1 if request.POST.get('additional') else 0
+                reference = _add if request.POST.get(
+                    'reference') != _add else None
+                parent.reference = request.POST.get('reference')
                 parent.save()
 
                 recipients = []
@@ -2630,8 +2646,8 @@ def proposal_release_update(request, _id):
                     msg += 'Mechanism:\n' + str(mechanism) + '\n'
                 if remarks:
                     msg += 'Remarks: ' + str(remarks) + '\n'
-                if additional:
-                    msg += 'Additional Proposal: ' + str(additional) + '\n'
+                if reference:
+                    msg += 'Reference Proposal: ' + str(reference) + '\n'
 
                 msg += '\nAFTER\n'
                 if program_name:
@@ -2663,9 +2679,9 @@ def proposal_release_update(request, _id):
                 if remarks:
                     msg += 'Remarks: ' + \
                         str(form.cleaned_data['remarks']) + '\n'
-                if additional:
-                    msg += 'Additional Proposal: ' + \
-                        str(form.cleaned_data['additional']) + '\n'
+                if reference:
+                    msg += 'Reference Proposal: ' + \
+                        str(form.cleaned_data['reference']) + '\n'
 
                 msg += '\nNote: ' + \
                     str(release.revise_note) + '\n\nClick the following link to view the proposal.\n' + host.url + 'proposal/view/inapproval/' + str(_id) + '/0/0/0/' + \
@@ -2681,6 +2697,7 @@ def proposal_release_update(request, _id):
     msg = form.errors
     context = {
         'form': form,
+        'refs': refs,
         'attachment': attachment,
         'incremental': incremental,
         'cost': cost,
@@ -4336,7 +4353,7 @@ def proposal_index(request, _tab):
     draft_count = Proposal.objects.filter(status='DRAFT', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').count
     inapprovals = Proposal.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
-        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').values_list('proposal_id', 'proposal_date', 'channel', 'total_cost', 'proposal_claim', 'balance', ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1])
+        user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').values_list('proposal_id', 'proposal_date', 'channel', 'total_cost', 'proposal_claim', 'balance', 'reference', ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1])
     inapproval_count = Proposal.objects.filter(status='IN APPROVAL', area__in=AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', flat=True)).order_by('-proposal_id').count
     opens = Proposal.objects.filter(status='OPEN', area__in=AreaUser.objects.filter(
@@ -4409,6 +4426,9 @@ def proposal_add(request, _area, _budget, _channel):
         budget_id=selected_budget) if selected_budget != '0' else None
     distributor = Budget.objects.get(
         budget_id=selected_budget).budget_distributor_id if selected_budget != '0' else None
+    refs = Proposal.objects.filter(status='OPEN',
+                                   budget_id=selected_budget, channel=selected_channel, reference__isnull=True).order_by('-proposal_date')
+
     message = ''
     no_save = False
     if selected_area != '0' and selected_channel != '0':
@@ -4444,7 +4464,7 @@ def proposal_add(request, _area, _budget, _channel):
             else:
                 parent.budget_id = selected_budget
                 parent.channel = selected_channel
-                parent.additional = 1 if request.POST.get('additional') else 0
+                parent.reference = request.POST.get('reference')
                 parent.status = 'DRAFT'
                 parent.seq_number = _no.seq_number + 1 if _no else 1
                 parent.entry_pos = request.user.position.position_id
@@ -4485,6 +4505,7 @@ def proposal_add(request, _area, _budget, _channel):
         'selected_area': selected_area,
         'selected_budget': selected_budget,
         'selected_channel': selected_channel,
+        'refs': refs,
         'msg': msg,
         'message': message,
         'no_save': no_save,
@@ -4507,6 +4528,8 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         budget=proposal.budget, budget_channel=proposal.channel)
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
+    refs = Proposal.objects.filter(
+        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference__isnull=True).exclude(proposal_id=_id).order_by('-proposal_date')
     form_attachment = FormProposalAttachment()
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     form_incremental = FormIncrementalSales()
@@ -4545,6 +4568,7 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         'budget': budget,
         'form': form,
         'divs': divs,
+        'refs': refs,
         'formAttachment': form_attachment,
         'attachment': attachment,
         'formInc': form_incremental,
@@ -4885,6 +4909,8 @@ def proposal_cost_update(request, _tab, _id, _activities):
 def proposal_update(request, _tab, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     divs = Division.objects.all()
+    refs = Proposal.objects.filter(
+        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference__isnull=True).exclude(proposal_id=_id).order_by('-proposal_date')
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     cost = ProjectedCost.objects.filter(proposal_id=_id)
@@ -4915,7 +4941,7 @@ def proposal_update(request, _tab, _id):
             if parent.duration.days < 0:
                 message = 'Period end must be greater than period start.'
             else:
-                parent.additional = 1 if form.cleaned_data['additional'] else 0
+                parent.reference = form.cleaned_data['reference']
                 parent.save()
                 return HttpResponseRedirect(reverse('proposal-view', args=[_tab, _id, '0', '0', '0']))
     else:
@@ -4927,6 +4953,7 @@ def proposal_update(request, _tab, _id):
         'form': form,
         'data': proposal,
         'divs': divs,
+        'refs': refs,
         'attachment': attachment,
         'incremental': incremental,
         'cost': cost,
@@ -5021,7 +5048,7 @@ def program_add(request, _area, _distributor, _proposal):
     distributors = Proposal.objects.filter(
         status='OPEN', area=selected_area, balance__gt=0).values_list('budget__budget_distributor__distributor_id', 'budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
     proposals = Proposal.objects.filter(
-        status='OPEN', area=selected_area, balance__gt=0, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor).order_by('-proposal_id') if selected_distributor != '0' else None
+        status='OPEN', area=selected_area, balance__gt=0, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor, reference__isnull=True).order_by('-proposal_id') if selected_distributor != '0' else None
 
     message = ''
     no_save = False
@@ -5797,8 +5824,8 @@ def claim_add(request, _area, _distributor, _program):
         if int(request.POST.get('amount')) > int(proposal.balance) and request.POST.get('add_proposal') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
-            add_proposals = Proposal.objects.filter(status='OPEN', area=selected_area, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor, additional=True).exclude(
-                proposal_id=proposal.proposal_id).order_by('-proposal_id') if selected_program != '0' else None
+            add_proposals = Proposal.objects.filter(
+                status='OPEN', balance__gte=difference, reference=program.proposal_id).order_by('-proposal_id')
         else:
             if form.is_valid():
                 draft = form.save(commit=False)
@@ -5867,7 +5894,8 @@ def claim_add(request, _area, _distributor, _program):
 
                 return HttpResponseRedirect(reverse('claim-view', args=['draft', _id]))
     else:
-        form = FormClaim(initial={'area': selected_area, 'claim_id': _id})
+        form = FormClaim(initial={'area': selected_area, 'claim_id': _id,
+                         'due_date': datetime.datetime.now().date() + datetime.timedelta(days=30)})
 
     msg = form.errors
     context = {
@@ -5990,8 +6018,8 @@ def claim_update(request, _tab, _id):
         if int(request.POST.get('amount')) > (int(program.proposal.balance) + int(claim.amount)) and request.POST.get('add_proposals') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
-            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor, additional=True).exclude(
-                proposal_id=proposal.proposal_id)
+            add_proposals = Proposal.objects.filter(
+                status='OPEN', balance__gte=difference, reference=program.proposal_id).order_by('-proposal_id')
         else:
             if form.is_valid():
                 draft = form.save(commit=False)
@@ -6193,8 +6221,8 @@ def claim_release_update(request, _id):
         if int(request.POST.get('amount')) > (int(proposal.balance) + int(claim.amount)) and request.POST.get('add_proposals') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
-            add_proposals = Proposal.objects.filter(status='OPEN', area=claim.area.area_id, channel=proposal.channel, balance__gte=difference, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=claim.proposal.budget.budget_distributor, additional=True).exclude(
-                proposal_id=proposal.proposal_id).order_by('-proposal_id')
+            add_proposals = Proposal.objects.filter(
+                status='OPEN', balance__gte=difference, reference=program.proposal_id).order_by('-proposal_id')
         else:
             if form.is_valid():
                 parent = form.save(commit=False)

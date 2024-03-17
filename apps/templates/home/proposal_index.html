@@ -43,6 +43,8 @@
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Proposal No.
                                             </th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                                Reference Proposal</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Channel</th>
@@ -61,6 +63,9 @@
                                                         <h6 class="mb-0 text-sm">{{ item.proposal_id }}</h6>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td>
+                                                <h6 class="mb-0 text-sm">{% if item.reference %}{{ item.reference }}{% endif %}</h6>
                                             </td>
                                             <td>
                                                 <h6 class="mb-0 text-sm">{{ item.proposal_date|date:"d M Y" }}</h6>
@@ -96,6 +101,8 @@
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Proposal No.
                                             </th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                                Reference Proposal</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Channel</th>
@@ -114,6 +121,9 @@
                                                         <h6 class="mb-0 text-sm">{{ item.proposal_id }}</h6>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td>
+                                                <h6 class="mb-0 text-sm">{% if item.reference %}{{ item.reference }}{% endif %}</h6>
                                             </td>
                                             <td>
                                                 <h6 class="mb-0 text-sm">{{ item.proposal_date|date:"d M Y" }}</h6>
@@ -149,6 +159,8 @@
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Proposal No.
                                             </th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                                Reference Proposal</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Channel</th>
@@ -169,6 +181,9 @@
                                                 </div>
                                             </td>
                                             <td>
+                                                <h6 class="mb-0 text-sm">{% if item.6 %}{{ item.6 }}{% endif %}</h6>
+                                            </td>
+                                            <td>
                                                 <h6 class="mb-0 text-sm">{{ item.1|date:"d M Y" }}</h6>
                                             </td>
                                             <td>
@@ -184,7 +199,7 @@
                                                 <h6 class="mb-0 text-sm text-end">{{ item.5|floatformat:0|intcomma }}</h6>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 text-sm">{{ item.6 }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.7 }}</h6>
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -205,12 +220,25 @@
 
 <script>
     $(document).ready( function () {
-        $('#openTable').DataTable();
+        $('#openTable').DataTable(
+            {
+                "scrollX": true
+            }
+        );
         $('#draftTable').DataTable();
-        $('#inapprovalTable').DataTable();
+        $('#inapprovalTable').DataTable(
+            {
+                "scrollX": true
+            }
+        );
 
         $(document).on('click', 'tbody tr', function() {
-            window.location = $(this).data('href');
+            var href = $(this).data('href');
+            if(href) { // Check if href data exists
+                window.location = href;
+            } else {
+                console.log("No data in href");
+            }
         });
 
         let btn = document.getElementsByClassName('paginate_button');

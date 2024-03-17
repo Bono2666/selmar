@@ -813,17 +813,15 @@ class FormProposal(ModelForm):
             attrs={'class': 'form-control-sm', 'rows': 3})
         self.fields['objectives'].label = 'Objectives'
         self.fields['objectives'].widget = forms.Textarea(
-            attrs={'class': 'form-control-sm', 'rows': 3})
+            attrs={'class': 'form-control-sm', 'rows': 4})
         self.fields['mechanism'].label = 'Mechanism'
         self.fields['mechanism'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 3})
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['additional'].label = 'Additional Proposal'
-        self.fields['additional'].widget = forms.CheckboxInput(
-            attrs={'class': 'border mt-1'})
-        self.fields['additional'].required = False
+        self.fields['reference'].label = 'Reference Proposal'
+        self.fields['reference'].required = False
 
     class Meta:
         model = Proposal
@@ -927,20 +925,20 @@ class FormProposalView(ModelForm):
             attrs={'class': 'form-control-sm', 'rows': 3, 'readonly': 'readonly'})
         self.fields['objectives'].label = 'Objectives'
         self.fields['objectives'].widget = forms.Textarea(
-            attrs={'class': 'form-control-sm', 'rows': 3, 'readonly': 'readonly'})
+            attrs={'class': 'form-control-sm', 'rows': 4, 'readonly': 'readonly'})
         self.fields['mechanism'].label = 'Mechanism'
         self.fields['mechanism'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 3, 'readonly': 'readonly'})
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['additional'].label = 'Additional Proposal'
-        self.fields['additional'].required = False
+        self.fields['reference'].label = 'Reference Proposal'
+        self.fields['reference'].required = False
 
     class Meta:
         model = Proposal
         fields = ['proposal_id', 'proposal_date', 'channel', 'type', 'division', 'program_name', 'products', 'area',
-                  'period_start', 'period_end', 'duration', 'background', 'objectives', 'mechanism', 'remarks', 'additional']
+                  'period_start', 'period_end', 'duration', 'background', 'objectives', 'mechanism', 'remarks', 'reference']
 
         widgets = {
             'proposal_date': DateInput(attrs={'class': 'form-control form-control-sm', 'disabled': 'disabled'}),
@@ -974,17 +972,15 @@ class FormProposalUpdate(ModelForm):
             attrs={'class': 'form-control-sm', 'rows': 3})
         self.fields['objectives'].label = 'Objectives'
         self.fields['objectives'].widget = forms.Textarea(
-            attrs={'class': 'form-control-sm', 'rows': 3})
+            attrs={'class': 'form-control-sm', 'rows': 4})
         self.fields['mechanism'].label = 'Mechanism'
         self.fields['mechanism'].widget = forms.Textarea(
             attrs={'class': 'form-control-sm', 'rows': 3})
         self.fields['remarks'].label = 'Remarks'
         self.fields['remarks'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['additional'].label = 'Additional Proposal'
-        self.fields['additional'].widget = forms.CheckboxInput(
-            attrs={'class': 'border mt-1'})
-        self.fields['additional'].required = False
+        self.fields['reference'].label = 'Reference Proposal'
+        self.fields['reference'].required = False
 
     class Meta:
         model = Proposal
@@ -1168,7 +1164,6 @@ class FormClaimUpdate(ModelForm):
         self.fields['claim_date'].label = 'Date'
         self.fields['claim_date'].widget = forms.DateInput(
             attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['claim_date']
         self.fields['invoice'].label = 'Invoice No.'
         self.fields['invoice'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})

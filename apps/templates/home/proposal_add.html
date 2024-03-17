@@ -135,8 +135,14 @@
                                     <div class="text-sm text-danger">
                                         {{ form.remarks.errors }}
                                     </div>
-                                    <div class="form-group shadow-none mt-2 mb-0 me-1 text-end">
-                                        <label class="form-control-label">Additional Proposal</label>&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" class="border mt-1" name="additional"/>
+                                    <div class="form-group shadow-none">
+                                        {{ form.reference.label_tag }}
+                                        <select name="reference" id="reference" class="form-control form-select-sm">
+                                            <option value="">Select Reference Proposal</option>
+                                            {% for item in refs %}
+                                            <option value="{{ item.proposal_id }}">{{ item.proposal_id }} - {{ item.program_name|truncatechars:50 }}</option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                 </div>
                             </div>

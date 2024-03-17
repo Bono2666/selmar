@@ -332,6 +332,36 @@
                                 </tr>
                                 {% endfor %}
                             </tbody>
+                            <tfoot>
+                                {% if budget_detail %}
+                                <tr>
+                                    <td colspan="2">
+                                        <h6 class="text-sm font-weight-bolder text-end">Total</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ data.budget_amount|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ data.budget_upping|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ data.budget_total|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_transfer_minus|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_transfer_plus|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_proposed|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ data.budget_balance|intcomma }}</h6>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tfoot>
                         </table>
                     </div>
                 </div>
