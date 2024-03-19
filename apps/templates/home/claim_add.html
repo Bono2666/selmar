@@ -406,10 +406,10 @@
             "info": false,
             "lengthChange": false,
         });
-        $('#programTable').DataTable({
-            "info": false,
-            "lengthChange": false,
-            // "scrollX": true,
+        new DataTable('#programTable', {
+            scrollX: true,
+            info: false,
+            lengthChange: false,
         });
     });
 

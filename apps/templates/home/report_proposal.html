@@ -112,10 +112,10 @@
                                         <h6 class="mb-0 text-sm text-end">{{ item.17|intcomma|floatformat:1 }}%
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.18 }}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.18 == 'OPEN' %}COMPLETED{% else %}{{ item.18 }}{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.10 == 'IN APPROVAL' %}{{ item.19 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.18 == 'IN APPROVAL' %}{{ item.19 }}{% endif %}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}
