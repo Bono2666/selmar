@@ -1,0 +1,229 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Historical Transfer {% endblock title %}
+
+{% block content %}
+
+{% load humanize %}
+
+<!-- Page content -->
+<div class="container-fluid py-0">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4 p-4">
+                <div class="row mb-2">
+                    <div class="col-6 d-flex align-items-center">
+                        <h4>Historical Transfer</h4>
+                    </div>
+                    <div class="col-6 text-end">
+                        <button class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#pop_filter"><i class="fas fa-filter"></i>&nbsp;&nbsp;Filter</button>
+                    </div>
+                </div>
+                <div class="card-body px-0 pt-0 pb-2">
+                    <div class="table-responsive p-0">
+                        <table class="table hover align-items-center mb-0" id="reportTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Budget Transfer No.</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Date</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Area</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Distributor</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Channel From</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Channel To</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.transfer_id }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.date|date:"d M Y" }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.area.area_name }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.distributor.distributor_name }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.channel_from_id }}</h6> 
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.channel_to_id }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.amount|intcomma }}</h6>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container">
+    <div class="modal fade" id="pop_filter" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header px-4">
+                    <h5 class="modal-title" id="ModalLabel">Report Filter</h5>
+                </div>
+                <div class="modal-body border-bottom-0 px-4">
+                    <div class="pl-lg-0">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group shadow-none">
+                                    <label class="form-control-label">From Year</label>
+                                    <select name="from_yr" id="from_yr" class="form-control form-select-sm">
+                                        <option value="0">Select Year</option>
+                                        {% for year in years %}
+                                        <option value="{{ year }}" {% if year == from_year %}selected{% endif %}>{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group shadow-none">
+                                    <label class="form-control-label">From Month</label>
+                                    <select name="from_mo" id="from_mo" class="form-control form-select-sm">
+                                        <option value="0">Select Month</option>
+                                        {% for month in months %}
+                                        <option value="{{ month }}" {% if month == from_month %}selected{% endif %}>{{ month }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group shadow-none">
+                                    <label class="form-control-label">To Year</label>
+                                    <select name="to_yr" id="to_yr" class="form-control form-select-sm">
+                                        <option value="0">Select Year</option>
+                                        {% for year in years %}
+                                        <option value="{{ year }}" {% if year == to_year %}selected{% endif %}>{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group shadow-none">
+                                    <label class="form-control-label">To Month</label>
+                                    <select name="to_mo" id="to_mo" class="form-control form-select-sm">
+                                        <option value="0">Select Month</option>
+                                        {% for month in months %}
+                                        <option value="{{ month }}" {% if month == to_month %}selected{% endif %}>{{ month }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group shadow-none">
+                                    <label class="form-control-label">Distributor</label>
+                                    <select name="distributor" id="distributor" class="form-control form-select-sm">
+                                        <option value="all">All Distributor</option>
+                                        {% for distributor in distributors %}
+                                        <option value="{{ distributor.distributor_id }}" {% if distributor.distributor_id == selected_distributor %}selected{% endif %}>{{ distributor.distributor_id }} - {{ distributor.distributor_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4">
+                    {% if from_year != '0' and to_year != '0' and from_month != '0' and to_month != '0' %}
+                    <button type="button" class="btn bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                    {% else %}
+                    <a href="{% url 'home' %}" class="btn bg-gradient-dark">Cancel</a>
+                    {% endif %}
+                    <button type="button" id="filter" class="btn bg-gradient-danger text-white">Apply Filter</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+
+<script>
+    let from_year = '{{ from_year }}';
+    let to_year = '{{ to_year }}';
+    let from_month = '{{ from_month }}';
+    let to_month = '{{ to_month }}';
+    let from_yr = document.getElementById('from_yr');
+    let to_yr = document.getElementById('to_yr');
+    let from_mo = document.getElementById('from_mo');
+    let to_mo = document.getElementById('to_mo');
+    let distributor = document.getElementById('distributor');
+    let filter = document.getElementById('filter');
+
+    from_yr.addEventListener('change', function() {
+        if(from_yr.value != '0' && from_yr.value > to_yr.value) {
+            to_yr.value = from_yr.value;
+        }
+    });
+
+    to_yr.addEventListener('change', function() {
+        if(to_yr.value != '0' && to_yr.value < from_yr.value) {
+            from_yr.value = to_yr.value;
+        }
+    });
+
+    from_mo.addEventListener('change', function() {
+        if(from_mo.value != '0' && from_mo.value > to_mo.value && from_yr.value == to_yr.value) {
+            to_mo.value = from_mo.value;
+        }
+    });
+
+    to_mo.addEventListener('change', function() {
+        if(to_mo.value != '0' && to_mo.value < from_mo.value && from_yr.value == to_yr.value) {
+            from_mo.value = to_mo.value;
+        }
+    });
+
+    filter.addEventListener('click', function() {
+        let url = `/report/transfer/${from_yr.value}/${from_mo.value}/${to_yr.value}/${to_mo.value}/${distributor.value}`;
+        window.location.href = url;
+    });
+
+    if(from_year == '0' && to_year == '0' && from_month == '0' && to_month == '0') {
+        $('#pop_filter').modal({backdrop: 'static', keyboard: false});
+    }
+    
+    $(document).ready( function () {
+        $('#reportTable').DataTable();
+        
+        $(document).on('click', 'tbody tr', function() {
+            var href = $(this).data('href');
+            if(href) { // Check if href data exists
+                window.location = href;
+            } else {
+                console.log("No data in href");
+            }
+        });
+
+        let btn = document.getElementsByClassName('paginate_button');
+        for (const button of btn) {
+            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
+    } );
+</script>
+
+{% endblock javascripts %}
+

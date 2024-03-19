@@ -8153,3 +8153,79 @@ def region_detail_delete(request, _id, _area):
     detail.delete()
 
     return HttpResponseRedirect(reverse('region-view', args=[_id]))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_transfer(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    years = [str(year) for year in BudgetTransfer.objects.dates(
+        'date', 'year').distinct().values_list('date__year', flat=True)]
+    distributors = Distributor.objects.all()
+    months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+
+    if _distributor == 'all':
+        transfer = BudgetTransfer.objects.filter(
+            date__gte=from_date, date__lt=to_date)
+    else:
+        transfer = BudgetTransfer.objects.filter(
+            date__gte=from_date, date__lt=to_date, distributor_id=_distributor)
+
+    context = {
+        'data': transfer,
+        'from_year': _from_yr,
+        'from_month': _from_mo,
+        'to_year': _to_yr,
+        'to_month': _to_mo,
+        'selected_distributor': _distributor,
+        'years': years,
+        'distributors': distributors,
+        'months': months,
+        'segment': 'report_transfer',
+        'group_segment': 'report',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/report_transfer.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_cl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    years = [str(year) for year in BudgetTransfer.objects.dates(
+        'date', 'year').distinct().values_list('date__year', flat=True)]
+    distributors = Distributor.objects.all()
+    months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+
+    if _distributor == 'all':
+        cl = CLDetail.objects.filter(
+            cl_id__cl_date__gte=from_date, cl_id__cl_date__lt=to_date)
+    else:
+        cl = CLDetail.objects.filter(
+            cl_id__cl_date__gte=from_date, cl_id__cl_date__lt=to_date, cl_id__distributor_id=_distributor)
+
+    context = {
+        'data': cl,
+        'from_year': _from_yr,
+        'from_month': _from_mo,
+        'to_year': _to_yr,
+        'to_month': _to_mo,
+        'selected_distributor': _distributor,
+        'years': years,
+        'distributors': distributors,
+        'months': months,
+        'segment': 'report_cl',
+        'group_segment': 'report',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/report_cl.html', context)

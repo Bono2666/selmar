@@ -338,4 +338,8 @@ urlpatterns = [
          views.region_delete, name='region-delete'),
     path('master/region-detail/delete/<str:_id>/<str:_area>/',
          views.region_detail_delete, name='region-detail-delete'),
+    path('report/transfer/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
+         views.report_transfer, name='report-transfer'),
+    path('report/cl/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
+         views.report_cl, name='report-cl'),
 ]
