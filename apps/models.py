@@ -672,6 +672,8 @@ class Proposal(models.Model):
         max_digits=12, decimal_places=0, default=0)
     proposal_claim = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
+    parked_claim = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
     balance = models.DecimalField(max_digits=12, decimal_places=0, default=0)
     roi = models.DecimalField(
         max_digits=10, decimal_places=0, default=0)

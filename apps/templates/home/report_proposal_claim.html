@@ -1,6 +1,6 @@
 {% extends 'layouts/base.html' %}
 
-{% block title %} CL Report {% endblock title %}
+{% block title %} Proposal - Claim Report {% endblock title %}
 
 {% block content %}
 
@@ -13,7 +13,7 @@
             <div class="card mb-4 p-4">
                 <div class="row mb-2">
                     <div class="col-6 d-flex align-items-center">
-                        <h4>CL Report</h4>
+                        <h4>Proposal - Claim Report</h4>
                     </div>
                     <div class="col-6 text-end">
                         <button class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#pop_filter"><i class="fas fa-filter"></i>&nbsp;&nbsp;Filter</button>
@@ -21,61 +21,73 @@
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
                     <div class="table-responsive p-0">
-                        <table class="table hover align-items-center mb-0" id="clTable">
+                        <table class="table hover align-items-center mb-0" id="propClaimTable">
                             <thead>
                                 <tr>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Area</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">CL No.</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">CL Date</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Depo</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Claim No.</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Invoice No.</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Distributor</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Claim Description</th>
-                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Amount</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Channel</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Proposal No.</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Program Name</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Division</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Start</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">End</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Budget</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Actual</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Parked</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Assigned</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Available</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for item in data %}
                                 <tr>
                                     <td>
-                                        <div class="d-flex pe-2 py-0">
-                                            <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.cl_id.area.area_name }}</h6>
-                                            </div>
-                                        </div>
+                                        <h6 class="mb-0 text-sm">{{ item.0 }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.1 }}</h6> 
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.2 }}</h6>
                                     </td>
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.cl_id_id }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.3 }}</h6>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.cl_id.cl_date|date:"d M Y" }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.4|truncatechars:30 }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.claim_id.depo }}</h6>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.5 }}</h6>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.claim_id }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.6|date:"d M Y" }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.claim.invoice }}</h6> 
+                                        <h6 class="mb-0 text-sm">{{ item.7|date:"d M Y" }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.cl_id.distributor.distributor_name }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.8|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.claim.remarks|truncatechars:20 }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.9|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.claim.total_claim|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.10|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.cl_id.status == 'OPEN' %}COMPLETED{% else %}{{ item.cl_id.status }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.11|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.12|intcomma }}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -214,7 +226,7 @@
     });
 
     filter.addEventListener('click', function() {
-        let url = `/report/cl/${from_yr.value}/${from_mo.value}/${to_yr.value}/${to_mo.value}/${distributor.value}`;
+        let url = `/report/proposal_claim/${from_yr.value}/${from_mo.value}/${to_yr.value}/${to_mo.value}/${distributor.value}`;
         window.location.href = url;
     });
 
@@ -223,7 +235,7 @@
     }
     
     $(document).ready( function () {
-        new DataTable('#clTable', {
+        new DataTable('#propClaimTable', {
             scrollX: true
         });
         
