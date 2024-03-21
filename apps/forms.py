@@ -826,7 +826,7 @@ class FormProposal(ModelForm):
     class Meta:
         model = Proposal
         exclude = ['budget', 'channel', 'duration', 'total_cost', 'roi', 'claim', 'balance', 'status', 'seq_number', 'proposal_claim', 'proposal_status', 'entry_date',
-                   'entry_by', 'update_date', 'update_by', 'entry_pos']
+                   'entry_by', 'update_date', 'update_by', 'entry_pos', 'parked_claim']
 
         widgets = {
             'division': forms.Select(attrs={'class': 'form-control form-select-sm'}),
@@ -937,7 +937,7 @@ class FormProposalView(ModelForm):
 
     class Meta:
         model = Proposal
-        fields = ['proposal_id', 'proposal_date', 'channel', 'type', 'division', 'program_name', 'products', 'area',
+        fields = ['proposal_id', 'proposal_date', 'channel', 'type', 'division', 'program_name', 'products', 'area', 'parked_claim',
                   'period_start', 'period_end', 'duration', 'background', 'objectives', 'mechanism', 'remarks', 'reference']
 
         widgets = {
@@ -985,7 +985,7 @@ class FormProposalUpdate(ModelForm):
     class Meta:
         model = Proposal
         exclude = ['proposal_id', 'budget', 'channel', 'duration', 'total_cost', 'roi', 'claim', 'balance', 'status', 'seq_number', 'entry_date', 'entry_pos', 'proposal_claim',
-                   'entry_by', 'update_date', 'update_by']
+                   'entry_by', 'update_date', 'update_by', 'parked_claim']
 
         widgets = {
             'division': forms.Select(attrs={'class': 'form-control form-select-sm'}),
