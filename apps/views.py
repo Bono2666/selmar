@@ -1390,6 +1390,8 @@ def budget_view(request, _tab, _id, _msg):
         total=Sum('budget_transfer_plus'))['total']
     total_proposed = BudgetDetail.objects.filter(budget_id=_id).aggregate(
         total=Sum('budget_proposed'))['total']
+    total_remaining = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_remaining'))['total']
 
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
     hundreds = 0
@@ -1429,6 +1431,7 @@ def budget_view(request, _tab, _id, _msg):
         'total_transfer_minus': total_transfer_minus,
         'total_transfer_plus': total_transfer_plus,
         'total_proposed': total_proposed,
+        'total_remaining': total_remaining,
         'status': budget.budget_status,
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
@@ -2352,7 +2355,7 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
     refs = Proposal.objects.filter(
-        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference__isnull=True).exclude(proposal_id=_id).order_by('-proposal_date')
+        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference='').exclude(proposal_id=_id).order_by('-proposal_date')
     form_attachment = FormProposalAttachment()
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     form_incremental = FormIncrementalSales()
@@ -2530,7 +2533,7 @@ def proposal_release_update(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     divs = Division.objects.all()
     refs = Proposal.objects.filter(
-        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference__isnull=True).exclude(proposal_id=_id).order_by('-proposal_date')
+        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference='').exclude(proposal_id=_id).order_by('-proposal_date')
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     cost = ProjectedCost.objects.filter(proposal_id=_id)
@@ -4430,7 +4433,7 @@ def proposal_add(request, _area, _budget, _channel):
     distributor = Budget.objects.get(
         budget_id=selected_budget).budget_distributor_id if selected_budget != '0' else None
     refs = Proposal.objects.filter(status='OPEN',
-                                   budget_id=selected_budget, channel=selected_channel, reference__isnull=True).order_by('-proposal_date')
+                                   budget_id=selected_budget, channel=selected_channel, reference='').order_by('-proposal_date')
 
     message = ''
     no_save = False
@@ -4532,7 +4535,7 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
     refs = Proposal.objects.filter(
-        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference__isnull=True).exclude(proposal_id=_id).order_by('-proposal_date')
+        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference='').exclude(proposal_id=_id).order_by('-proposal_date')
     form_attachment = FormProposalAttachment()
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     form_incremental = FormIncrementalSales()
@@ -4566,6 +4569,13 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         approval = ProposalRelease.objects.filter(
             proposal_id=_id).order_by('sequence')
 
+    if _tab in ['closed', 'reject']:
+        segment = 'proposal_archive'
+    elif _tab in ['closing']:
+        segment = 'proposal_closing'
+    else:
+        segment = 'proposal'
+
     context = {
         'data': proposal,
         'budget': budget,
@@ -4590,7 +4600,7 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         'message': _msg,
         'status': proposal.status,
         'add_cost': add_cost,
-        'segment': 'proposal_archive' if _tab in ['closed', 'reject'] else 'proposal',
+        'segment': segment,
         'group_segment': 'proposal',
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list(
@@ -4913,7 +4923,7 @@ def proposal_update(request, _tab, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     divs = Division.objects.all()
     refs = Proposal.objects.filter(
-        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference__isnull=True).exclude(proposal_id=_id).order_by('-proposal_date')
+        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference='').exclude(proposal_id=_id).order_by('-proposal_date')
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     cost = ProjectedCost.objects.filter(proposal_id=_id)
@@ -4998,6 +5008,74 @@ def proposal_delete(request, _tab, _id):
 
 
 @login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL-CLOSING')
+def proposal_closing_index(request):
+    proposals = Proposal.objects.exclude(proposal_id__in=Program.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list(
+        'proposal_id', flat=True)).exclude(proposal_id__in=Claim.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list('proposal_id', flat=True)).exclude(proposal_id__in=Claim.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list(
+            'additional_proposal', flat=True)).filter(status='OPEN', period_end__lt=datetime.datetime.now().date()).order_by('-proposal_id').all()
+
+    context = {
+        'data': proposals,
+        'segment': 'proposal_closing',
+        'group_segment': 'proposal',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='PROPOSAL-CLOSING') if not request.user.is_superuser else Auth.objects.all(),
+    }
+
+    return render(request, 'home/proposal_closing_index.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL-CLOSING')
+def proposal_bulk_close(request):
+    prop_nos = request.GET.get('prop_nos')
+    _ids = prop_nos.split(',')
+    for _id in _ids:
+        proposal = Proposal.objects.get(proposal_id=_id)
+        budget = Budget.objects.get(
+            budget_area=proposal.area, budget_distributor=proposal.budget.budget_distributor, budget_status='OPEN')
+        budget_detail = BudgetDetail.objects.get(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor,
+                                                 budget_channel=proposal.channel, budget__budget_status='OPEN')
+
+        budget_detail.budget_remaining += proposal.balance
+        budget_detail.save()
+
+        sum_balance = BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status='OPEN').aggregate(Sum('budget_balance'))[
+            'budget_balance__sum'] if BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status='OPEN').exists() else 0
+        budget.budget_balance = sum_balance
+        budget.save()
+
+        proposal.status = 'CLOSED'
+        proposal.save()
+
+    return HttpResponseRedirect(reverse('proposal-closing-index'))
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='PROPOSAL-CLOSING')
+def proposal_single_close(request, _id):
+    proposal = Proposal.objects.get(proposal_id=_id)
+    budget = Budget.objects.get(
+        budget_area=proposal.area, budget_distributor=proposal.budget.budget_distributor, budget_status='OPEN')
+    budget_detail = BudgetDetail.objects.get(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor,
+                                             budget_channel=proposal.channel, budget__budget_status='OPEN')
+
+    budget_detail.budget_remaining += proposal.balance
+    budget_detail.save()
+
+    sum_balance = BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status='OPEN').aggregate(Sum('budget_balance'))[
+        'budget_balance__sum'] if BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status='OPEN').exists() else 0
+    budget.budget_balance = sum_balance
+    budget.save()
+
+    proposal.status = 'CLOSED'
+    proposal.save()
+
+    return HttpResponseRedirect(reverse('proposal-closing-index'))
+
+
+@login_required(login_url='/login/')
 @role_required(allowed_roles='PROGRAM')
 def program_index(request, _tab):
     programs = Program.objects.all()
@@ -5051,7 +5129,7 @@ def program_add(request, _area, _distributor, _proposal):
     distributors = Proposal.objects.filter(
         status='OPEN', area=selected_area, balance__gt=0).values_list('budget__budget_distributor__distributor_id', 'budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
     proposals = Proposal.objects.filter(
-        status='OPEN', area=selected_area, balance__gt=0, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor, reference__isnull=True).order_by('-proposal_id') if selected_distributor != '0' else None
+        status='OPEN', area=selected_area, balance__gt=0, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor, reference='').order_by('proposal_id') if selected_distributor != '0' else None
 
     message = ''
     no_save = False
@@ -6225,7 +6303,7 @@ def claim_delete(request, _tab, _id):
 def claim_release_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT apps_claim.claim_id, apps_claim.claim_date, apps_distributor.distributor_name, apps_proposal.channel, apps_claim.total_claim, apps_claim.status, apps_claimrelease.sequence FROM apps_distributor INNER JOIN apps_budget ON apps_distributor.distributor_id = apps_budget.budget_distributor_id INNER JOIN apps_proposal ON apps_budget.budget_id = apps_proposal.budget_id INNER JOIN apps_claim ON apps_proposal.proposal_id = apps_claim.proposal_id INNER JOIN apps_claimrelease ON apps_claim.claim_id = apps_claimrelease.claim_id INNER JOIN (SELECT claim_id, MIN(sequence) AS seq FROM apps_claimrelease WHERE claim_approval_status = 'N' GROUP BY claim_id ORDER BY sequence ASC) AS q_group ON apps_claimrelease.claim_id = q_group.claim_id AND apps_claimrelease.sequence = q_group.seq WHERE (apps_claim.status = 'PENDING' OR apps_claim.status = 'IN APPROVAL') AND apps_claimrelease.claim_approval_id = '" + str(request.user.user_id) + "'")
+            "SELECT apps_claim.claim_id, apps_claim.claim_date, apps_distributor.distributor_name, apps_proposal.channel, apps_claim.total_claim, apps_claim.status, apps_claimrelease.sequence FROM apps_distributor INNER JOIN apps_budget ON apps_distributor.distributor_id = apps_budget.budget_distributor_id INNER JOIN apps_proposal ON apps_budget.budget_id = apps_proposal.budget_id INNER JOIN apps_claim ON apps_proposal.proposal_id = apps_claim.proposal_id INNER JOIN apps_claimrelease ON apps_claim.claim_id = apps_claimrelease.claim_id INNER JOIN (SELECT claim_id, MIN(sequence) AS seq FROM apps_claimrelease WHERE claim_approval_status = 'N' AND approve = 1 GROUP BY claim_id ORDER BY sequence ASC) AS q_group ON apps_claimrelease.claim_id = q_group.claim_id AND apps_claimrelease.sequence = q_group.seq WHERE (apps_claim.status = 'PENDING' OR apps_claim.status = 'IN APPROVAL') AND apps_claimrelease.claim_approval_id = '" + str(request.user.user_id) + "'")
         release = cursor.fetchall()
 
     context = {

@@ -338,6 +338,8 @@ class BudgetDetail(models.Model):
         max_digits=12, decimal_places=0, default=0, null=True)
     budget_transfer_plus = models.DecimalField(
         max_digits=12, decimal_places=0, default=0, null=True)
+    budget_remaining = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0)
     budget_balance = models.DecimalField(
         max_digits=12, decimal_places=0)
     entry_date = models.DateTimeField(null=True)
@@ -354,7 +356,7 @@ class BudgetDetail(models.Model):
     def save(self, *args, **kwargs):
         self.budget_total = self.budget_amount + self.budget_upping
         self.budget_balance = self.budget_total - self.budget_transfer_minus + \
-            self.budget_transfer_plus - self.budget_proposed
+            self.budget_transfer_plus - self.budget_proposed + self.budget_remaining
         if not self.entry_date:
             self.entry_date = timezone.now()
             self.entry_by = get_current_user().user_id

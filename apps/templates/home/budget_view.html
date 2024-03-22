@@ -291,6 +291,7 @@
                                         Transfer (+)</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
                                         Proposed</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">Remaining</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
                                         Balance</th>
                                 </tr>
@@ -327,6 +328,9 @@
                                         <h6 class="mb-0 text-sm text-end">{{ item.budget_proposed|intcomma }}</h6>
                                     </td>
                                     <td>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_remaining|intcomma }}</h6>
+                                    </td>
+                                    <td>
                                         <h6 class="mb-0 text-sm text-end">{{ item.budget_balance|intcomma }}</h6>
                                     </td>
                                 </tr>
@@ -355,6 +359,9 @@
                                     </td>
                                     <td>
                                         <h6 class="text-sm font-weight-bolder text-end">{{ total_proposed|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_remaining|intcomma }}</h6>
                                     </td>
                                     <td>
                                         <h6 class="text-sm font-weight-bolder text-end">{{ data.budget_balance|intcomma }}</h6>

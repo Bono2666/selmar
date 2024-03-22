@@ -22,10 +22,11 @@
                                 <h5 class="mb-2">Proposal No. {{ data.proposal_id }}</h5>
                             </div>
                             <div class="col-6 text-end">
-                                <a href="{% if crud == 'view' %}{% if tab == 'close' or tab == 'reject' %}{% url 'proposal-archive-index' tab %}{% else %}{% url 'proposal-index' tab %}{% endif %}{% else %}{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
+                                <a href="{% if crud == 'view' %}{% if tab == 'closing' %}{% url 'proposal-closing-index' %}{% else %}{% if tab == 'close' or tab == 'reject' %}{% url 'proposal-archive-index' tab %}{% else %}{% url 'proposal-index' tab %}{% endif %}{% endif %}{% else %}{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
                                 <a href="{% url 'proposal-update' tab data.proposal_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.proposal_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" {% if tab == 'closing' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.proposal_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'OPEN' and not request.user.is_superuser %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}" {% if tab != 'closing' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-close"><i class="fas fa-times"></i>&nbsp;&nbsp;Close</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if total_cost <= 0 %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button>
                                 <a href="{% url 'proposal-print' data.proposal_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" {% if data.status == 'DRAFT' %}hidden{% endif %} target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
@@ -122,6 +123,23 @@
                                     <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
                                     <a href="{% url 'proposal-delete' tab data.proposal_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Delete
                                     </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="confirm-close" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ModalLabel">Confirmation</h5>
+                                </div>
+                                <div class="modal-body border-bottom-0">
+                                    Are you sure you want to close proposal no: <strong>{{ data.proposal_id }}</strong>?
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'proposal-single-close' data.proposal_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Yes</a>
                                 </div>
                             </div>
                         </div>
