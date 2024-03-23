@@ -5012,7 +5012,8 @@ def proposal_delete(request, _tab, _id):
 def proposal_closing_index(request):
     proposals = Proposal.objects.exclude(proposal_id__in=Program.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list(
         'proposal_id', flat=True)).exclude(proposal_id__in=Claim.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list('proposal_id', flat=True)).exclude(proposal_id__in=Claim.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list(
-            'additional_proposal', flat=True)).filter(status='OPEN', period_end__lt=datetime.datetime.now().date()).order_by('-proposal_id').all()
+            'additional_proposal', flat=True)).filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                                      status='OPEN', period_end__lt=datetime.datetime.now().date()).order_by('-proposal_id').all()
 
     context = {
         'data': proposals,

@@ -29,16 +29,15 @@
                         <table class="table hover align-items-center mb-0" id="closeTable">
                             <thead>
                                 <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Area</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Distributor</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Proposal No.
                                     </th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                        Reference Proposal</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                        Date</th>
+                                        Program Name</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                         Channel</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">Total Cost</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">Claim</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">Balance</th>
                                     <th></th>
                                 </tr>
@@ -49,24 +48,32 @@
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.area }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.budget.budget_distributor.distributor_name }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
                                                 <h6 class="mb-0 text-sm">{{ item.proposal_id }}</h6>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.reference %}{{ item.reference }}{% endif %}</h6>
-                                    </td>
-                                    <td>
-                                        <h6 class="mb-0 text-sm">{{ item.proposal_date|date:"d M Y" }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.program_name|truncatechars:15 }}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">{{ item.channel }}
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm text-end">{{ item.total_cost|intcomma }}</h6>
-                                    </td>
-                                    <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.proposal_claim|intcomma }}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm text-end">{{ item.balance|intcomma }}</h6>
