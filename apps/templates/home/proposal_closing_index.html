@@ -79,7 +79,7 @@
                                         <h6 class="mb-0 text-sm text-end">{{ item.balance|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <input type="checkbox" class="cursor-pointer border" name="check[]" id="check[]">
+                                        <input type="checkbox" class="cursor-pointer border my-checkbox " name="check[]" id="check[]">
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -113,10 +113,9 @@
 {% block javascripts %}
 
 <script>
-    $(document).ready( function () {
+    $(document).ready(function() {
         $('#closeTable').DataTable();
 
-        // Add click event to each cell in the row except the last one
         $('tbody tr td:not(:last-child)').on('click', function() {
             // Get the href from the parent row
             var href = $(this).parent().data('href');
@@ -125,26 +124,71 @@
             }
         });
 
-        let checks = document.getElementsByName('check[]');
-        let selectAll = document.getElementById('select-all');
+        var table = $('#closeTable').DataTable();
         let btnBulkClose = document.getElementById('btn-bulk-close');
-
-        document.getElementById("select-all").addEventListener("click", function() {
-            let count = 0;
-
-            for (var check of checks) {
-                check.checked = this.checked;
-                if (check.checked) {
-                    count++;
+        
+        $('#select-all').click(function(event) {  //on click 
+            var checked = this.checked;
+            table.column(7).nodes().to$().each(function() {
+                if (checked) {
+                    $(this).find('.my-checkbox').prop('checked', 'checked');
+                    btnBulkClose.classList.remove('disabled');
+                } else {
+                    $(this).find('.my-checkbox').prop('checked', '');
+                    btnBulkClose.classList.add('disabled');
                 }
-            }
+            });
+            // check current page number
+            var page = table.page.info().page;
+            table.draw();
+            table.page(page).draw('page');
+        });
 
-            if (count > 0) {
+        // check if all checkboxes are checked
+        table.on('click', '.my-checkbox', function() {
+            var checked = true;
+            var anyChecked = false;
+            table.column(7).nodes().to$().each(function() {
+                if (!$(this).find('.my-checkbox').prop('checked')) {
+                    checked = false;
+                } else {
+                    anyChecked = true;
+                }
+            });
+            $('#select-all').prop('checked', checked);
+
+            // Enable or disable btnBulkClose based on whether any checkboxes are checked
+            if (anyChecked) {
                 btnBulkClose.classList.remove('disabled');
             } else {
                 btnBulkClose.classList.add('disabled');
             }
-        })
+        });
+
+        let bulkClose = document.getElementById('bulk-close');
+        bulkClose.addEventListener("click", function() {
+            let propNos = [];
+
+            table.column(7).nodes().to$().each(function() {
+                if ($(this).find('.my-checkbox').prop('checked')) {
+                    let propNo = $(this).parent().find('td').eq(2).text();
+                    propNos.push(propNo.trim()); // remove spaces
+                }
+            });
+            
+            let url = "{% url 'proposal-bulk-close' %}?prop_nos=" + propNos;
+            bulkClose.href = url;
+        });
+    });
+</script>
+
+
+<!-- <script>
+    $(document).ready( function () {
+        
+        let checks = document.querySelectorAll('input[name="check[]"]');
+        let selectAll = document.getElementById('select-all');
+        let btnBulkClose = document.getElementById('btn-bulk-close');
 
         for (let check of checks) {
             check.addEventListener("click", function() {
@@ -176,7 +220,7 @@
             let propNos = [];
             for (let check of checks) {
                 if (check.checked) {
-                    propNos.push(check.parentElement.parentElement.children[0].children[0].children[0].innerText);
+                    propNos.push(check.parentElement.parentElement.children[2].children[0].innerText);
                 }
             }
             let url = "{% url 'proposal-bulk-close' %}?prop_nos=" + propNos;
@@ -188,6 +232,6 @@
             button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
         }
     } );
-</script>
+</script> -->
 
 {% endblock javascripts %}

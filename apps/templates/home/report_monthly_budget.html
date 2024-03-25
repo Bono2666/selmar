@@ -1,0 +1,255 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Budget Monthly Report {% endblock title %}
+
+{% block content %}
+
+{% load humanize %}
+
+<!-- Page content -->
+<div class="container-fluid py-0">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4 p-4">
+                <div class="row mb-2">
+                    <div class="col-6 d-flex align-items-center">
+                        <h4>Budget Monthly Report</h4>
+                    </div>
+                    <div class="col-6 text-end">
+                        <button class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#pop_filter"><i class="fas fa-filter"></i>&nbsp;&nbsp;Filter</button>
+                    </div>
+                </div>
+                <div class="card-body px-0 pt-0 pb-2">
+                    <div class="table-responsive p-0">
+                        <table class="table hover align-items-center mb-0" id="budgetTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Year</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Mo</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Area</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Distributor</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Ch</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">%</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Begin Bal</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Upping Price</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Transfer</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Begin Month</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Proposed</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Remaining</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Available Bal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for budget in budgets %}
+                                    {% for item in budget.details %}
+                                    <tr>
+                                        <td>
+                                            <h6 class="mb-0 text-sm">{% ifchanged budget.budget_year %}{{ budget.budget_year }}{% endifchanged %}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm">{% ifchanged budget.budget_month %}{{ budget.budget_month }}{% endifchanged %}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm">{% ifchanged budget.budget_area %}{{ budget.budget_area }}{% endifchanged %}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm">{% ifchanged budget.budget_distributor.distributor_name %}{{ budget.budget_distributor.distributor_name }}{% endifchanged %}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm">{{ item.budget_channel_id }}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm text-end">{{ item.budget_percent }}%</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm text-end">{{ item.budget_amount|intcomma }}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm text-end">{{ item.budget_upping|intcomma }}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm text-end">{{ item.transfer|intcomma }}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm text-end">{{ item.beginning_mo|intcomma }}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm text-end">{{ item.budget_proposed|intcomma }}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm text-end">{{ item.budget_remaining|intcomma }}</h6>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0 text-sm text-end">{{ item.budget_balance|intcomma }}</h6>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    <tr>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7">Total</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7">{{ budget.budget_distributor.distributor_name }}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">100%</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_amount|intcomma }}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_upping|intcomma }}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">0</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_total|intcomma }}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.proposed|intcomma }}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.remaining|intcomma }}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_balance|intcomma }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            {% if budgets %}
+                            <tfoot>
+                                <tr>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">Grand Total</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end"></td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.begin_bal|intcomma }}</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.upping|intcomma }}</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">0</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.begin_mo|intcomma }}</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.proposed|intcomma }}</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.remaining|intcomma }}</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.balance|intcomma }}</td>
+                                </tr>
+                            </tfoot>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container">
+    <div class="modal fade" id="pop_filter" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header px-4">
+                    <h5 class="modal-title" id="ModalLabel">Report Filter</h5>
+                </div>
+                <div class="modal-body border-bottom-0 px-4">
+                    <div class="pl-lg-0">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group shadow-none">
+                                    <label class="form-control-label">Year</label>
+                                    <select name="from_yr" id="from_yr" class="form-control form-select-sm">
+                                        <option value="0">Select Year</option>
+                                        {% for year in years %}
+                                        <option value="{{ year }}" {% if year == from_year %}selected{% endif %}>{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group shadow-none">
+                                    <label class="form-control-label">Month</label>
+                                    <select name="from_mo" id="from_mo" class="form-control form-select-sm">
+                                        <option value="0">Select Month</option>
+                                        {% for month in months %}
+                                        <option value="{{ month }}" {% if month == from_month %}selected{% endif %}>{{ month }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group shadow-none">
+                                    <label class="form-control-label">Distributor</label>
+                                    <select name="distributor" id="distributor" class="form-control form-select-sm">
+                                        <option value="all">All Distributor</option>
+                                        {% for distributor in distributors %}
+                                        <option value="{{ distributor.distributor_id }}" {% if distributor.distributor_id == selected_distributor %}selected{% endif %}>{{ distributor.distributor_id }} - {{ distributor.distributor_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4">
+                    {% if from_year != '0' and to_year != '0' and from_month != '0' and to_month != '0' %}
+                    <button type="button" class="btn bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
+                    {% else %}
+                    <a href="{% url 'home' %}" class="btn bg-gradient-dark">Cancel</a>
+                    {% endif %}
+                    <button type="button" id="filter" class="btn bg-gradient-danger text-white">Apply Filter</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+
+<script>
+    let from_year = '{{ from_year }}';
+    let to_year = '{{ to_year }}';
+    let from_month = '{{ from_month }}';
+    let to_month = '{{ to_month }}';
+    let from_yr = document.getElementById('from_yr');
+    let from_mo = document.getElementById('from_mo');
+    let distributor = document.getElementById('distributor');
+    let filter = document.getElementById('filter');
+    let scroll_x = '{{ scrollX }}';
+
+    filter.addEventListener('click', function() {
+        let url = `/report/budget/monthly/${from_yr.value}/${from_mo.value}/0/0/${distributor.value}`;
+        window.location.href = url;
+    });
+
+    if(from_year == '0' && to_year == '0' && from_month == '0' && to_month == '0') {
+        $('#pop_filter').modal({backdrop: 'static', keyboard: false});
+    }
+    
+    $(document).ready( function () {
+        // if (scroll_x == 'True') {
+            // set scroll x for datatable to True
+        new DataTable('#budgetTable', {
+            sort: false,
+            info: false,
+            lengthChange: true,
+            lengthMenu: [25, 50, 100, 250, 500],
+            pageLength: 50,
+            scrollX: true,
+        });
+        // } else {
+        //     new DataTable('#budgetTable', {
+        //         sort: false,
+        //         info: false,
+        //         lengthChange: true,
+        //         lengthMenu: [25, 50, 100, 250, 500],
+        //         pageLength: 50,
+        //         scrollX: false,
+        //     });
+        // }
+
+        $(document).on('click', 'tbody tr', function() {
+            var href = $(this).data('href');
+            if(href) { // Check if href data exists
+                window.location = href;
+            } else {
+                console.log("No data in href");
+            }
+        });
+
+        let btn = document.getElementsByClassName('paginate_button');
+        for (const button of btn) {
+            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
+    } );
+</script>
+
+{% endblock javascripts %}
+

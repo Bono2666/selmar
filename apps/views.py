@@ -28,9 +28,9 @@ from django.template.loader import get_template
 from django.utils.text import Truncator
 import os
 from datetime import date
-from django.db.models import Subquery
-from django.db.models import IntegerField
 from django.db.models import F
+from django.db.models import Prefetch
+from django.db.models.functions import Length
 
 
 @login_required(login_url='/login/')
@@ -8542,7 +8542,9 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
             incpct_nom=Sum('incrementalsales__incrp_nom') /
             Sum('incrementalsales__swop_nom') * 100
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
+            ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
+                'sequence').values('proposal_approval_name')[:1]
         )
 
     context = {
@@ -8562,3 +8564,93 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/report_proposal.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    years = [str(year) for year in BudgetTransfer.objects.dates(
+        'date', 'year').distinct().values_list('date__year', flat=True)]
+    distributors = Distributor.objects.all()
+    months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+
+    if _distributor == 'all':
+        max_name = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
+            max_length=Max(Length('budget_distributor__distributor_name')))
+        max_len = max_name.get('max_length') if max_name.get(
+            'max_length') else 0
+        scrollX = True if max_len > 25 else False
+
+        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'],
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+            proposed=F('budget_total') +
+            Sum('budgetdetail__budget_remaining') - F('budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+        ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
+            transfer=F('budget_transfer_plus') -
+            F('budget_transfer_minus'),
+            beginning_mo=F('budget_transfer_plus') -
+            F('budget_transfer_minus') + F('budget_total'),
+        ), to_attr='details'))
+
+        total = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'],
+                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
+            begin_bal=Sum('budgetdetail__budget_amount'),
+            upping=Sum('budgetdetail__budget_upping'),
+            begin_mo=Sum('budgetdetail__budget_total'),
+            proposed=Sum('budgetdetail__budget_total') + Sum(
+                'budgetdetail__budget_remaining') - Sum('budgetdetail__budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+            balance=Sum('budgetdetail__budget_balance'))
+    else:
+        max_name = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo)), budget_distributor=_distributor).aggregate(
+            max_length=Max(Length('budget_distributor__distributor_name')))
+        max_len = max_name.get('max_length') if max_name.get(
+            'max_length') else 0
+        scrollX = True if max_len > 25 else False
+
+        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'],
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+            proposed=F('budget_total') +
+            Sum('budgetdetail__budget_remaining') - F('budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+        ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
+            transfer=F('budget_transfer_plus') -
+            F('budget_transfer_minus'),
+            beginning_mo=F('budget_transfer_plus') -
+            F('budget_transfer_minus') + F('budget_total'),
+        ), to_attr='details'))
+
+        total = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'],
+                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
+            begin_bal=Sum('budgetdetail__budget_amount'),
+            upping=Sum('budgetdetail__budget_upping'),
+            begin_mo=Sum('budgetdetail__budget_total'),
+            proposed=Sum('budgetdetail__budget_total') + Sum(
+                'budgetdetail__budget_remaining') - Sum('budgetdetail__budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+            balance=Sum('budgetdetail__budget_balance'))
+
+    context = {
+        'budgets': budgets,
+        'total': total,
+        'scrollX': scrollX,
+        'from_year': _from_yr,
+        'from_month': _from_mo,
+        'to_year': _to_yr,
+        'to_month': _to_mo,
+        'selected_distributor': _distributor,
+        'years': years,
+        'distributors': distributors,
+        'months': months,
+        'segment': 'report_budget_monthly',
+        'group_segment': 'report',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/report_monthly_budget.html', context)

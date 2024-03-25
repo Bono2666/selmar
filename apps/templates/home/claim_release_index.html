@@ -68,7 +68,7 @@
                                         <h6 class="mb-0 text-sm">{{ item.5 }}</h6>
                                     </td>
                                     <td>
-                                        <input type="checkbox" class="cursor-pointer border" name="check[]" id="check[]">
+                                        <input type="checkbox" class="cursor-pointer border my-checkbox" name="check[]" id="check[]">
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -102,76 +102,72 @@
 {% block javascripts %}
 
 <script>
-    $(document).ready( function () {
+    $(document).ready(function() {
         $('#relTable').DataTable();
-        
-        $(document).on('click', 'tbody tr td:not(:last-child)', function() {
-            window.location = $(this).parent().data('href');
+
+        $('tbody tr td:not(:last-child)').on('click', function() {
+            // Get the href from the parent row
+            var href = $(this).parent().data('href');
+            if(href) {
+                window.location = href;
+            }
         });
 
-        let checks = document.getElementsByName('check[]');
-        let selectAll = document.getElementById('select-all');
+        var table = $('#relTable').DataTable();
         let btnBulkApprove = document.getElementById('btn-bulk-approve');
-
-        document.getElementById("select-all").addEventListener("click", function() {
-            let count = 0;
-
-            for (var check of checks) {
-                check.checked = this.checked;
-                if (check.checked) {
-                    count++;
+        
+        $('#select-all').click(function(event) {  //on click 
+            var checked = this.checked;
+            table.column(6).nodes().to$().each(function() {
+                if (checked) {
+                    $(this).find('.my-checkbox').prop('checked', 'checked');
+                    btnBulkApprove.classList.remove('disabled');
+                } else {
+                    $(this).find('.my-checkbox').prop('checked', '');
+                    btnBulkApprove.classList.add('disabled');
                 }
-            }
+            });
+            // check current page number
+            var page = table.page.info().page;
+            table.draw();
+            table.page(page).draw('page');
+        });
 
-            if (count > 0) {
+        // check if all checkboxes are checked
+        table.on('click', '.my-checkbox', function() {
+            var checked = true;
+            var anyChecked = false;
+            table.column(6).nodes().to$().each(function() {
+                if (!$(this).find('.my-checkbox').prop('checked')) {
+                    checked = false;
+                } else {
+                    anyChecked = true;
+                }
+            });
+            $('#select-all').prop('checked', checked);
+
+            // Enable or disable btnBulkClose based on whether any checkboxes are checked
+            if (anyChecked) {
                 btnBulkApprove.classList.remove('disabled');
             } else {
                 btnBulkApprove.classList.add('disabled');
             }
         });
 
-        for (let check of checks) {
-            check.addEventListener("click", function() {
-                let count = 0;
-
-                for (let check of checks) {
-                    if (check.checked) {
-                        count++;
-                    }
-                }
-
-                if (count > 0) {
-                    btnBulkApprove.classList.remove('disabled');
-                } else {
-                    btnBulkApprove.classList.add('disabled');
-                }
-
-                if (count == checks.length) {
-                    selectAll.checked = true;
-                } else {
-                    selectAll.checked = false;
-                }
-            });
-        }
-
         let bulkApprove = document.getElementById('bulk-approve');
         bulkApprove.addEventListener("click", function() {
-            let checks = document.getElementsByName('check[]');
             let claimNos = [];
-            for (let check of checks) {
-                if (check.checked) {
-                    claimNos.push(check.parentElement.parentElement.children[0].children[0].children[0].innerText);
+
+            table.column(6).nodes().to$().each(function() {
+                if ($(this).find('.my-checkbox').prop('checked')) {
+                    let claimNo = $(this).closest('tr').find('td').eq(0).text();
+                    claimNos.push(claimNo.trim()); // remove spaces
                 }
-            }
+            });
             let url = "{% url 'claim-release-bulk-approve' %}?claim_nos=" + claimNos;
             bulkApprove.href = url;
         });
-
-        let btn = document.getElementsByClassName('paginate_button');
-        for (const button of btn) {
-            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
-        }
-    } );
+    });
 </script>
 
 {% endblock javascripts %}

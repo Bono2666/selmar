@@ -356,6 +356,11 @@
 
         <div class="multi-level ms-5 collapse {% if 'report' in group_segment %}show{% endif %}" role="list" id="report-menu" aria-expanded="{% if 'report' in group_segment %}true{% else %}false{% endif %}">
           <ul class="flex-column nav">
+            <li class="nav-item {% if segment == 'report_budget_monthly' %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'report-monthly-budget' '0' '0' '0' '0' 'all' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}">Budget Monthly</span>
+              </a>
+            </li>
             <li class="nav-item {% if segment == 'report_proposal' %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'report-proposal' '0' '0' '0' '0' 'all' %}"{% endif %}>
                 <span class="nav-link-text ms-1 {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}">Proposal</span>
