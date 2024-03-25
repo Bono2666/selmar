@@ -116,7 +116,7 @@
     $(document).ready(function() {
         $('#closeTable').DataTable();
 
-        $('tbody tr td:not(:last-child)').on('click', function() {
+        $('#closeTable').on('click', 'tbody tr td:not(:last-child)', function() {
             // Get the href from the parent row
             var href = $(this).parent().data('href');
             if(href) {

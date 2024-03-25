@@ -103,9 +103,13 @@
 
 <script>
     $(document).ready(function() {
-        $('#relTable').DataTable();
+        $('#relTable').DataTable(
+            {
+                'pageLength': 1,
+            }
+        );
 
-        $('tbody tr td:not(:last-child)').on('click', function() {
+        $('#relTable').on('click', 'tbody tr td:not(:last-child)', function() {
             // Get the href from the parent row
             var href = $(this).parent().data('href');
             if(href) {
