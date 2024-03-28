@@ -279,7 +279,10 @@
                                         <select name="reference" id="reference" class="form-control form-select-sm" {% if crud != 'update' %}disabled{% endif %}>
                                             <option value="">Select Reference Proposal</option>
                                             {% for item in refs %}
-                                            <option value="{{ item.proposal_id }}" {% if item.proposal_id == data.reference %}selected{% endif %}>{{ item.proposal_id }} - {{ item.program_name|truncatechars:50 }}</option>
+                                                {% if item.reference %}
+                                                {% else %}
+                                                    <option value="{{ item.proposal_id }}" {% if item.proposal_id == data.reference %}selected{% endif %}>{{ item.proposal_id }} - {{ item.program_name|truncatechars:50 }}</option>
+                                                {% endif %}
                                             {% endfor %}
                                         </select>
                                     </div>

@@ -214,8 +214,6 @@
     }
     
     $(document).ready( function () {
-        // if (scroll_x == 'True') {
-            // set scroll x for datatable to True
         new DataTable('#budgetTable', {
             sort: false,
             info: false,
@@ -224,17 +222,7 @@
             pageLength: 50,
             scrollX: true,
         });
-        // } else {
-        //     new DataTable('#budgetTable', {
-        //         sort: false,
-        //         info: false,
-        //         lengthChange: true,
-        //         lengthMenu: [25, 50, 100, 250, 500],
-        //         pageLength: 50,
-        //         scrollX: false,
-        //     });
-        // }
-
+        
         $(document).on('click', 'tbody tr', function() {
             var href = $(this).data('href');
             if(href) { // Check if href data exists

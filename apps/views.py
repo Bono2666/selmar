@@ -31,6 +31,7 @@ from datetime import date
 from django.db.models import F
 from django.db.models import Prefetch
 from django.db.models.functions import Length
+from django.db.models.functions import Length
 
 
 @login_required(login_url='/login/')
@@ -2354,8 +2355,8 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
         budget=proposal.budget, budget_channel=proposal.channel)
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
-    refs = Proposal.objects.filter(
-        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference='').exclude(proposal_id=_id).order_by('-proposal_date')
+    refs = Proposal.objects.filter(status='OPEN', area=proposal.area, budget__budget_distributor_id=proposal.budget.budget_distributor_id,
+                                   channel=proposal.channel).exclude(proposal_id=_id).order_by('-proposal_date')
     form_attachment = FormProposalAttachment()
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     form_incremental = FormIncrementalSales()
@@ -2532,8 +2533,8 @@ def budget_release_update(request, _id):
 def proposal_release_update(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     divs = Division.objects.all()
-    refs = Proposal.objects.filter(
-        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference='').exclude(proposal_id=_id).order_by('-proposal_date')
+    refs = Proposal.objects.filter(status='OPEN', area=proposal.area, budget__budget_distributor_id=proposal.budget.budget_distributor_id,
+                                   channel=proposal.channel).exclude(proposal_id=_id).order_by('-proposal_date')
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     cost = ProjectedCost.objects.filter(proposal_id=_id)
@@ -4432,8 +4433,8 @@ def proposal_add(request, _area, _budget, _channel):
         budget_id=selected_budget) if selected_budget != '0' else None
     distributor = Budget.objects.get(
         budget_id=selected_budget).budget_distributor_id if selected_budget != '0' else None
-    refs = Proposal.objects.filter(status='OPEN',
-                                   budget_id=selected_budget, channel=selected_channel, reference='').order_by('-proposal_date')
+    refs = Proposal.objects.filter(status='OPEN', area=selected_area, budget__budget_distributor_id=distributor,
+                                   channel=selected_channel).order_by('-proposal_date')
 
     message = ''
     no_save = False
@@ -4534,8 +4535,8 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         budget=proposal.budget, budget_channel=proposal.channel)
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
-    refs = Proposal.objects.filter(
-        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference='').exclude(proposal_id=_id).order_by('-proposal_date')
+    refs = Proposal.objects.filter(status='OPEN', area=proposal.area, budget__budget_distributor_id=budget.budget.budget_distributor_id,
+                                   channel=proposal.channel).order_by('-proposal_date')
     form_attachment = FormProposalAttachment()
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     form_incremental = FormIncrementalSales()
@@ -4922,8 +4923,8 @@ def proposal_cost_update(request, _tab, _id, _activities):
 def proposal_update(request, _tab, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     divs = Division.objects.all()
-    refs = Proposal.objects.filter(
-        budget_id=proposal.budget_id, channel=proposal.channel, status='OPEN', reference='').exclude(proposal_id=_id).order_by('-proposal_date')
+    refs = Proposal.objects.filter(status='OPEN', area=proposal.area, budget__budget_distributor_id=proposal.budget.budget_distributor_id,
+                                   channel=proposal.channel).exclude(proposal_id=_id).order_by('-proposal_date')
     attachment = ProposalAttachment.objects.filter(proposal_id=_id)
     incremental = IncrementalSales.objects.filter(proposal_id=_id)
     cost = ProjectedCost.objects.filter(proposal_id=_id)
@@ -5130,7 +5131,12 @@ def program_add(request, _area, _distributor, _proposal):
     distributors = Proposal.objects.filter(
         status='OPEN', area=selected_area, balance__gt=0).values_list('budget__budget_distributor__distributor_id', 'budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
     proposals = Proposal.objects.filter(
-        status='OPEN', area=selected_area, balance__gt=0, period_end__gte=datetime.datetime.now().date(), budget__budget_distributor=selected_distributor, reference='').order_by('proposal_id') if selected_distributor != '0' else None
+        status='OPEN',
+        area=selected_area,
+        balance__gt=0,
+        period_end__gte=datetime.datetime.now().date(),
+        budget__budget_distributor=selected_distributor,
+    ).order_by('proposal_id') if selected_distributor != '0' else None
 
     message = ''
     no_save = False
@@ -5235,7 +5241,7 @@ def program_add(request, _area, _distributor, _proposal):
             else:
                 form = FormProgram(initial={'program_id': _id, 'area': selected_area, 'deadline': deadline, 'header': '<b><table style="width: 100%; height: 12;"><tr><td style="padding-left: 0;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 0;"><b>' + area.base_city + ', ' + datetime.datetime.now().strftime('%-d') + ' ' + bulan[int(datetime.datetime.now().strftime('%m')) - 1] + ' ' + datetime.datetime.now().strftime('%Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br>', 'content': '<b>Hal : <u>' + proposal.program_name + '</u></b><br><br>' + 'Dengan hormat,<br>' +
                                             'Sehubungan dengan informasi proposal ABC PI dengan no. sbb :<br><ul><li><b>' + proposal.proposal_id + ' (ANP Manual)</b></li></ul>Maka bersama surat ini kami sampaikan mengenai support program dengan rincian sebagai berikut :<br><table style="width: 100%; height: 12;"><tr><td style="padding-left: 0; width: 15%; height: ' + str(_height) + '; vertical-align: top;">Nama Program</td><td style="padding-left: 0; width: 2%; height: ' + str(_height) + '; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: ' + str(_height) + '; vertical-align: top;">' + proposal.program_name + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Produk</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + prod + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Periode</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + proposal.period_start.strftime("%-d") + ' ' + bln[int(proposal.period_start.strftime('%m')) - 1] + ' - ' + proposal.period_end.strftime("%d") + ' ' + bln[int(proposal.period_end.strftime('%m')) - 1] + ' ' + proposal.period_end.strftime("%Y") + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Wilayah/Channel</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;">' + proposal.budget.budget_area.area_name + '/' + proposal.channel + '</td></tr><tr><td style="padding-left: 0; width: 15%; height: 12; vertical-align: top;">Detail Qty</td><td style="padding-left: 0; width: 2%; height: 12; vertical-align: top;">: </td><td style="padding-left: 0; width: 76%; height: 12; vertical-align: top;"></td></tr></table>' +
-                                            '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>') + '<p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'disclaimer': '<p><strong><em>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline.strftime('%d') + ' ' + bulan[int(deadline.strftime('%m')) - 1] + ' ' + deadline.strftime('%Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</em></strong></p>', 'approval':
+                                            '<br>Mekanisme Program dan Klaim sebagai berikut :<br>' + proposal.mechanism.replace('\n', '<br>'), 'disclaimer': '<p><strong><em>"Program di atas dapat diklaim ke PT. ABC PI paling lambat tanggal ' + deadline.strftime('%d') + ' ' + bulan[int(deadline.strftime('%m')) - 1] + ' ' + deadline.strftime('%Y') + ', melewati dari batas tersebut PT. ABC PI berhak menolak dan tidak memproses klaim tersebut".</em></strong></p>' + '<p>Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>', 'approval':
                                             '<p><br />Hormat Kami,</p>' +
                                             '<table style="width: 100%; height: 50"><tbody><tr>' + approver_signature + '</tr><tr>' +
                                                 approver_name + '</tr><tr>' + approver_position +
@@ -8654,3 +8660,80 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/report_monthly_budget.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_budget_summary(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    years = [str(year) for year in BudgetTransfer.objects.dates(
+        'date', 'year').distinct().values_list('date__year', flat=True)]
+    distributors = Distributor.objects.all()
+    months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+
+    if _distributor == 'all':
+        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'],
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+            proposed=F('budget_total') +
+            Sum('budgetdetail__budget_remaining') - F('budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+        ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
+            transfer=F('budget_transfer_plus') -
+            F('budget_transfer_minus'),
+            beginning_mo=F('budget_transfer_plus') -
+            F('budget_transfer_minus') + F('budget_total'),
+        ), to_attr='details'))
+
+        total = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'],
+                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
+            begin_bal=Sum('budgetdetail__budget_amount'),
+            upping=Sum('budgetdetail__budget_upping'),
+            begin_mo=Sum('budgetdetail__budget_total'),
+            proposed=Sum('budgetdetail__budget_total') + Sum(
+                'budgetdetail__budget_remaining') - Sum('budgetdetail__budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+            balance=Sum('budgetdetail__budget_balance'))
+    else:
+        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'],
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+            proposed=F('budget_total') +
+            Sum('budgetdetail__budget_remaining') - F('budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+        ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
+            transfer=F('budget_transfer_plus') -
+            F('budget_transfer_minus'),
+            beginning_mo=F('budget_transfer_plus') -
+            F('budget_transfer_minus') + F('budget_total'),
+        ), to_attr='details'))
+
+        total = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'],
+                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
+            begin_bal=Sum('budgetdetail__budget_amount'),
+            upping=Sum('budgetdetail__budget_upping'),
+            begin_mo=Sum('budgetdetail__budget_total'),
+            proposed=Sum('budgetdetail__budget_total') + Sum(
+                'budgetdetail__budget_remaining') - Sum('budgetdetail__budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+            balance=Sum('budgetdetail__budget_balance'))
+
+    context = {
+        'budgets': budgets,
+        'total': total,
+        'from_year': _from_yr,
+        'from_month': _from_mo,
+        'to_year': _to_yr,
+        'to_month': _to_mo,
+        'selected_distributor': _distributor,
+        'years': years,
+        'distributors': distributors,
+        'months': months,
+        'segment': 'report_budget_monthly',
+        'group_segment': 'report',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/report_budget_summary.html', context)

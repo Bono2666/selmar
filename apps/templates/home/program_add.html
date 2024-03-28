@@ -199,7 +199,9 @@
                             </thead>
                             <tbody>
                                 {% for item in proposals %}
-                                <tr data-href="{% url 'program-add' selected_area selected_distributor item.proposal_id %}" class="cursor-pointer">
+                                    {% if item.reference %}
+                                    {% else %}
+                                        <tr data-href="{% url 'program-add' selected_area selected_distributor item.proposal_id %}" class="cursor-pointer">
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
@@ -242,7 +244,8 @@
                                             </div>
                                         </div>
                                     </td>
-                                </tr>
+                                        </tr>
+                                    {% endif %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -329,7 +332,7 @@
         selector: '#id_disclaimer',    
         readonly: 1,
         width: '75%',
-        height: 80,
+        height: 100,
         content_style: "body { font-size: 10pt; }",
         menubar: false,
         statusbar: false,

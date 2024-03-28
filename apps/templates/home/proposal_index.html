@@ -47,7 +47,7 @@
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                                Channel</th>
+                                                Ch</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Total Cost</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Claim</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Balance</th>
@@ -105,7 +105,7 @@
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                                Channel</th>
+                                                Ch</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Total Cost</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Claim</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Balance</th>
@@ -163,11 +163,11 @@
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                                 Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                                Channel</th>
+                                                Ch</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Total Cost</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Claim</th>
                                             <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7 ps-2">Balance</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Wait for Approval</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Wait Approval</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -220,17 +220,17 @@
 
 <script>
     $(document).ready( function () {
-        $('#openTable').DataTable(
-            // {
-            //     "scrollX": true
-            // }
-        );
-        $('#draftTable').DataTable();
-        $('#inapprovalTable').DataTable(
-            // {
-            //     "scrollX": true
-            // }
-        );
+        new DataTable('#openTable', {
+            // scrollX: true,
+        });
+
+        new DataTable('#draftTable', {
+            // scrollX: true,
+        });
+        
+        new DataTable('#inapprovalTable', {
+            // scrollX: true,
+        });
 
         $(document).on('click', 'tbody tr', function() {
             var href = $(this).data('href');

@@ -66,7 +66,7 @@
             </li>
             <li class="nav-item {% if segment == 'budget_release' %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'BUDGET-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'budget-release-index' %}"{% endif %}>
-                <span class="nav-link-text ms-1 {% if 'BUDGET-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Release</span>
+                <span class="nav-link-text ms-1 {% if 'BUDGET-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Approval</span>
               </a>
             </li>
             <li class="nav-item {% if segment == 'budget_closing' %}active{% endif %} list-unstyled">
@@ -167,7 +167,7 @@
             </li>
             <li class="nav-item {% if segment == 'proposal_release' %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'PROPOSAL-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'proposal-release-index' %}"{% endif %}>
-                <span class="nav-link-text ms-1 {% if 'PROPOSAL-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Release</span>
+                <span class="nav-link-text ms-1 {% if 'PROPOSAL-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Approval</span>
               </a>
             </li>
             <li class="nav-item {% if 'proposal_archive' in segment %}active{% endif %} list-unstyled">
@@ -205,7 +205,7 @@
             </svg>
             {% endif %}
           </div>
-          <span class="nav-link-text ms-1">Program</span>
+          <span class="nav-link-text ms-1">Program Letter</span>
         </a>
 
         <div class="multi-level ms-5 collapse {% if 'program' in group_segment %}show{% endif %}" role="list" id="program-menu" aria-expanded="{% if 'program' in group_segment %}true{% else %}false{% endif %}">
@@ -217,7 +217,7 @@
             </li>
             <li class="nav-item {% if segment == 'program_release' %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'PROGRAM-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'program-release-index' %}"{% endif %}>
-                <span class="nav-link-text ms-1 {% if 'PROGRAM-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Release</span>
+                <span class="nav-link-text ms-1 {% if 'PROGRAM-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Approval</span>
               </a>
             </li>
             <li class="nav-item {% if 'program_archive' in segment %}active{% endif %} list-unstyled">
@@ -271,7 +271,7 @@
             </li>
             <li class="nav-item {% if segment == 'claim_release' %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'CLAIM-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'claim-release-index' %}"{% endif %}>
-                <span class="nav-link-text ms-1 {% if 'CLAIM-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Release</span>
+                <span class="nav-link-text ms-1 {% if 'CLAIM-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Approval</span>
               </a>
             </li>
             <li class="nav-item {% if 'claim_archive' in segment %}active{% endif %} list-unstyled">
@@ -317,7 +317,7 @@
             </li>
             <li class="nav-item {% if segment == 'cl_release' %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'CL-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'cl-release-index' %}"{% endif %}>
-                <span class="nav-link-text ms-1 {% if 'CL-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Release</span>
+                <span class="nav-link-text ms-1 {% if 'CL-RELEASE' not in role and not request.user.is_superuser %}disabled{% endif %}">Approval</span>
               </a>
             </li>
             <li class="nav-item {% if segment == 'cl_archive' %}active{% endif %} list-unstyled">

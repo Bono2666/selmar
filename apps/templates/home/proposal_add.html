@@ -140,7 +140,10 @@
                                         <select name="reference" id="reference" class="form-control form-select-sm">
                                             <option value="">Select Reference Proposal</option>
                                             {% for item in refs %}
-                                            <option value="{{ item.proposal_id }}">{{ item.proposal_id }} - {{ item.program_name|truncatechars:50 }}</option>
+                                                {% if item.reference %}
+                                                {% else %}
+                                                    <option value="{{ item.proposal_id }}">{{ item.proposal_id }} - {{ item.program_name|truncatechars:50 }}</option>
+                                                {% endif %}
                                             {% endfor %}
                                         </select>
                                     </div>
