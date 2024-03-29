@@ -8394,10 +8394,6 @@ def report_transfer_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
     to_date = datetime.date(int(_to_yr), int(
         _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
-    years = [str(year) for year in BudgetTransfer.objects.dates(
-        'date', 'year').distinct().values_list('date__year', flat=True)]
-    distributors = Distributor.objects.all()
-    months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
     if _distributor == 'all':
         transfer = BudgetTransfer.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -8409,20 +8405,52 @@ def report_transfer_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="transfer.xlsx"'
+    filename = 'historical_transfer_' + \
+        _from_mo + '_' + _from_yr + '_to_' + _to_mo + '_' + \
+        _to_yr + '_distributor_' + _distributor + '.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=' + filename
 
     # Create an XlsxWriter workbook object and add a worksheet.
     workbook = xlsxwriter.Workbook(response, {'in_memory': True})
     worksheet = workbook.add_worksheet()
+
+    # Define column headers
+    headers = ['Transfer No.', 'Date', 'Area', 'Distributor',
+               'Channel From', 'Channel To', 'Amount']
+
+    # Define cell formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#7eaa55',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+    })
+    cell_format = workbook.add_format({'border': 1})
+    date_format = workbook.add_format(
+        {'border': 1, 'num_format': 'dd/mm/yyyy'})
+    num_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
+
+    # Set column width
+    worksheet.set_column('A:A', 26)
+    worksheet.set_column('B:C', 10)
+    worksheet.set_column('D:D', 28)
+    worksheet.set_column('E:F', 10)
+    worksheet.set_column('G:G', 14)
 
     # Write data to XlsxWriter Object
     for idx, record in enumerate(transfer.values('transfer_id', 'date', 'area_id', 'distributor__distributor_name', 'channel_from_id', 'channel_to_id', 'amount')):
         for col_idx, (col_name, col_value) in enumerate(record.items()):
             if idx == 0:
                 # Write the column headers on the first row
-                worksheet.write(idx, col_idx, col_name)
+                worksheet.write(idx, col_idx, headers[col_idx], header_format)
             # Write the data rows
-            worksheet.write(idx + 1, col_idx, col_value)
+            if col_name == 'date':
+                worksheet.write(idx + 1, col_idx, col_value, date_format)
+            elif col_name == 'amount':
+                worksheet.write(idx + 1, col_idx, col_value, num_format)
+            else:
+                worksheet.write(idx + 1, col_idx, col_value, cell_format)
 
     # Close the workbook before sending the data.
     workbook.close()
@@ -8466,6 +8494,91 @@ def report_cl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/report_cl.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_cl_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+
+    if _distributor == 'all':
+        cl = CLDetail.objects.filter(cl_id__area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                     cl_id__cl_date__gte=from_date, cl_id__cl_date__lt=to_date)
+    else:
+        cl = CLDetail.objects.filter(cl_id__area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                     cl_id__cl_date__gte=from_date, cl_id__cl_date__lt=to_date, cl_id__distributor_id=_distributor)
+
+    # Create a HttpResponse object with the csv data
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = 'cl_list_' + \
+        _from_mo + '_' + _from_yr + '_to_' + _to_mo + '_' + \
+        _to_yr + '_distributor_' + _distributor + '.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+
+    # Create an XlsxWriter workbook object and add a worksheet.
+    workbook = xlsxwriter.Workbook(response, {'in_memory': True})
+    worksheet = workbook.add_worksheet()
+
+    # Define column headers
+    headers = ['No.', 'Area', 'CL No.', 'Date', 'Depo', 'Claim No.', 'Invoice No.',
+               'Distributor', 'Claim Description', 'Amount', 'Status', 'Remarks']
+
+    # Define cell formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#7eaa55',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+    })
+    cell_format = workbook.add_format({'border': 1})
+    date_format = workbook.add_format(
+        {'border': 1, 'num_format': 'dd/mm/yyyy'})
+    num_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
+
+    # Set column width
+    worksheet.set_column('A:A', 5)
+    worksheet.set_column('B:B', 10)
+    worksheet.set_column('C:C', 26)
+    worksheet.set_column('D:E', 10)
+    worksheet.set_column('F:G', 29)
+    worksheet.set_column('H:H', 28)
+    worksheet.set_column('I:I', 50)
+    worksheet.set_column('J:J', 14)
+    worksheet.set_column('K:K', 10)
+    worksheet.set_column('L:L', 30)
+
+    # Write data to XlsxWriter Object
+    for idx, record in enumerate(cl.values('cl_id__area_id', 'cl_id', 'cl_id__cl_date', 'claim_id__depo', 'claim_id', 'claim__invoice', 'cl_id__distributor__distributor_name', 'claim__remarks', 'claim__total_claim', 'cl_id__status')):
+        for col_idx, (col_name, col_value) in enumerate(record.items()):
+            if idx == 0:
+                # Write the column headers on the first row
+                worksheet.write(idx, col_idx, headers[col_idx], header_format)
+                worksheet.write(idx, 10, headers[10], header_format)
+                worksheet.write(idx, 11, headers[11], header_format)
+            # Write the data rows
+            if col_idx == 0:
+                worksheet.write(idx + 1, col_idx, idx + 1, cell_format)
+            if col_name == 'cl_id__cl_date':
+                worksheet.write(idx + 1, col_idx + 1, col_value, date_format)
+            elif col_name == 'claim__total_claim':
+                worksheet.write(idx + 1, col_idx + 1, col_value, num_format)
+            elif col_name == 'cl_id__status':
+                worksheet.write(
+                    idx + 1, col_idx + 1, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format)
+            else:
+                worksheet.write(idx + 1, col_idx + 1, col_value, cell_format)
+
+            worksheet.write(idx + 1, 11, '', cell_format)
+
+    # Close the workbook before sending the data.
+    workbook.close()
+
+    return response
 
 
 @login_required(login_url='/login/')
