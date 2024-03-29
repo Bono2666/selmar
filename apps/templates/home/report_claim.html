@@ -35,6 +35,7 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Proposal No.</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Program Name</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Invoice Description</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Claim Period</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Curr</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Amount</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
@@ -80,10 +81,13 @@
                                         <h6 class="mb-0 text-sm">{{ item.8 }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.9|truncatechars:20 }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.9 }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.10|truncatechars:20 }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.10 }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.14 %}{{ item.14 }}{% endif %}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">IDR</h6>

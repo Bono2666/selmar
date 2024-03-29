@@ -20,6 +20,7 @@ pypdf2
 requests
 django-tinymce
 xhtml2pdf
+django-pivot
 # djangorestframework
 
 # psycopg2-binary

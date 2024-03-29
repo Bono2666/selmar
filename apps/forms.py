@@ -1084,18 +1084,15 @@ class FormClaim(ModelForm):
         self.fields['due_date'].label = 'Due Date'
         self.fields['amount'].label = 'Amount'
         self.fields['amount'].widget = forms.NumberInput(
-            attrs={'class': 'form-control-sm no-spinners'})
+            attrs={'class': 'form-control-sm no-spinners', 'min': 1})
         self.fields['is_tax'].label = 'Using Tax'
         self.fields['remarks'].label = 'Invoice Description'
-        self.fields['remarks'].required = False
         self.fields['depo'].label = 'Depo'
         self.fields['depo'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['depo'].required = False
         self.fields['claim_period'].label = 'Claim Period'
         self.fields['claim_period'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['claim_period'].required = False
         self.fields['additional_proposal'].label = 'Additional Proposal'
         self.fields['additional_proposal'].required = False
 
@@ -1171,18 +1168,15 @@ class FormClaimUpdate(ModelForm):
         self.fields['due_date'].label = 'Due Date'
         self.fields['amount'].label = 'Amount'
         self.fields['amount'].widget = forms.NumberInput(
-            attrs={'class': 'form-control-sm no-spinners'})
+            attrs={'class': 'form-control-sm no-spinners', 'min': 1})
         self.fields['is_tax'].label = 'Using Tax'
         self.fields['remarks'].label = 'Invoice Description'
-        self.fields['remarks'].required = False
         self.fields['depo'].label = 'Depo'
         self.fields['depo'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['depo'].required = False
         self.fields['claim_period'].label = 'Claim Period'
         self.fields['claim_period'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
-        self.fields['claim_period'].required = False
         self.fields['additional_proposal'].label = 'Additional Proposal'
         self.fields['additional_proposal'].required = False
 

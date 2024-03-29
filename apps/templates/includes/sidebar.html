@@ -361,6 +361,16 @@
                 <span class="nav-link-text ms-1 {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}">Budget Monthly</span>
               </a>
             </li>
+            <!-- <li class="nav-item {% if segment == 'report_budget_summary' %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'report-budget-summary' '0' '0' '0' '0' 'all' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}">Budget Summary</span>
+              </a>
+            </li> -->
+            <li class="nav-item {% if segment == 'report_transfer' %}active{% endif %} list-unstyled">
+              <a class="nav-link button cursor-pointer {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'report-transfer' '0' '0' '0' '0' 'all' %}"{% endif %}>
+                <span class="nav-link-text ms-1 {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}">Transfer</span>
+              </a>  
+            </li>
             <li class="nav-item {% if segment == 'report_proposal' %}active{% endif %} list-unstyled">
               <a class="nav-link button cursor-pointer {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'report-proposal' '0' '0' '0' '0' 'all' %}"{% endif %}>
                 <span class="nav-link-text ms-1 {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}">Proposal</span>
@@ -380,11 +390,6 @@
               <a class="nav-link button cursor-pointer {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'report-cl' '0' '0' '0' '0' 'all' %}"{% endif %}>
                 <span class="nav-link-text ms-1 {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}">CL</span>
               </a>
-            </li>
-            <li class="nav-item {% if segment == 'report_transfer' %}active{% endif %} list-unstyled">
-              <a class="nav-link button cursor-pointer {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}" {% if crud != 'add' and crud != 'update' %}href="{% url 'report-transfer' '0' '0' '0' '0' 'all' %}"{% endif %}>
-                <span class="nav-link-text ms-1 {% if 'REPORT' not in role and not request.user.is_superuser %}disabled{% endif %}">Transfer</span>
-              </a>  
             </li>
           </ul>
         </div>

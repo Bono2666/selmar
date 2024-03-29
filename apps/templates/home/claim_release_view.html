@@ -25,7 +25,7 @@
                                 <a href="{% if crud == 'view' and is_revise == 0 %}{% url 'claim-release-index' %}{% else %}{% if crud == 'update' %}{% url 'claim-release-view' data.claim_id 1 %}{% else %}{% url 'claim-release-view' data.claim_id 0 %}{% endif %}{% endif %}" class="btn btn-sm px-3 bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' and is_revise == 0 %}Back{% else %}Cancel{% endif %}</a>
                                 <button type="button" class="btn btn-sm px-3 bg-gradient-dark mb-0 {% if not btn_release.approve %}disabled{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-approve"><i class="fas fa-check"></i>&nbsp;&nbsp;Approve</button>
                                 <a href="{% if is_revise == 0 %}{% url 'claim-release-view' data.claim_id 1 %}{% else %}{% url 'claim-release-update' data.claim_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if not btn_release.revise %}disabled{% endif %} {% if approved == 'Y' %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;{% if is_revise == 0 %}Revise{% else %}Edit{% endif %}</a>
-                                <button type="button" class="btn btn-sm px-4 bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#revise-note"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
+                                <button type="submit" class="btn btn-sm px-4 bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm px-4 bg-gradient-dark mb-0 {% if not btn_release.returned %}disabled{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-return"><i class="fas fa-reply-all"></i>&nbsp;&nbsp;Return</button>
                                 <button type="button" class="btn btn-sm px-4 bg-gradient-danger mb-0 {% if not btn_release.reject %}disabled{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-reject"><i class="fas fa-times"></i>&nbsp;&nbsp;Reject</button>
                             </div>
@@ -233,7 +233,11 @@
                                 <div class="col-md-2">
                                     <div class="shadow-none">
                                         {{ form.amount.label_tag }}
-                                        <input type="text" name="amount" id="id_amount" class="form-control form-control-sm" value="{% if crud == 'view' %}{{ form.amount.value|intcomma }}{% else %}{{ form.amount.value }}{% endif %}" {% if crud == 'view' %}readonly{% endif %}>
+                                        {% if crud == 'view' %}
+                                            <input type="text" name="amount" id="id_amount" class="form-control form-control-sm" value="{% if crud == 'view' %}{{ form.amount.value|intcomma }}{% else %}{{ form.amount.value }}{% endif %}" {% if crud == 'view' %}readonly{% endif %}>
+                                        {% else %}
+                                            {{ form.amount }}
+                                        {% endif %}
                                         <div class="text-sm text-danger">
                                             {{ form.amount.errors }}
                                         </div>
@@ -275,7 +279,7 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-8">
+                                <div class="{% if crud == 'view' %}col-md-8{% else %}col-md-4{% endif %}">
                                     {{ form.remarks.label_tag }}
                                     {{ form.remarks }}
                                     <div class="text-sm text-danger">
@@ -298,6 +302,14 @@
                                         </div>
                                     </div>
                                 </div>
+                                {% if crud == 'update' %}
+                                <div class="col-md-4">
+                                    <label for="id_revise-note">Revise Note</label>
+                                    <div class="shadow-none">
+                                        <textarea name="id_revise-note" id="id_revise-note" class="form-control-sm text-body" aria-label="Revise Note" placeholder="Your note here ..." rows="4" required {% if crud == 'view' %}disabled{% endif %}></textarea>
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

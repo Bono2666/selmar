@@ -32,6 +32,11 @@ from django.db.models import F
 from django.db.models import Prefetch
 from django.db.models.functions import Length
 from django.db.models.functions import Length
+from django.db.models import ExpressionWrapper, F
+from django.db.models import Value as V
+from django.db.models.functions import Concat, Cast
+from django.db.models import DateTimeField
+from django_pivot.pivot import pivot
 
 
 @login_required(login_url='/login/')
@@ -6483,7 +6488,7 @@ def claim_release_update(request, _id):
 
                 release = ClaimRelease.objects.get(
                     claim_id=_id, claim_approval_id=request.user.user_id)
-                release.revise_note = request.POST.get('revise_note')
+                release.revise_note = request.POST.get('id_revise-note')
                 release.save()
 
                 with connection.cursor() as cursor:
@@ -8357,11 +8362,11 @@ def report_transfer(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
     if _distributor == 'all':
-        transfer = BudgetTransfer.objects.filter(
-            date__gte=from_date, date__lt=to_date)
+        transfer = BudgetTransfer.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                                 date__gte=from_date, date__lt=to_date)
     else:
-        transfer = BudgetTransfer.objects.filter(
-            date__gte=from_date, date__lt=to_date, distributor_id=_distributor)
+        transfer = BudgetTransfer.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                                 date__gte=from_date, date__lt=to_date, distributor_id=_distributor)
 
     context = {
         'data': transfer,
@@ -8395,11 +8400,11 @@ def report_cl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
     if _distributor == 'all':
-        cl = CLDetail.objects.filter(
-            cl_id__cl_date__gte=from_date, cl_id__cl_date__lt=to_date)
+        cl = CLDetail.objects.filter(cl_id__area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                     cl_id__cl_date__gte=from_date, cl_id__cl_date__lt=to_date)
     else:
-        cl = CLDetail.objects.filter(
-            cl_id__cl_date__gte=from_date, cl_id__cl_date__lt=to_date, cl_id__distributor_id=_distributor)
+        cl = CLDetail.objects.filter(cl_id__area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                     cl_id__cl_date__gte=from_date, cl_id__cl_date__lt=to_date, cl_id__distributor_id=_distributor)
 
     context = {
         'data': cl,
@@ -8433,11 +8438,11 @@ def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
     if _distributor == 'all':
-        claim = Claim.objects.filter(
-            claim_date__gte=from_date, claim_date__lt=to_date).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area__area_name', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1])
+        claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                     claim_date__gte=from_date, claim_date__lt=to_date).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area__area_name', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
     else:
-        claim = Claim.objects.filter(
-            claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area__area_name', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1])
+        claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area__area_name', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
 
     context = {
         'data': claim,
@@ -8471,15 +8476,15 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
     if _distributor == 'all':
-        proposal = Proposal.objects.filter(
-            proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN').annotate(
+        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN').annotate(
             difference=F('proposal_claim') - F('parked_claim')
         ).values_list(
             'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance'
         )
     else:
-        proposal = Proposal.objects.filter(
-            proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN', budget__budget_distributor=_distributor).annotate(
+        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN', budget__budget_distributor=_distributor).annotate(
             difference=F('proposal_claim') - F('parked_claim')
         ).values_list(
             'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance'
@@ -8517,8 +8522,8 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
     if _distributor == 'all':
-        proposal = Proposal.objects.filter(
-            proposal_date__gte=from_date, proposal_date__lt=to_date).annotate(
+        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date).annotate(
             sum_swop_carton=Sum('incrementalsales__swop_carton'),
             sum_swop_nom=Sum('incrementalsales__swop_nom'),
             sum_swp_carton=Sum('incrementalsales__swp_carton'),
@@ -8535,8 +8540,8 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
                 'sequence').values('proposal_approval_name')[:1]
         )
     else:
-        proposal = Proposal.objects.filter(
-            proposal_date__gte=from_date, proposal_date__lt=to_date, budget__budget_distributor=_distributor).annotate(
+        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, budget__budget_distributor=_distributor).annotate(
             sum_swop_carton=Sum('incrementalsales__swop_carton'),
             sum_swop_nom=Sum('incrementalsales__swop_nom'),
             sum_swp_carton=Sum('incrementalsales__swp_carton'),
@@ -8591,7 +8596,7 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
             'max_length') else 0
         scrollX = True if max_len > 25 else False
 
-        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'],
+        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
                                         budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
             proposed=F('budget_total') +
             Sum('budgetdetail__budget_remaining') - F('budget_balance'),
@@ -8603,7 +8608,7 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
             F('budget_transfer_minus') + F('budget_total'),
         ), to_attr='details'))
 
-        total = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'],
+        total = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
                                       budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
             begin_bal=Sum('budgetdetail__budget_amount'),
             upping=Sum('budgetdetail__budget_upping'),
@@ -8619,7 +8624,7 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
             'max_length') else 0
         scrollX = True if max_len > 25 else False
 
-        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'],
+        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
                                         budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
             proposed=F('budget_total') +
             Sum('budgetdetail__budget_remaining') - F('budget_balance'),
@@ -8631,7 +8636,7 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
             F('budget_transfer_minus') + F('budget_total'),
         ), to_attr='details'))
 
-        total = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'],
+        total = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
                                       budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
             begin_bal=Sum('budgetdetail__budget_amount'),
             upping=Sum('budgetdetail__budget_upping'),
@@ -8675,53 +8680,26 @@ def report_budget_summary(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
     if _distributor == 'all':
-        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'],
-                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
-            proposed=F('budget_total') +
-            Sum('budgetdetail__budget_remaining') - F('budget_balance'),
-            remaining=Sum('budgetdetail__budget_remaining'),
-        ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
-            transfer=F('budget_transfer_plus') -
-            F('budget_transfer_minus'),
-            beginning_mo=F('budget_transfer_plus') -
-            F('budget_transfer_minus') + F('budget_total'),
-        ), to_attr='details'))
+        budgets = Budget.objects.annotate(
+            budget_date=ExpressionWrapper(
+                Cast(Concat('budget_year', V('-'), 'budget_month',
+                     V('-01')), output_field=DateTimeField()),
+                output_field=DateTimeField()
+            ),
+        ).filter(
+            budget_status__in=['OPEN', 'CLOSED'],
+            budget_area__in=AreaUser.objects.filter(
+                user_id=request.user.user_id).values_list('area_id', flat=True),
+            budget_date__gte=from_date, budget_date__lt=to_date,
+        )
 
-        total = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'],
-                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
-            begin_bal=Sum('budgetdetail__budget_amount'),
-            upping=Sum('budgetdetail__budget_upping'),
-            begin_mo=Sum('budgetdetail__budget_total'),
-            proposed=Sum('budgetdetail__budget_total') + Sum(
-                'budgetdetail__budget_remaining') - Sum('budgetdetail__budget_balance'),
-            remaining=Sum('budgetdetail__budget_remaining'),
-            balance=Sum('budgetdetail__budget_balance'))
-    else:
-        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'],
-                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
-            proposed=F('budget_total') +
-            Sum('budgetdetail__budget_remaining') - F('budget_balance'),
-            remaining=Sum('budgetdetail__budget_remaining'),
-        ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
-            transfer=F('budget_transfer_plus') -
-            F('budget_transfer_minus'),
-            beginning_mo=F('budget_transfer_plus') -
-            F('budget_transfer_minus') + F('budget_total'),
-        ), to_attr='details'))
-
-        total = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'],
-                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
-            begin_bal=Sum('budgetdetail__budget_amount'),
-            upping=Sum('budgetdetail__budget_upping'),
-            begin_mo=Sum('budgetdetail__budget_total'),
-            proposed=Sum('budgetdetail__budget_total') + Sum(
-                'budgetdetail__budget_remaining') - Sum('budgetdetail__budget_balance'),
-            remaining=Sum('budgetdetail__budget_remaining'),
-            balance=Sum('budgetdetail__budget_balance'))
+    summaries = pivot(budgets, 'budget_date',
+                      'budget_distributor__distributor_name', 'budget_balance')
+    print(summaries)
 
     context = {
         'budgets': budgets,
-        'total': total,
+        'summaries': summaries,
         'from_year': _from_yr,
         'from_month': _from_mo,
         'to_year': _to_yr,
