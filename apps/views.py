@@ -8389,6 +8389,49 @@ def report_transfer(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='REPORT')
+def report_transfer_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    years = [str(year) for year in BudgetTransfer.objects.dates(
+        'date', 'year').distinct().values_list('date__year', flat=True)]
+    distributors = Distributor.objects.all()
+    months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+
+    if _distributor == 'all':
+        transfer = BudgetTransfer.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                                 date__gte=from_date, date__lt=to_date)
+    else:
+        transfer = BudgetTransfer.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                                 date__gte=from_date, date__lt=to_date, distributor_id=_distributor)
+
+    # Create a HttpResponse object with the csv data
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="transfer.xlsx"'
+
+    # Create an XlsxWriter workbook object and add a worksheet.
+    workbook = xlsxwriter.Workbook(response, {'in_memory': True})
+    worksheet = workbook.add_worksheet()
+
+    # Write data to XlsxWriter Object
+    for idx, record in enumerate(transfer.values('transfer_id', 'date', 'area_id', 'distributor__distributor_name', 'channel_from_id', 'channel_to_id', 'amount')):
+        for col_idx, (col_name, col_value) in enumerate(record.items()):
+            if idx == 0:
+                # Write the column headers on the first row
+                worksheet.write(idx, col_idx, col_name)
+            # Write the data rows
+            worksheet.write(idx + 1, col_idx, col_value)
+
+    # Close the workbook before sending the data.
+    workbook.close()
+
+    return response
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
 def report_cl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)

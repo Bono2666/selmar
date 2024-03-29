@@ -17,6 +17,7 @@
                     </div>
                     <div class="col-6 text-end">
                         <button class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#pop_filter"><i class="fas fa-filter"></i>&nbsp;&nbsp;Filter</button>
+                        <button id="export" class="btn btn-sm bg-success text-white mb-0"><i class="fas fa-file-excel"></i>&nbsp;&nbsp;Export Data</a>
                     </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
@@ -172,6 +173,7 @@
     let to_mo = document.getElementById('to_mo');
     let distributor = document.getElementById('distributor');
     let filter = document.getElementById('filter');
+    let export_btn = document.getElementById('export');
 
     from_yr.addEventListener('change', function() {
         if(from_yr.value != '0' && from_yr.value > to_yr.value) {
@@ -199,6 +201,11 @@
 
     filter.addEventListener('click', function() {
         let url = `/report/transfer/${from_yr.value}/${from_mo.value}/${to_yr.value}/${to_mo.value}/${distributor.value}`;
+        window.location.href = url;
+    });
+
+    export_btn.addEventListener('click', function() {
+        let url = `/report/transfer_toxl/${from_year}/${from_month}/${to_year}/${to_month}/${distributor.value}`;
         window.location.href = url;
     });
 

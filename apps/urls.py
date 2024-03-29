@@ -346,6 +346,8 @@ urlpatterns = [
          views.region_detail_delete, name='region-detail-delete'),
     path('report/transfer/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
          views.report_transfer, name='report-transfer'),
+    path('report/transfer_toxl/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
+         views.report_transfer_toxl, name='report-transfer-toxl'),
     path('report/cl/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
          views.report_cl, name='report-cl'),
     path('report/claim/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
