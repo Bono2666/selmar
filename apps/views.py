@@ -8621,6 +8621,112 @@ def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='REPORT')
+def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+
+    if _distributor == 'all':
+        claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                     claim_date__gte=from_date, claim_date__lt=to_date).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area__area_name', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
+    else:
+        claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area__area_name', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
+
+    # Create a HttpResponse object with the csv data
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = 'claim_list_' + \
+        _from_mo + '_' + _from_yr + '_to_' + _to_mo + '_' + \
+        _to_yr + '_distributor_' + _distributor + '.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+
+    # Create an XlsxWriter workbook object and add a worksheet.
+    workbook = xlsxwriter.Workbook(response, {'in_memory': True})
+    worksheet = workbook.add_worksheet()
+
+    # Define column headers
+    headers = ['No.', 'Claim No.', 'Invoice No.', 'Claim Date', 'Invoice Date', 'Distributor', 'Area', 'Depo',
+               'Channel', 'Proposal No.', 'Program Name', 'Invoice Description', 'Curr', 'Amount', 'Status', 'Wait For Approval']
+
+    # Define cell formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#7eaa55',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+    })
+    cell_format = workbook.add_format({'border': 1})
+    date_format = workbook.add_format(
+        {'border': 1, 'num_format': 'dd/mm/yyyy'})
+    date_back_format = workbook.add_format(
+        {'border': 1, 'num_format': 'dd/mm/yyyy', 'bg_color': '#e5eedc'})
+    num_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
+    num_back_format = workbook.add_format(
+        {'border': 1, 'num_format': '#,##0', 'bg_color': '#e5eedc'})
+    back_format = workbook.add_format({'border': 1, 'bg_color': '#e5eedc'})
+
+    # Set column width
+    worksheet.set_column('A:A', 5)
+    worksheet.set_column('B:C', 29)
+    worksheet.set_column('D:E', 11)
+    worksheet.set_column('F:F', 28)
+    worksheet.set_column('G:H', 10)
+    worksheet.set_column('I:I', 10)
+    worksheet.set_column('J:J', 29)
+    worksheet.set_column('K:K', 78)
+    worksheet.set_column('L:L', 50)
+    worksheet.set_column('M:M', 6)
+    worksheet.set_column('N:N', 14)
+    worksheet.set_column('O:O', 11)
+    worksheet.set_column('P:P', 30)
+
+    # Write data to XlsxWriter Object
+    for idx, record in enumerate(claim):
+        for col_idx, col_value in enumerate(record):
+            if idx == 0:
+                # Write the column headers on the first row
+                worksheet.write(idx, col_idx, headers[col_idx], header_format)
+                worksheet.write(idx, 15, headers[15], header_format)
+            # Write the data rows
+            if col_idx == 0:
+                worksheet.write(idx + 1, col_idx, idx + 1, cell_format) if idx % 2 == 0 else worksheet.write(
+                    idx + 1, col_idx, idx + 1, back_format)
+            if col_idx == 2 or col_idx == 3:
+                worksheet.write(idx + 1, col_idx + 1, col_value, date_format) if idx % 2 == 0 else worksheet.write(
+                    idx + 1, col_idx + 1, col_value, date_back_format)
+            elif col_idx == 11:
+                worksheet.write(idx + 1, col_idx + 2, col_value, num_format) if idx % 2 == 0 else worksheet.write(
+                    idx + 1, col_idx + 2, col_value, num_back_format)
+            elif col_idx == 12:
+                worksheet.write(idx + 1, col_idx + 2, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format) if idx % 2 == 0 else worksheet.write(
+                    idx + 1, col_idx + 2, 'COMPLETED' if col_value == 'OPEN' else col_value, back_format)
+            elif col_idx == 13:
+                if idx % 2 == 0:
+                    worksheet.write(idx + 1, col_idx + 2, col_value, cell_format) if record[12] == 'IN APPROVAL' else worksheet.write(
+                        idx + 1, col_idx + 2, '', cell_format)
+                else:
+                    worksheet.write(idx + 1, col_idx + 2, col_value, back_format) if record[12] == 'IN APPROVAL' else worksheet.write(
+                        idx + 1, col_idx + 2, '', back_format)
+            elif col_idx == 14:
+                worksheet.write(idx + 1, col_idx + 2, '')
+            else:
+                worksheet.write(idx + 1, col_idx + 1, col_value, cell_format) if idx % 2 == 0 else worksheet.write(
+                    idx + 1, col_idx + 1, col_value, back_format)
+
+            worksheet.write(idx + 1, 12, 'IDR', cell_format) if idx % 2 == 0 else worksheet.write(
+                idx + 1, 12, 'IDR', back_format)
+
+    # Close the workbook before sending the data.
+    workbook.close()
+
+    return response
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
 def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)

@@ -354,6 +354,8 @@ urlpatterns = [
          views.report_cl_toxl, name='report-cl-toxl'),
     path('report/claim/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
          views.report_claim, name='report-claim'),
+    path('report/claim/export/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
+         views.report_claim_toxl, name='report-claim-toxl'),
     path('report/proposal_claim/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
          views.report_proposal_claim, name='report-proposal-claim'),
     path('report/proposal/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
