@@ -8595,10 +8595,10 @@ def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 
     if _distributor == 'all':
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                     claim_date__gte=from_date, claim_date__lt=to_date).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area__area_name', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
+                                     claim_date__gte=from_date, claim_date__lt=to_date).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
     else:
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area__area_name', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
+                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
 
     context = {
         'data': claim,
@@ -8629,10 +8629,10 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
 
     if _distributor == 'all':
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                     claim_date__gte=from_date, claim_date__lt=to_date).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
+                                     claim_date__gte=from_date, claim_date__lt=to_date).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1])
     else:
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
+                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1])
 
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
@@ -8673,7 +8673,8 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
     worksheet.set_column('B:C', 29)
     worksheet.set_column('D:E', 11)
     worksheet.set_column('F:F', 28)
-    worksheet.set_column('G:H', 11)
+    worksheet.set_column('G:G', 9)
+    worksheet.set_column('H:H', 11)
     worksheet.set_column('I:I', 9)
     worksheet.set_column('J:J', 29)
     worksheet.set_column('K:K', 78)
@@ -8710,8 +8711,6 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
                 else:
                     worksheet.write(idx + 1, col_idx + 2, col_value, back_format) if record[12] == 'IN APPROVAL' else worksheet.write(
                         idx + 1, col_idx + 2, '', back_format)
-            elif col_idx == 14:
-                worksheet.write(idx + 1, col_idx + 2, '')
             else:
                 worksheet.write(idx + 1, col_idx + 1, col_value, cell_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx + 1, col_value, back_format)
