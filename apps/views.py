@@ -8797,7 +8797,7 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    filename = 'proposal_claim_list_' + \
+    filename = 'proposal_claim_' + \
         _from_mo + '_' + _from_yr + '_to_' + _to_mo + '_' + \
         _to_yr + '_distributor_' + _distributor + '.xlsx'
     response['Content-Disposition'] = 'attachment; filename=' + filename
@@ -8881,7 +8881,7 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
         ).values_list(
             'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
             ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
-                'sequence').values('proposal_approval_name')[:1]
+                'sequence').values('proposal_approval_name')[:1], 'total_cost'
         )
     else:
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -8899,7 +8899,7 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
         ).values_list(
             'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
             ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
-                'sequence').values('proposal_approval_name')[:1]
+                'sequence').values('proposal_approval_name')[:1], 'total_cost'
         )
 
     context = {
@@ -8923,11 +8923,129 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='REPORT')
-def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+def report_proposal_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
     to_date = datetime.date(int(_to_yr), int(
         _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+
+    if _distributor == 'all':
+        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date).annotate(
+            sum_swop_carton=Sum('incrementalsales__swop_carton'),
+            sum_swop_nom=Sum('incrementalsales__swop_nom'),
+            sum_swp_carton=Sum('incrementalsales__swp_carton'),
+            sum_swp_nom=Sum('incrementalsales__swp_nom'),
+            sum_incrp_carton=Sum('incrementalsales__incrp_carton'),
+            sum_incrp_nom=Sum('incrementalsales__incrp_nom'),
+            incpct_carton=Sum('incrementalsales__incrp_carton') /
+            Sum('incrementalsales__swop_carton'),
+            incpct_nom=Sum('incrementalsales__incrp_nom') /
+            Sum('incrementalsales__swop_nom')
+        ).values_list(
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
+            ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
+                'sequence').values('proposal_approval_name')[:1]
+        )
+    else:
+        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, budget__budget_distributor=_distributor).annotate(
+            sum_swop_carton=Sum('incrementalsales__swop_carton'),
+            sum_swop_nom=Sum('incrementalsales__swop_nom'),
+            sum_swp_carton=Sum('incrementalsales__swp_carton'),
+            sum_swp_nom=Sum('incrementalsales__swp_nom'),
+            sum_incrp_carton=Sum('incrementalsales__incrp_carton'),
+            sum_incrp_nom=Sum('incrementalsales__incrp_nom'),
+            incpct_carton=Sum('incrementalsales__incrp_carton') /
+            Sum('incrementalsales__swop_carton'),
+            incpct_nom=Sum('incrementalsales__incrp_nom') /
+            Sum('incrementalsales__swop_nom')
+        ).values_list(
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
+            ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
+                'sequence').values('proposal_approval_name')[:1]
+        )
+
+    # Create a HttpResponse object with the csv data
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = 'proposal_' + \
+        _from_mo + '_' + _from_yr + '_to_' + _to_mo + '_' + \
+        _to_yr + '_distributor_' + _distributor + '.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+
+    # Create an XlsxWriter workbook object and add a worksheet.
+    workbook = xlsxwriter.Workbook(response, {'in_memory': True})
+    worksheet = workbook.add_worksheet()
+
+    # Define column headers
+    headers = ['Area', 'Distributor', 'Channel', 'Proposal No.', 'Program Name', 'Program No.', 'Division', 'Start', 'End', 'Budget',
+               'Sales Without Program (CTN)', 'Sales Without Program (Rp)', 'Sales With Program (CTN)', 'Sales With Program (Rp)', 'Incremental (CTN)', 'Incremental (Rp)', 'Incremental % (CTN)', 'Incremental % (Rp)', 'Status', 'Wait For Approval']
+
+    # Define cell formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#7eaa55',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+    })
+    cell_format = workbook.add_format({'border': 1})
+    date_format = workbook.add_format(
+        {'border': 1, 'num_format': 'dd/mm/yyyy'})
+    num_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
+    percent_format = workbook.add_format(
+        {'border': 1, 'num_format': '#,##0.0%'})
+
+    # Set column width
+    worksheet.set_column('A:A', 9)
+    worksheet.set_column('B:B', 32)
+    worksheet.set_column('C:C', 9)
+    worksheet.set_column('D:D', 29)
+    worksheet.set_column('E:E', 80)
+    worksheet.set_column('F:F', 29)
+    worksheet.set_column('G:G', 16)
+    worksheet.set_column('H:I', 11)
+    worksheet.set_column('J:J', 14)
+    worksheet.set_column('K:R', 24)
+    worksheet.set_column('S:S', 12)
+    worksheet.set_column('T:T', 30)
+
+    # Write data to XlsxWriter Object
+    for idx, record in enumerate(proposal):
+        for col_idx, col_value in enumerate(record):
+            if idx == 0:
+                # Write the column headers on the first row
+                worksheet.write(idx, col_idx, headers[col_idx], header_format)
+            # Write the data rows
+            if col_idx == 7 or col_idx == 8:
+                worksheet.write(idx + 1, col_idx, col_value, date_format)
+            elif col_idx == 9 or col_idx == 10 or col_idx == 11 or col_idx == 12 or col_idx == 13 or col_idx == 14 or col_idx == 15:
+                worksheet.write(idx + 1, col_idx, col_value, num_format)
+            elif col_idx == 16:
+                formula = f'=IFERROR({xlsxwriter.utility.xl_rowcol_to_cell(idx + 1, 14)} / {xlsxwriter.utility.xl_rowcol_to_cell(idx + 1, 10)}, 0)'
+                worksheet.write(idx + 1, col_idx, formula, percent_format)
+            elif col_idx == 17:
+                formula = f'=IFERROR({xlsxwriter.utility.xl_rowcol_to_cell(idx + 1, 15)} / {xlsxwriter.utility.xl_rowcol_to_cell(idx + 1, 11)}, 0)'
+                worksheet.write(idx + 1, col_idx, formula, percent_format)
+            elif col_idx == 18:
+                worksheet.write(
+                    idx + 1, col_idx, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format)
+            elif col_idx == 19:
+                worksheet.write(idx + 1, col_idx, col_value, cell_format) if record[18] == 'IN APPROVAL' else worksheet.write(
+                    idx + 1, col_idx, '', cell_format)
+            else:
+                worksheet.write(idx + 1, col_idx, col_value, cell_format)
+
+    # Close the workbook before sending the data.
+    workbook.close()
+
+    return response
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     years = [str(year) for year in BudgetTransfer.objects.dates(
         'date', 'year').distinct().values_list('date__year', flat=True)]
     distributors = Distributor.objects.all()

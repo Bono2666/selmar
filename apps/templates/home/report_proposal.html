@@ -17,6 +17,7 @@
                     </div>
                     <div class="col-6 text-end">
                         <button class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#pop_filter"><i class="fas fa-filter"></i>&nbsp;&nbsp;Filter</button>
+                        <button id="export" class="btn btn-sm bg-success text-white mb-0"><i class="fas fa-file-excel"></i>&nbsp;&nbsp;Export Data</a>
                     </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
@@ -88,28 +89,28 @@
                                         <h6 class="mb-0 text-sm text-end">{{ item.9|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.10|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.10 %}{{ item.10|intcomma }}{% else %}0{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.11|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.11 %}{{ item.11|intcomma }}{% else %}0{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.12|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.12 %}{{ item.12|intcomma }}{% else %}0{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.13|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.13 %}{{ item.13|intcomma }}{% else %}0{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.14|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.14 %}{{ item.14|intcomma }}{% else %}0{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.15|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.15 %}{{ item.15|intcomma }}{% else %}0{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.16|intcomma|floatformat:1 }}%</h6>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.16 %}{{ item.16|intcomma|floatformat:1 }}%{% else %}0%{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.17|intcomma|floatformat:1 }}%
+                                        <h6 class="mb-0 text-sm text-end">{% if item.17 %}{{ item.17|intcomma|floatformat:1 }}%{% else %}0%{% endif %}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">{% if item.18 == 'OPEN' %}COMPLETED{% else %}{{ item.18 }}{% endif %}</h6>
@@ -228,6 +229,7 @@
     let to_mo = document.getElementById('to_mo');
     let distributor = document.getElementById('distributor');
     let filter = document.getElementById('filter');
+    let exportBtn = document.getElementById('export');
 
     from_yr.addEventListener('change', function() {
         if(from_yr.value != '0' && from_yr.value > to_yr.value) {
@@ -255,6 +257,11 @@
 
     filter.addEventListener('click', function() {
         let url = `/report/proposal/${from_yr.value}/${from_mo.value}/${to_yr.value}/${to_mo.value}/${distributor.value}`;
+        window.location.href = url;
+    });
+
+    exportBtn.addEventListener('click', function() {
+        let url = `/report/proposal/export/${from_yr.value}/${from_mo.value}/${to_yr.value}/${to_mo.value}/${distributor.value}`;
         window.location.href = url;
     });
 
