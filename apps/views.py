@@ -8690,6 +8690,7 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
             if idx == 0:
                 # Write the column headers on the first row
                 worksheet.write(idx, col_idx, headers[col_idx], header_format)
+                worksheet.write(idx, 14, headers[14], header_format)
                 worksheet.write(idx, 15, headers[15], header_format)
             # Write the data rows
             if col_idx == 0:
@@ -8768,6 +8769,88 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/report_proposal_claim.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+
+    if _distributor == 'all':
+        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN').annotate(
+            difference=F('proposal_claim') - F('parked_claim')
+        ).values_list(
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance'
+        )
+    else:
+        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN', budget__budget_distributor=_distributor).annotate(
+            difference=F('proposal_claim') - F('parked_claim')
+        ).values_list(
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance'
+        )
+
+    # Create a HttpResponse object with the csv data
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = 'proposal_claim_list_' + \
+        _from_mo + '_' + _from_yr + '_to_' + _to_mo + '_' + \
+        _to_yr + '_distributor_' + _distributor + '.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+
+    # Create an XlsxWriter workbook object and add a worksheet.
+    workbook = xlsxwriter.Workbook(response, {'in_memory': True})
+    worksheet = workbook.add_worksheet()
+
+    # Define column headers
+    headers = ['Area', 'Distributor', 'Channel', 'Proposal No.', 'Program Name',
+               'Division', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Available']
+
+    # Define cell formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#7eaa55',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+    })
+    cell_format = workbook.add_format({'border': 1})
+    date_format = workbook.add_format(
+        {'border': 1, 'num_format': 'dd/mm/yyyy'})
+    num_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
+
+    # Set column width
+    worksheet.set_column('A:A', 9)
+    worksheet.set_column('B:B', 32)
+    worksheet.set_column('C:C', 9)
+    worksheet.set_column('D:D', 29)
+    worksheet.set_column('E:E', 80)
+    worksheet.set_column('F:F', 16)
+    worksheet.set_column('G:H', 11)
+    worksheet.set_column('I:M', 14)
+
+    # Write data to XlsxWriter Object
+    for idx, record in enumerate(proposal):
+        for col_idx, col_value in enumerate(record):
+            if idx == 0:
+                # Write the column headers on the first row
+                worksheet.write(idx, col_idx, headers[col_idx], header_format)
+            # Write the data rows
+            if col_idx == 6 or col_idx == 7:
+                worksheet.write(idx + 1, col_idx, col_value, date_format)
+            elif col_idx == 8 or col_idx == 9 or col_idx == 10 or col_idx == 11 or col_idx == 12:
+                worksheet.write(idx + 1, col_idx, col_value, num_format)
+            else:
+                worksheet.write(idx + 1, col_idx, col_value, cell_format)
+
+    # Close the workbook before sending the data.
+    workbook.close()
+
+    return response
 
 
 @login_required(login_url='/login/')

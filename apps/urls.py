@@ -358,6 +358,8 @@ urlpatterns = [
          views.report_claim_toxl, name='report-claim-toxl'),
     path('report/proposal_claim/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
          views.report_proposal_claim, name='report-proposal-claim'),
+    path('report/proposal_claim/export/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
+         views.report_proposal_claim_toxl, name='report-proposal-claim-toxl'),
     path('report/proposal/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
          views.report_proposal, name='report-proposal'),
     path('report/budget/monthly/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
