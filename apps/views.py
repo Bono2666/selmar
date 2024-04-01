@@ -6679,6 +6679,62 @@ def claim_release_approve(request, _id):
 
     claim.save()
 
+    sum_amount = Claim.objects.filter(
+        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+    sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
+        status__in=['REJECTED']).aggregate(Sum('additional_amount'))
+
+    sum_amount2 = Claim.objects.filter(
+        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
+        Sum('additional_amount'))
+
+    amount = sum_amount.get('amount__sum') if sum_amount.get(
+        'amount__sum') else 0
+    additional_amount = sum_add_amount.get(
+        'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+
+    amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+        'amount__sum') else 0
+    additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+        'additional_amount__sum') else 0
+
+    # update parked claim
+    sum_parked_amount = Claim.objects.filter(
+        proposal_id=claim.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+    sum_add_parked_amount = Claim.objects.filter(additional_proposal=claim.proposal_id, status__in=[
+        'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+    parked_amount = sum_parked_amount.get(
+        'amount__sum') if sum_parked_amount.get('amount__sum') else 0
+    additional_parked_amount = sum_add_parked_amount.get(
+        'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
+
+    sum_parked_amount2 = Claim.objects.filter(proposal_id=claim.additional_proposal, status__in=[
+        'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+    sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal, status__in=[
+        'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+    parked_amount2 = sum_parked_amount2.get(
+        'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
+    additional_parked_amount2 = sum_add_parked_amount2.get(
+        'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
+
+    proposal = Proposal.objects.get(proposal_id=claim.proposal_id)
+
+    proposal.proposal_claim = amount + additional_amount
+    proposal.parked_claim = parked_amount + additional_parked_amount
+    proposal.balance = proposal.total_cost - proposal.proposal_claim
+    proposal.save()
+
+    proposal2 = Proposal.objects.get(
+        proposal_id=claim.additional_proposal) if claim.additional_proposal else None
+    if proposal2:
+        proposal2.proposal_claim = amount2 + additional_amount2
+        proposal2.parked_claim = parked_amount2 + additional_parked_amount2
+        proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+        proposal2.save()
+
     return HttpResponseRedirect(reverse('claim-release-index'))
 
 
@@ -6742,6 +6798,62 @@ def claim_release_bulk_approve(request):
             send_email(subject, msg, [email[0]])
 
         claim.save()
+
+        sum_amount = Claim.objects.filter(
+            proposal_id=claim.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+        sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
+            status__in=['REJECTED']).aggregate(Sum('additional_amount'))
+
+        sum_amount2 = Claim.objects.filter(
+            proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+        sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
+            Sum('additional_amount'))
+
+        amount = sum_amount.get('amount__sum') if sum_amount.get(
+            'amount__sum') else 0
+        additional_amount = sum_add_amount.get(
+            'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+
+        amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+            'amount__sum') else 0
+        additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+            'additional_amount__sum') else 0
+
+        # update parked claim
+        sum_parked_amount = Claim.objects.filter(
+            proposal_id=claim.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+        sum_add_parked_amount = Claim.objects.filter(additional_proposal=claim.proposal_id, status__in=[
+            'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+        parked_amount = sum_parked_amount.get(
+            'amount__sum') if sum_parked_amount.get('amount__sum') else 0
+        additional_parked_amount = sum_add_parked_amount.get(
+            'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
+
+        sum_parked_amount2 = Claim.objects.filter(proposal_id=claim.additional_proposal, status__in=[
+            'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+        sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal, status__in=[
+            'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+        parked_amount2 = sum_parked_amount2.get(
+            'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
+        additional_parked_amount2 = sum_add_parked_amount2.get(
+            'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
+
+        proposal = Proposal.objects.get(proposal_id=claim.proposal_id)
+
+        proposal.proposal_claim = amount + additional_amount
+        proposal.parked_claim = parked_amount + additional_parked_amount
+        proposal.balance = proposal.total_cost - proposal.proposal_claim
+        proposal.save()
+
+        proposal2 = Proposal.objects.get(
+            proposal_id=claim.additional_proposal) if claim.additional_proposal else None
+        if proposal2:
+            proposal2.proposal_claim = amount2 + additional_amount2
+            proposal2.parked_claim = parked_amount2 + additional_parked_amount2
+            proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+            proposal2.save()
 
     return HttpResponseRedirect(reverse('claim-release-index'))
 
@@ -7364,7 +7476,7 @@ def cl_index(request, _tab):
 
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT cl_id, cl_date, area_id, distributor_name, sum_total_claim, cl_approval_name FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id LEFT JOIN (SELECT cl_id_id, sum(total_claim) AS sum_total_claim FROM apps_cldetail INNER JOIN apps_claim ON apps_cldetail.claim_id = apps_claim.claim_id WHERE apps_claim.status = 'OPEN' GROUP BY cl_id_id) AS q_cldetail ON apps_cl.cl_id = q_cldetail.cl_id_id INNER JOIN (SELECT cl_id_id, MIN(sequence) AS seq FROM apps_clrelease WHERE cl_approval_status = 'N' GROUP BY cl_id_id) AS q_clrelease ON apps_cl.cl_id = q_clrelease.cl_id_id INNER JOIN apps_clrelease ON q_clrelease.cl_id_id = apps_clrelease.cl_id_id AND q_clrelease.seq = apps_clrelease.sequence WHERE apps_cl.status = 'IN APPROVAL' AND apps_cl.area_id IN (SELECT area_id FROM apps_areauser WHERE user_id = '" + str(request.user.user_id) + "') ORDER BY cl_id")
+            "SELECT cl_id, cl_date, area_id, distributor_name, sum_total_claim, status, cl_approval_name FROM apps_distributor INNER JOIN apps_cl ON apps_distributor.distributor_id = apps_cl.distributor_id LEFT JOIN (SELECT cl_id_id, sum(total_claim) AS sum_total_claim FROM apps_cldetail INNER JOIN apps_claim ON apps_cldetail.claim_id = apps_claim.claim_id WHERE apps_claim.status = 'OPEN' GROUP BY cl_id_id) AS q_cldetail ON apps_cl.cl_id = q_cldetail.cl_id_id INNER JOIN (SELECT cl_id_id, MIN(sequence) AS seq FROM apps_clrelease WHERE cl_approval_status = 'N' GROUP BY cl_id_id) AS q_clrelease ON apps_cl.cl_id = q_clrelease.cl_id_id INNER JOIN apps_clrelease ON q_clrelease.cl_id_id = apps_clrelease.cl_id_id AND q_clrelease.seq = apps_clrelease.sequence WHERE apps_cl.status = 'IN APPROVAL' AND apps_cl.area_id IN (SELECT area_id FROM apps_areauser WHERE user_id = '" + str(request.user.user_id) + "') ORDER BY cl_id")
         inapprovals = cursor.fetchall()
 
     context = {
