@@ -37,6 +37,7 @@ from django.db.models import Value as V
 from django.db.models.functions import Concat, Cast
 from django.db.models import DateTimeField
 from django_pivot.pivot import pivot
+import pandas as pd
 
 
 @login_required(login_url='/login/')
@@ -1390,6 +1391,12 @@ def budget_view(request, _tab, _id, _msg):
     budget.budget_upping = '{:,}'.format(budget.budget_upping)
     budget.budget_total = '{:,}'.format(budget.budget_total)
     form = FormBudgetView(instance=budget)
+    total_beginning = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_amount'))['total']
+    total_upping = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_upping'))['total']
+    total_total = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_total'))['total']
     total_transfer_minus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
         total=Sum('budget_transfer_minus'))['total']
     total_transfer_plus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
@@ -1398,6 +1405,8 @@ def budget_view(request, _tab, _id, _msg):
         total=Sum('budget_proposed'))['total']
     total_remaining = BudgetDetail.objects.filter(budget_id=_id).aggregate(
         total=Sum('budget_remaining'))['total']
+    total_balance = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_balance'))['total']
 
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
     hundreds = 0
@@ -1434,6 +1443,10 @@ def budget_view(request, _tab, _id, _msg):
         'form': form,
         'data': budget,
         'hundreds': hundreds,
+        'total_beginning': total_beginning,
+        'total_upping': total_upping,
+        'total_total': total_total,
+        'total_balance': total_balance,
         'total_transfer_minus': total_transfer_minus,
         'total_transfer_plus': total_transfer_plus,
         'total_proposed': total_proposed,
@@ -8378,7 +8391,7 @@ def region_view(request, _id):
     region = Region.objects.get(region_id=_id)
     form = FormRegionView(instance=region)
     details = RegionDetail.objects.filter(region_id=_id)
-    areas = AreaSales.objects.exclude(regiondetail__region_id=_id).values_list(
+    areas = AreaSales.objects.exclude(area_id__in=RegionDetail.objects.all().values_list('area_id', flat=True)).values_list(
         'area_id', 'area_name', 'regiondetail__region_id')
 
     if request.POST:
@@ -9243,37 +9256,246 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='REPORT')
+def report_monthly_budget_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    if _distributor == 'all':
+        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+            proposed=F('budget_total') +
+            Sum('budgetdetail__budget_remaining') - F('budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+        ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
+            transfer=F('budget_transfer_plus') -
+            F('budget_transfer_minus'),
+            beginning_mo=F('budget_transfer_plus') -
+            F('budget_transfer_minus') + F('budget_total'),
+        ), to_attr='details'))
+    else:
+        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+            proposed=F('budget_total') +
+            Sum('budgetdetail__budget_remaining') - F('budget_balance'),
+            remaining=Sum('budgetdetail__budget_remaining'),
+        ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
+            transfer=F('budget_transfer_plus') -
+            F('budget_transfer_minus'),
+            beginning_mo=F('budget_transfer_plus') -
+            F('budget_transfer_minus') + F('budget_total'),
+        ), to_attr='details')).values('budget_year', 'budget_month', 'budget_area_id', 'budget_distributor__distributor_name', 'details__budget_channel_id', 'details__budget_percent', 'details__budget_amount', 'details__budget_upping', 'details__transfer', 'details__beginning_mo', 'details__budget_proposed', 'details__budget_remaining', 'details__budget_balance')
+
+    # Create a HttpResponse object with the csv data
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = 'monthly_budget_' + \
+        _from_mo + '_' + _from_yr + '_distributor_' + _distributor + '.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+
+    # Create an XlsxWriter workbook object and add a worksheet.
+    workbook = xlsxwriter.Workbook(response, {'in_memory': True})
+    worksheet = workbook.add_worksheet()
+
+    # Define column headers
+    headers = ['Year', 'Mo', 'Area', 'Distributor', 'Ch', '%', 'Begin Bal',
+               'Upping Price', 'Transfer', 'Currennt Bal', 'Proposed', 'Remaining', 'Available Bal']
+
+    # Define cell formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#7eaa55',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+    })
+    cell_format = workbook.add_format({'border': 1})
+    num_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
+    percent_format = workbook.add_format(
+        {'border': 1, 'num_format': '#,##0%'})
+    total_format = workbook.add_format(
+        {'bold': True, 'border': 1})
+    total_percent_format = workbook.add_format(
+        {'bold': True, 'border': 1, 'num_format': '#,##0%'})
+    total_num_format = workbook.add_format(
+        {'bold': True, 'border': 1, 'num_format': '#,##0'})
+
+    # Set column width
+    worksheet.set_column('A:A', 5)
+    worksheet.set_column('B:B', 3)
+    worksheet.set_column('C:C', 9)
+    worksheet.set_column('D:D', 32)
+    worksheet.set_column('E:F', 5)
+    worksheet.set_column('G:M', 14)
+
+    # Write column headers
+    for col_idx, col_value in enumerate(headers):
+        worksheet.write(0, col_idx, col_value, header_format)
+
+    idx = 0
+
+    # Convert budgets queryset to DataFrame
+    df = pd.DataFrame(list(budgets.values('budget_id', 'budget_year', 'budget_month', 'budget_area_id', 'budget_distributor__distributor_name', 'budgetdetail__budget_channel_id', 'budgetdetail__budget_percent',
+                      'budgetdetail__budget_amount', 'budgetdetail__budget_upping', 'budgetdetail__budget_proposed', 'budgetdetail__budget_remaining', 'budgetdetail__budget_balance').annotate(transfer=F('budgetdetail__budget_transfer_plus') - F('budgetdetail__budget_transfer_minus'), beginning_mo=F('budgetdetail__budget_transfer_plus') - F('budgetdetail__budget_transfer_minus') + F('budgetdetail__budget_total'))))
+
+    # Create a pivot table
+    pivot_table = pd.pivot_table(df, index=['budget_id', 'budget_year', 'budget_month', 'budget_area_id', 'budget_distributor__distributor_name', 'budgetdetail__budget_channel_id', 'budgetdetail__budget_percent'],
+                                 values=['budgetdetail__budget_amount', 'budgetdetail__budget_upping', 'transfer', 'beginning_mo',
+                                         'budgetdetail__budget_proposed', 'budgetdetail__budget_remaining', 'budgetdetail__budget_balance'],
+                                 aggfunc='sum')
+
+    _id = ''
+    _distributor = ''
+    total = 0
+    header = 1
+    start = 2
+    end = 0
+
+    # Write pivot table to XlsxWriter Object
+    for idx, record in enumerate(pivot_table.iterrows()):
+        if _id == record[1].name[0]:
+            worksheet.write(idx + header + total, 0, '', cell_format)
+            worksheet.write(idx + header + total, 1, '', cell_format)
+            worksheet.write(idx + header + total, 2, '', cell_format)
+            worksheet.write(idx + header + total, 3, '', cell_format)
+            worksheet.write(idx + header + total, 4,
+                            record[1].name[5], cell_format)
+            worksheet.write(idx + header + total, 5,
+                            record[1].name[6] / 100, percent_format)
+            worksheet.write(
+                idx + header + total, 6, record[1].budgetdetail__budget_amount, num_format)
+            worksheet.write(
+                idx + header + total, 7, record[1].budgetdetail__budget_upping, num_format)
+            worksheet.write(idx + header + total, 8,
+                            record[1].transfer, num_format)
+            worksheet.write(idx + header + total, 9,
+                            record[1].beginning_mo, num_format)
+            worksheet.write(
+                idx + header + total, 10, record[1].budgetdetail__budget_proposed, num_format)
+            worksheet.write(
+                idx + header + total, 11, record[1].budgetdetail__budget_remaining, num_format)
+            worksheet.write(
+                idx + header + total, 12, record[1].budgetdetail__budget_balance, num_format)
+        else:
+            # Add Subtotal
+            if idx > 0:
+                end = idx + total + 1
+
+                worksheet.write(idx + header + total, 0, '', cell_format)
+                worksheet.write(idx + header + total, 1, '', cell_format)
+                worksheet.write(idx + header + total, 2, 'TOTAL', total_format)
+                worksheet.write(idx + header + total, 3,
+                                _distributor, total_format)
+                worksheet.write(idx + header + total, 4, '', cell_format)
+                worksheet.write(idx + header + total, 5,
+                                1, total_percent_format)
+                worksheet.write_formula(
+                    idx + header + total, 6, f'=SUBTOTAL(9, G{start}:G{end})', total_num_format)
+                worksheet.write_formula(
+                    idx + header + total, 7, f'=SUBTOTAL(9, H{start}:H{end})', total_num_format)
+                worksheet.write_formula(
+                    idx + header + total, 8, f'=SUBTOTAL(9, I{start}:I{end})', total_num_format)
+                worksheet.write_formula(
+                    idx + header + total, 9, f'=SUBTOTAL(9, J{start}:J{end})', total_num_format)
+                worksheet.write_formula(
+                    idx + header + total, 10, f'=SUBTOTAL(9, K{start}:K{end})', total_num_format)
+                worksheet.write_formula(
+                    idx + header + total, 11, f'=SUBTOTAL(9, L{start}:L{end})', total_num_format)
+                worksheet.write_formula(
+                    idx + header + total, 12, f'=SUBTOTAL(9, M{start}:M{end})', total_num_format)
+
+                total += 1
+                start = idx + total + header + 1
+
+            worksheet.write(idx + header + total, 0,
+                            record[1].name[1], cell_format)
+            worksheet.write(idx + header + total, 1,
+                            record[1].name[2], cell_format)
+            worksheet.write(idx + header + total, 2,
+                            record[1].name[3], cell_format)
+            worksheet.write(idx + header + total, 3,
+                            record[1].name[4], cell_format)
+            worksheet.write(idx + header + total, 4,
+                            record[1].name[5], cell_format)
+            worksheet.write(
+                idx + header + total, 5, record[1].name[6] / 100, percent_format)
+            worksheet.write(
+                idx + header + total, 6, record[1].budgetdetail__budget_amount, num_format)
+            worksheet.write(
+                idx + header + total, 7, record[1].budgetdetail__budget_upping, num_format)
+            worksheet.write(idx + header + total, 8,
+                            record[1].transfer, num_format)
+            worksheet.write(
+                idx + header + total, 9, record[1].beginning_mo, num_format)
+            worksheet.write(
+                idx + header + total, 10, record[1].budgetdetail__budget_proposed, num_format)
+            worksheet.write(
+                idx + header + total, 11, record[1].budgetdetail__budget_remaining, num_format)
+            worksheet.write(
+                idx + header + total, 12, record[1].budgetdetail__budget_balance, num_format)
+
+        _id = record[1].name[0]
+        _distributor = record[1].name[4]
+
+    total += 1
+    end = idx + total + 1
+
+    worksheet.write(idx + header + total, 0, '', cell_format)
+    worksheet.write(idx + header + total, 1, '', cell_format)
+    worksheet.write(idx + header + total, 2, 'TOTAL', total_format)
+    worksheet.write(idx + header + total, 3, _distributor, total_format)
+    worksheet.write(idx + header + total, 4, '', cell_format)
+    worksheet.write(idx + header + total, 5, 1, total_percent_format)
+    worksheet.write_formula(
+        idx + header + total, 6, f'=SUBTOTAL(9, G{start}:G{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 7,
+                            f'=SUBTOTAL(9, H{start}:H{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 8,
+                            f'=SUBTOTAL(9, I{start}:I{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 9,
+                            f'=SUBTOTAL(9, J{start}:J{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 10,
+                            f'=SUBTOTAL(9, K{start}:K{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 11,
+                            f'=SUBTOTAL(9, L{start}:L{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 12,
+                            f'=SUBTOTAL(9, M{start}:M{end})', total_num_format)
+
+    total += 1
+    start = idx + total + header + 1
+
+    worksheet.write(idx + header + total, 0, '', cell_format)
+    worksheet.write(idx + header + total, 1, '', cell_format)
+    worksheet.write(idx + header + total, 2, '', cell_format)
+    worksheet.write(idx + header + total, 3, 'GRAND TOTAL', total_format)
+    worksheet.write(idx + header + total, 4, '', cell_format)
+    worksheet.write(idx + header + total, 5, '', cell_format)
+    worksheet.write_formula(
+        idx + header + total, 6, f'=SUBTOTAL(9, G2:G{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 7,
+                            f'=SUBTOTAL(9, H2:H{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 8,
+                            f'=SUBTOTAL(9, I2:I{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 9,
+                            f'=SUBTOTAL(9, J2:J{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 10,
+                            f'=SUBTOTAL(9, K2:K{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 11,
+                            f'=SUBTOTAL(9, L2:L{end})', total_num_format)
+    worksheet.write_formula(idx + header + total, 12,
+                            f'=SUBTOTAL(9, M2:M{end})', total_num_format)
+
+    # Close the workbook before sending the data.
+    workbook.close()
+
+    return response
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
 def report_budget_summary(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
-    from_date = datetime.date(int(_from_yr), int(
-        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
     years = [str(year) for year in BudgetTransfer.objects.dates(
         'date', 'year').distinct().values_list('date__year', flat=True)]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
-    if _distributor == 'all':
-        budgets = Budget.objects.annotate(
-            budget_date=ExpressionWrapper(
-                Cast(Concat('budget_year', V('-'), 'budget_month',
-                     V('-01')), output_field=DateTimeField()),
-                output_field=DateTimeField()
-            ),
-        ).filter(
-            budget_status__in=['OPEN', 'CLOSED'],
-            budget_area__in=AreaUser.objects.filter(
-                user_id=request.user.user_id).values_list('area_id', flat=True),
-            budget_date__gte=from_date, budget_date__lt=to_date,
-        )
-
-    summaries = pivot(budgets, 'budget_date',
-                      'budget_distributor__distributor_name', 'budget_balance')
-    print(summaries)
-
     context = {
-        'budgets': budgets,
-        'summaries': summaries,
         'from_year': _from_yr,
         'from_month': _from_mo,
         'to_year': _to_yr,
@@ -9282,10 +9504,174 @@ def report_budget_summary(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
         'years': years,
         'distributors': distributors,
         'months': months,
-        'segment': 'report_budget_monthly',
+        'segment': 'report_budget_summary',
         'group_segment': 'report',
         'crud': 'index',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
     }
     return render(request, 'home/report_budget_summary.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+
+    if _distributor == 'all':
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT budget_area_id, budget_id, distributor_name, region_name, budget_balance, 
+                DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date 
+                FROM apps_budget 
+                INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
+                INNER JOIN apps_regiondetail ON budget_area_id = area_id 
+                INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
+                WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+                    SELECT area_id FROM apps_areauser WHERE user_id = %s
+                ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s
+                """, [request.user.user_id, from_date, to_date]
+            )
+            budget_region = cursor.fetchall()
+    else:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT budget_area_id, budget_id, distributor_name, region_name, budget_balance,
+                DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
+                FROM apps_budget
+                INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
+                INNER JOIN apps_regiondetail ON budget_area_id = area_id
+                INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
+                WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+                    SELECT area_id FROM apps_areauser WHERE user_id = %s
+                ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s AND budget_distributor_id = %s
+                """, [request.user.user_id, from_date, to_date, _distributor]
+            )
+            budget_region = cursor.fetchall()
+
+    # Convert budgets queryset to DataFrame
+    df = pd.DataFrame(budget_region, columns=[
+        'budget_area', 'budget_id', 'budget_distributor__distributor_name', 'region_name', 'budget_balance', 'budget_date'])
+
+    # Create a pivot table
+    pivot_table = pd.pivot_table(df, index=['budget_area', 'budget_distributor__distributor_name'],
+                                 values=['budget_balance'], columns=['budget_date'],
+                                 aggfunc='sum', fill_value=0)
+
+    pivot_region = pd.pivot_table(df, index=['region_name'], values=[
+                                  'budget_balance'], columns=['budget_date'], aggfunc='sum', fill_value=0)
+
+    # Create a HttpResponse object with the csv data
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = 'budget_summary_' + \
+        _from_mo + '_' + _from_yr + '_to_' + _to_mo + '_' + \
+        _to_yr + '_distributor_' + _distributor + '.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+
+    # Create an XlsxWriter workbook object and add a worksheet.
+    workbook = xlsxwriter.Workbook(response, {'in_memory': True})
+    worksheet = workbook.add_worksheet()
+
+    # Define column headers
+    headers = ['Area', 'Distributor']
+    headers.extend(
+        [f'{pd.to_datetime(date).strftime("%b-%Y")}' for date in pivot_table.columns.levels[1]])
+
+    # Define cell formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#7eaa55',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+    })
+    cell_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
+    bold_format = workbook.add_format({'bold': True})
+    total_format = workbook.add_format({'bold': True, 'border': 1})
+    total_num_format = workbook.add_format(
+        {'bold': True, 'border': 1, 'num_format': '#,##0'})
+
+    # Set column width
+    worksheet.set_column('A:A', 9)
+    worksheet.set_column('B:B', 32)
+    worksheet.set_column('C:Z', 14)
+
+    worksheet.freeze_panes(4, 2)
+
+    worksheet.write(0, 0, 'PT ABC President Indonesia', bold_format)
+    worksheet.write(1, 0, 'Selmar Budget Summary Report')
+
+    gap = 3
+
+    # Write column headers
+    for col_idx, col_value in enumerate(headers):
+        worksheet.write(0 + gap, col_idx, col_value, header_format)
+
+    # Initialize variables for subtotals
+    subtotal_start_row = gap + 1
+    current_area = None
+
+    # Write pivot table to XlsxWriter Object
+    for idx, record in enumerate(pivot_table.iterrows()):
+        # Check if area has changed (i.e., we've moved to a new area)
+        if current_area != record[0][0]:
+            # If this is not the first area, write the subtotal for the previous area
+            if current_area is not None:
+                worksheet.merge_range(
+                    idx + gap + 1, 0, idx + gap + 1, 1, 'Subtotal for ' + current_area, total_format)
+                for col_idx, col_value in enumerate(pivot_table.columns.levels[1]):
+                    worksheet.write_formula(idx + gap + 1, col_idx + 2,
+                                            f'=SUBTOTAL(9, {xlsxwriter.utility.xl_rowcol_to_cell(subtotal_start_row, col_idx + 2)}:{xlsxwriter.utility.xl_rowcol_to_cell(idx + gap, col_idx + 2)})', total_num_format)
+                gap += 1  # Increase gap to account for the new subtotal row
+
+            # Update current area and reset start row for subtotals
+            current_area = record[0][0]
+            subtotal_start_row = idx + gap + 1
+
+        # Write the record
+        worksheet.write(idx + 1 + gap, 0, record[0][0], cell_format)
+        worksheet.write(idx + 1 + gap, 1, record[0][1], cell_format)
+        for col_idx, col_value in enumerate(record[1]):
+            worksheet.write(idx + 1 + gap, col_idx + 2, col_value, cell_format)
+
+    # Write the subtotal for the last area
+    worksheet.merge_range(idx + 1 + gap + 1, 0, idx + 1 + gap + 1,
+                          1, 'Subtotal for ' + current_area, total_format)
+    for col_idx, col_value in enumerate(pivot_table.columns.levels[1]):
+        worksheet.write_formula(idx + 1 + gap + 1, col_idx + 2,
+                                f'=SUBTOTAL(9, {xlsxwriter.utility.xl_rowcol_to_cell(subtotal_start_row, col_idx + 2)}:{xlsxwriter.utility.xl_rowcol_to_cell(idx + gap + 1, col_idx + 2)})', total_num_format)
+
+    gap += 1  # Increase gap to account for the new subtotal row
+
+    # Write Grand Total
+    worksheet.merge_range(idx + 2 + gap, 0, idx + 2 + gap,
+                          1, 'Grand Total', total_format)
+    for col_idx, col_value in enumerate(pivot_table.sum()):
+        worksheet.write(idx + 2 + gap, col_idx + 2,
+                        col_value, total_num_format)
+
+    # Write Total by Region
+    gap = idx + gap + 4
+    for idx, record in enumerate(pivot_region.iterrows()):
+        worksheet.merge_range(idx + gap, 0, idx + gap,
+                              1, record[0], cell_format)
+        for col_idx, col_value in enumerate(record[1]):
+            worksheet.write(idx + gap, col_idx + 2, col_value, cell_format)
+
+    # Write Grand Total by Region
+    gap += 1
+    worksheet.merge_range(idx + gap, 0, idx + gap,
+                          1, 'Grand Total', total_format)
+    for col_idx, col_value in enumerate(pivot_region.sum()):
+        worksheet.write(idx + gap, col_idx + 2,
+                        col_value, total_num_format)
+
+    # Close the workbook before sending the data.
+    workbook.close()
+    return response

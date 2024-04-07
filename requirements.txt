@@ -21,6 +21,7 @@ requests
 django-tinymce
 xhtml2pdf
 django-pivot
+pandas
 # djangorestframework
 
 # psycopg2-binary

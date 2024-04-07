@@ -343,13 +343,13 @@
                                         <h6 class="text-sm font-weight-bolder text-end">Total</h6>
                                     </td>
                                     <td>
-                                        <h6 class="text-sm font-weight-bolder text-end">{{ data.budget_amount|intcomma }}</h6>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_beginning|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="text-sm font-weight-bolder text-end">{{ data.budget_upping|intcomma }}</h6>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_upping|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="text-sm font-weight-bolder text-end">{{ data.budget_total|intcomma }}</h6>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_total|intcomma }}</h6>
                                     </td>
                                     <td>
                                         <h6 class="text-sm font-weight-bolder text-end">{{ total_transfer_minus|intcomma }}</h6>
@@ -364,7 +364,7 @@
                                         <h6 class="text-sm font-weight-bolder text-end">{{ total_remaining|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="text-sm font-weight-bolder text-end">{{ data.budget_balance|intcomma }}</h6>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_balance|intcomma }}</h6>
                                     </td>
                                 </tr>
                                 {% endif %}

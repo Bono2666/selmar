@@ -10,13 +10,14 @@
 <div class="container-fluid py-0">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4 p-4">
+            <div class="card mb-6 p-4">
                 <div class="row mb-2">
                     <div class="col-6 d-flex align-items-center">
                         <h4>Budget Monthly Report</h4>
                     </div>
                     <div class="col-6 text-end">
                         <button class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#pop_filter"><i class="fas fa-filter"></i>&nbsp;&nbsp;Filter</button>
+                        <button id="export" class="btn btn-sm bg-success text-white mb-0"><i class="fas fa-file-excel"></i>&nbsp;&nbsp;Export Data</a>
                     </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
@@ -203,9 +204,15 @@
     let distributor = document.getElementById('distributor');
     let filter = document.getElementById('filter');
     let scroll_x = '{{ scrollX }}';
+    let export_btn = document.getElementById('export');
 
     filter.addEventListener('click', function() {
         let url = `/report/budget/monthly/${from_yr.value}/${from_mo.value}/0/0/${distributor.value}`;
+        window.location.href = url;
+    });
+
+    export_btn.addEventListener('click', function() {
+        let url = `/report/budget/monthly/export/${from_yr.value}/${from_mo.value}/0/0/${distributor.value}`;
         window.location.href = url;
     });
 
