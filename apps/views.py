@@ -9608,6 +9608,7 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     worksheet.write(1, 0, 'Selmar Budget Summary Report')
 
     gap = 3
+    foot = 0
 
     # Write column headers
     for col_idx, col_value in enumerate(headers):
@@ -9640,37 +9641,33 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
         for col_idx, col_value in enumerate(record[1]):
             worksheet.write(idx + 1 + gap, col_idx + 2, col_value, cell_format)
 
+    foot = len(pivot_table) + gap + 1
     # Write the subtotal for the last area
-    worksheet.merge_range(idx + 1 + gap + 1, 0, idx + 1 + gap + 1,
-                          1, 'Subtotal for ' + current_area, total_format)
+    worksheet.merge_range(foot, 0, foot, 1,
+                          'Subtotal for ' + current_area, total_format)
     for col_idx, col_value in enumerate(pivot_table.columns.levels[1]):
-        worksheet.write_formula(idx + 1 + gap + 1, col_idx + 2,
+        worksheet.write_formula(foot, col_idx + 2,
                                 f'=SUBTOTAL(9, {xlsxwriter.utility.xl_rowcol_to_cell(subtotal_start_row, col_idx + 2)}:{xlsxwriter.utility.xl_rowcol_to_cell(idx + gap + 1, col_idx + 2)})', total_num_format)
 
-    gap += 1  # Increase gap to account for the new subtotal row
-
+    foot += 1
     # Write Grand Total
-    worksheet.merge_range(idx + 2 + gap, 0, idx + 2 + gap,
-                          1, 'Grand Total', total_format)
+    worksheet.merge_range(foot, 0, foot, 1, 'Grand Total', total_format)
     for col_idx, col_value in enumerate(pivot_table.sum()):
-        worksheet.write(idx + 2 + gap, col_idx + 2,
-                        col_value, total_num_format)
+        worksheet.write(foot, col_idx + 2, col_value, total_num_format)
 
     # Write Total by Region
-    gap = idx + gap + 4
+    foot += 2
     for idx, record in enumerate(pivot_region.iterrows()):
-        worksheet.merge_range(idx + gap, 0, idx + gap,
+        worksheet.merge_range(idx + foot, 0, idx + foot,
                               1, record[0], cell_format)
         for col_idx, col_value in enumerate(record[1]):
-            worksheet.write(idx + gap, col_idx + 2, col_value, cell_format)
+            worksheet.write(idx + foot, col_idx + 2, col_value, cell_format)
 
     # Write Grand Total by Region
-    gap += 1
-    worksheet.merge_range(idx + gap, 0, idx + gap,
-                          1, 'Grand Total', total_format)
+    foot += len(pivot_region)
+    worksheet.merge_range(foot, 0, foot, 1, 'Grand Total', total_format)
     for col_idx, col_value in enumerate(pivot_region.sum()):
-        worksheet.write(idx + gap, col_idx + 2,
-                        col_value, total_num_format)
+        worksheet.write(foot, col_idx + 2, col_value, total_num_format)
 
     # Close the workbook before sending the data.
     workbook.close()
