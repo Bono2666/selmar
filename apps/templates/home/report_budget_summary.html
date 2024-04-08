@@ -124,6 +124,12 @@
     let to_mo = document.getElementById('to_mo');
     let distributor = document.getElementById('distributor');
     let filter = document.getElementById('filter');
+    let err = '{{ error }}'
+
+    if(err) {
+        alert(err);
+        window.location.href = "{% url 'report-budget-summary' '0' '0' '0' '0' 'all' %}";
+    }
 
     from_yr.addEventListener('change', function() {
         if(from_yr.value != '0' && from_yr.value > to_yr.value) {

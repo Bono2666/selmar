@@ -9554,6 +9554,9 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
             )
             budget_region = cursor.fetchall()
 
+    if not budget_region:
+        return render(request, 'home/report_budget_summary.html', {'error': 'No region data available'})
+
     # Convert budgets queryset to DataFrame
     df = pd.DataFrame(budget_region, columns=[
         'budget_area', 'budget_id', 'budget_distributor__distributor_name', 'region_name', 'budget_balance', 'budget_date'])
@@ -9657,17 +9660,22 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 
     # Write Total by Region
     foot += 2
-    for idx, record in enumerate(pivot_region.iterrows()):
-        worksheet.merge_range(idx + foot, 0, idx + foot,
-                              1, record[0], cell_format)
-        for col_idx, col_value in enumerate(record[1]):
-            worksheet.write(idx + foot, col_idx + 2, col_value, cell_format)
+    if pivot_region.empty:
+        worksheet.merge_range(
+            foot, 0, foot, 1, 'Region data not found', total_format)
+    else:
+        for idx, record in enumerate(pivot_region.iterrows()):
+            worksheet.merge_range(idx + foot, 0, idx + foot,
+                                  1, record[0], cell_format)
+            for col_idx, col_value in enumerate(record[1]):
+                worksheet.write(idx + foot, col_idx + 2,
+                                col_value, cell_format)
 
-    # Write Grand Total by Region
-    foot += len(pivot_region)
-    worksheet.merge_range(foot, 0, foot, 1, 'Grand Total', total_format)
-    for col_idx, col_value in enumerate(pivot_region.sum()):
-        worksheet.write(foot, col_idx + 2, col_value, total_num_format)
+        # Write Grand Total by Region
+        foot += len(pivot_region)
+        worksheet.merge_range(foot, 0, foot, 1, 'Grand Total', total_format)
+        for col_idx, col_value in enumerate(pivot_region.sum()):
+            worksheet.write(foot, col_idx + 2, col_value, total_num_format)
 
     # Close the workbook before sending the data.
     workbook.close()
