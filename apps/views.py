@@ -9680,3 +9680,196 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     # Close the workbook before sending the data.
     workbook.close()
     return response
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_budget_detail(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    years = [str(year) for year in BudgetTransfer.objects.dates(
+        'date', 'year').distinct().values_list('date__year', flat=True)]
+    distributors = Distributor.objects.all()
+    months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+
+    context = {
+        'from_year': _from_yr,
+        'from_month': _from_mo,
+        'to_year': _to_yr,
+        'to_month': _to_mo,
+        'selected_distributor': _distributor,
+        'years': years,
+        'distributors': distributors,
+        'months': months,
+        'segment': 'report_budget_detail',
+        'group_segment': 'report',
+        'crud': 'index',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='REPORT') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/report_budget_detail.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='REPORT')
+def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
+    from_date = datetime.date(int(_from_yr), int(
+        _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(int(_to_yr), int(
+        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+
+    if _distributor == 'all':
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 4_balance,
+                DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
+                FROM apps_budget 
+                LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id 
+                INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
+                INNER JOIN apps_regiondetail ON budget_area_id = area_id
+                INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
+                WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+                    SELECT area_id FROM apps_areauser WHERE user_id = %s
+                ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s
+                """, [request.user.user_id, from_date, to_date]
+            )
+            budget_detail = cursor.fetchall()
+    else:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 4_balance,
+                DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
+                FROM apps_budget
+                LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id
+                INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
+                INNER JOIN apps_regiondetail ON budget_area_id = area_id
+                INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
+                WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+                    SELECT area_id FROM apps_areauser WHERE user_id = %s
+                ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s AND budget_distributor_id = %s
+                """, [request.user.user_id, from_date, to_date, _distributor]
+            )
+            budget_detail = cursor.fetchall()
+
+    if not budget_detail:
+        return render(request, 'home/report_budget_detail.html', {'error': 'No region data available'})
+
+    # Convert budgets queryset to DataFrame
+    df = pd.DataFrame(budget_detail, columns=[
+        'budget_id', 'distributor_name', 'region_name', 'budget_area_id', '1_opening', '2_upping', '3_claim', '4_balance', 'budget_date'])
+
+    # Create a pivot table
+    pivot_table = (pd.pivot_table(df,
+                                  index=['budget_date'],
+                                  columns=['region_name',
+                                           'distributor_name'],
+                                  values=['1_opening', '2_upping',
+                                          '3_claim', '4_balance'],
+                                  aggfunc='sum', fill_value=0)).T.swaplevel(1, 0).swaplevel(2, 1).sort_index(level=0)
+
+    # Create a HttpResponse object with the csv data
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = 'budget_detail_' + \
+        _from_mo + '_' + _from_yr + '_to_' + _to_mo + '_' + \
+        _to_yr + '_distributor_' + _distributor + '.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+
+    # Create an XlsxWriter workbook object and add a worksheet.
+    workbook = xlsxwriter.Workbook(response, {'in_memory': True})
+    worksheet = workbook.add_worksheet()
+
+    # Define column headers
+    headers = ['Region', 'Distributor', '']
+    headers.extend(
+        [f'{pd.to_datetime(date).strftime("%b-%Y")}' for date in pivot_table.columns])
+
+    # Define cell formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#7eaa55',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+    })
+    cell_format = workbook.add_format(
+        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)'})
+    back_format = workbook.add_format(
+        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'bg_color': '#e5eedc'})
+    bold_format = workbook.add_format({'bold': True})
+    total_format = workbook.add_format({'bold': True, 'border': 1})
+    back_total_format = workbook.add_format(
+        {'bold': True, 'border': 1, 'bg_color': '#e5eedc'})
+    total_num_format = workbook.add_format(
+        {'bold': True, 'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)'})
+    back_total_num_format = workbook.add_format(
+        {'bold': True, 'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'bg_color': '#e5eedc'})
+
+    # Set column width
+    worksheet.set_column('A:A', 8)
+    worksheet.set_column('B:B', 32)
+    worksheet.set_column('C:C', 16)
+    worksheet.set_column('D:Z', 14)
+
+    worksheet.freeze_panes(5, 3)
+
+    worksheet.write(0, 0, 'PT ABC President Indonesia', bold_format)
+    worksheet.write(1, 0, 'Selmar Budget Report')
+    worksheet.write(2, 0, from_date.strftime('%b %Y') if _from_yr !=
+                    _to_yr else from_date.strftime('%b') + ' to ' + to_date.strftime('%b %Y'))
+
+    gap = 4
+    foot = 0
+    region = ''
+    distributor = ''
+    back = False
+
+    # Write column headers
+    for col_idx, col_value in enumerate(headers):
+        worksheet.write(0 + gap, col_idx, col_value, header_format)
+
+    # Write dataframes to XlsxWriter Object
+    for idx, record in enumerate(pivot_table.iterrows()):
+        if idx % 4 == 0:
+            back = not back
+            worksheet.merge_range(
+                idx + 1 + gap, 1, idx + 4 + gap, 1, record[0][1], cell_format if not back else back_format)
+
+        if region != record[0][0]:
+            worksheet.write(
+                idx + 1 + gap, 0, record[0][0], cell_format if not back else back_format)
+        else:
+            worksheet.write(idx + 1 + gap, 1, '',
+                            cell_format if not back else back_format)
+
+        if record[0][2] == '1_opening':
+            worksheet.write(idx + 1 + gap, 2, 'Opening Balance',
+                            total_format if not back else back_total_format)
+        elif record[0][2] == '2_upping':
+            worksheet.write(idx + 1 + gap, 2, 'Upping Price',
+                            cell_format if not back else back_format)
+        elif record[0][2] == '3_claim':
+            worksheet.write(idx + 1 + gap, 2, 'Spending',
+                            cell_format if not back else back_format)
+        elif record[0][2] == '4_balance':
+            worksheet.write(idx + 1 + gap, 2, 'Ending Balance',
+                            total_format if not back else back_total_format)
+
+        for col_idx, col_value in enumerate(record[1]):
+            if record[0][2] == '1_opening' or record[0][2] == '4_balance':
+                worksheet.write(idx + 1 + gap, col_idx + 3,
+                                col_value, total_num_format if not back else back_total_num_format)
+            else:
+                worksheet.write(idx + 1 + gap, col_idx +
+                                3, col_value, cell_format if not back else back_format)
+
+            if record[0][2] == '3_claim':
+                worksheet.write(idx + 1 + gap, col_idx + 3,
+                                col_value * -1, cell_format if not back else back_format)
+
+        region = record[0][0]
+        distributor = record[0][1]
+
+    # Close the workbook before sending the data.
+    workbook.close()
+    return response

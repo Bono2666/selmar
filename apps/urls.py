@@ -372,4 +372,8 @@ urlpatterns = [
          views.report_budget_summary, name='report-budget-summary'),
     path('report/budget_summary/export/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
          views.report_budget_summary_toxl, name='report-budget-summary-toxl'),
+    path('report/budget_detail/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
+         views.report_budget_detail, name='report-budget-detail'),
+    path('report/budget_detail/export/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
+         views.report_budget_detail_toxl, name='report-budget-detail-toxl'),
 ]
