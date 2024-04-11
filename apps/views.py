@@ -38,6 +38,7 @@ from django.db.models.functions import Concat, Cast
 from django.db.models import DateTimeField
 from django_pivot.pivot import pivot
 import pandas as pd
+from datetime import timedelta
 
 
 @login_required(login_url='/login/')
@@ -9761,11 +9762,22 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
     # Create a pivot table
     pivot_table = (pd.pivot_table(df,
                                   index=['budget_date'],
-                                  columns=['region_name',
-                                           'distributor_name'],
+                                  columns=['distributor_name', 'region_name'],
                                   values=['1_opening', '2_upping',
                                           '3_claim', '4_balance'],
                                   aggfunc='sum', fill_value=0)).T.swaplevel(1, 0).swaplevel(2, 1).sort_index(level=0)
+
+    pivot_total = (pd.pivot_table(df,
+                                  index=['budget_date'],
+                                  values=['1_opening', '2_upping',
+                                          '3_claim', '4_balance'],
+                                  aggfunc='sum', fill_value=0)).T
+
+    pivot_region = pd.pivot_table(df,
+                                  index=['region_name'],
+                                  columns=['budget_date'],
+                                  values=['4_balance'],
+                                  aggfunc='sum', fill_value=0)
 
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
@@ -9780,7 +9792,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
     worksheet = workbook.add_worksheet()
 
     # Define column headers
-    headers = ['Region', 'Distributor', '']
+    headers = ['Distributor', 'Region', '']
     headers.extend(
         [f'{pd.to_datetime(date).strftime("%b-%Y")}' for date in pivot_table.columns])
 
@@ -9793,9 +9805,9 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
         'align': 'center',
     })
     cell_format = workbook.add_format(
-        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'align': 'top'})
+        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'valign': 'vcenter'})
     back_format = workbook.add_format(
-        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'bg_color': '#e5eedc', 'align': 'top'})
+        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'bg_color': '#e5eedc', 'valign': 'vcenter'})
     bold_format = workbook.add_format({'bold': True})
     total_format = workbook.add_format({'bold': True, 'border': 1})
     back_total_format = workbook.add_format(
@@ -9806,8 +9818,8 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
         {'bold': True, 'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'bg_color': '#e5eedc'})
 
     # Set column width
-    worksheet.set_column('A:A', 8)
-    worksheet.set_column('B:B', 32)
+    worksheet.set_column('A:A', 32)
+    worksheet.set_column('B:B', 8)
     worksheet.set_column('C:C', 16)
     worksheet.set_column('D:Z', 14)
 
@@ -9816,12 +9828,10 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
     worksheet.write(0, 0, 'PT ABC President Indonesia', bold_format)
     worksheet.write(1, 0, 'Selmar Budget Report')
     worksheet.write(2, 0, from_date.strftime('%b %Y') if _from_yr !=
-                    _to_yr else from_date.strftime('%b') + ' to ' + to_date.strftime('%b %Y'))
+                    _to_yr else from_date.strftime('%b') + ' to ' + (to_date - timedelta(days=1)).strftime('%b %Y'))
 
     gap = 4
     foot = 0
-    region = ''
-    distributor = ''
     back = False
 
     # Write column headers
@@ -9833,14 +9843,9 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
         if idx % 4 == 0:
             back = not back
             worksheet.merge_range(
+                idx + 1 + gap, 0, idx + 4 + gap, 0, record[0][0], cell_format if not back else back_format)
+            worksheet.merge_range(
                 idx + 1 + gap, 1, idx + 4 + gap, 1, record[0][1], cell_format if not back else back_format)
-
-        if region != record[0][0]:
-            worksheet.write(
-                idx + 1 + gap, 0, record[0][0], cell_format if not back else back_format)
-        else:
-            worksheet.write(idx + 1 + gap, 0, '',
-                            cell_format if not back else back_format)
 
         if record[0][2] == '1_opening':
             worksheet.write(idx + 1 + gap, 2, 'Opening Balance',
@@ -9867,8 +9872,40 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
                 worksheet.write(idx + 1 + gap, col_idx + 3,
                                 col_value * -1, cell_format if not back else back_format)
 
-        region = record[0][0]
-        distributor = record[0][1]
+    foot = len(pivot_table) + gap + 2
+    # Write Grand Total
+    for idx, record in enumerate(pivot_total.iterrows()):
+        worksheet.write(foot + idx, 1, 'Total', total_format)
+        if record[0] == '1_opening':
+            worksheet.write(foot + idx, 2, 'Opening Balance', cell_format)
+        elif record[0] == '2_upping':
+            worksheet.write(foot + idx, 2, 'Upping Price', cell_format)
+        elif record[0] == '3_claim':
+            worksheet.write(foot + idx, 2, 'Spending', cell_format)
+        elif record[0] == '4_balance':
+            worksheet.write(foot + idx, 2, 'Ending Balance', total_num_format)
+        for col_idx, col_value in enumerate(record[1]):
+            if record[0] == '4_balance':
+                worksheet.write(foot + idx, col_idx + 3,
+                                col_value, total_num_format)
+            else:
+                worksheet.write(foot + idx, col_idx + 3,
+                                col_value, cell_format)
+
+    foot += len(pivot_total) + 1
+    # Write Total by Region
+    for idx, record in enumerate(pivot_region.iterrows()):
+        worksheet.write(foot + idx, 1, record[0], total_format)
+        worksheet.write(foot + idx, 2, 'Ending Balance', cell_format)
+        for col_idx, col_value in enumerate(record[1]):
+            worksheet.write(foot + idx, col_idx + 3, col_value, cell_format)
+
+    # Write Grand Total by Region
+    foot += len(pivot_region)
+    worksheet.write(foot, 1, 'Total', total_format)
+    worksheet.write(foot, 2, 'Ending Balance', total_num_format)
+    for idx, record in enumerate(pivot_region.sum()):
+        worksheet.write(foot, idx + 3, record, total_num_format)
 
     # Close the workbook before sending the data.
     workbook.close()
