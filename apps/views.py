@@ -9793,9 +9793,9 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
         'align': 'center',
     })
     cell_format = workbook.add_format(
-        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)'})
+        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'align': 'top'})
     back_format = workbook.add_format(
-        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'bg_color': '#e5eedc'})
+        {'border': 1, 'num_format': '_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)', 'bg_color': '#e5eedc', 'align': 'top'})
     bold_format = workbook.add_format({'bold': True})
     total_format = workbook.add_format({'bold': True, 'border': 1})
     back_total_format = workbook.add_format(
@@ -9839,7 +9839,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
             worksheet.write(
                 idx + 1 + gap, 0, record[0][0], cell_format if not back else back_format)
         else:
-            worksheet.write(idx + 1 + gap, 1, '',
+            worksheet.write(idx + 1 + gap, 0, '',
                             cell_format if not back else back_format)
 
         if record[0][2] == '1_opening':
