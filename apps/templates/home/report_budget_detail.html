@@ -128,7 +128,7 @@
 
     if(err) {
         alert(err);
-        window.location.href = "{% url 'report-budget-summary' '0' '0' '0' '0' 'all' %}";
+        window.location.href = "{% url 'report-budget-detail' '0' '0' '0' '0' 'all' %}";
     }
 
     from_yr.addEventListener('change', function() {

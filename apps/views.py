@@ -9526,9 +9526,10 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT budget_area_id, budget_id, distributor_name, region_name, budget_balance, 
+                SELECT budget_area_id, apps_budget.budget_id, distributor_name, region_name, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) as balance,
                 DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date 
                 FROM apps_budget 
+                LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id 
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id 
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
@@ -9542,9 +9543,10 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT budget_area_id, budget_id, distributor_name, region_name, budget_balance,
+                SELECT budget_area_id, budget_id, distributor_name, region_name, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) as balance,
                 DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
                 FROM apps_budget
+                LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id 
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
@@ -9560,15 +9562,15 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 
     # Convert budgets queryset to DataFrame
     df = pd.DataFrame(budget_region, columns=[
-        'budget_area', 'budget_id', 'budget_distributor__distributor_name', 'region_name', 'budget_balance', 'budget_date'])
+        'budget_area', 'budget_id', 'budget_distributor__distributor_name', 'region_name', 'balance', 'budget_date'])
 
     # Create a pivot table
     pivot_table = pd.pivot_table(df, index=['budget_area', 'budget_distributor__distributor_name'],
-                                 values=['budget_balance'], columns=['budget_date'],
+                                 values=['balance'], columns=['budget_date'],
                                  aggfunc='sum', fill_value=0)
 
     pivot_region = pd.pivot_table(df, index=['region_name'], values=[
-                                  'budget_balance'], columns=['budget_date'], aggfunc='sum', fill_value=0)
+                                  'balance'], columns=['budget_date'], aggfunc='sum', fill_value=0)
 
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
