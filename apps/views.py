@@ -4588,6 +4588,8 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
     else:
         approval = ProposalRelease.objects.filter(
             proposal_id=_id).order_by('sequence')
+    rejector = ProposalRelease.objects.filter(
+        proposal_id=_id, proposal_approval_status='N').order_by('sequence').first() if proposal.status == 'REJECTED' else None
 
     if _tab in ['closed', 'reject']:
         segment = 'proposal_archive'
@@ -4617,6 +4619,7 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         'sub_id': _sub_id,
         'action': _act,
         'approval': approval,
+        'rejector': rejector,
         'message': _msg,
         'status': proposal.status,
         'add_cost': add_cost,
@@ -5340,12 +5343,15 @@ def program_view(request, _tab, _id):
     else:
         approval = ProgramRelease.objects.filter(
             program_id=_id).order_by('sequence')
+    rejector = ProgramRelease.objects.filter(
+        program_id=_id, program_approval_status='N').order_by('sequence').first() if program.status == 'REJECTED' else None
 
     context = {
         'data': program,
         'form': form,
         'tab': _tab,
         'approval': approval,
+        'rejector': rejector,
         'status': program.status,
         'segment': 'program_archive' if _tab == 'reject' else 'program',
         'group_segment': 'program',
@@ -6104,6 +6110,8 @@ def claim_view(request, _tab, _id, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
     else:
         approval = ClaimRelease.objects.filter(
             claim_id=_id).order_by('sequence')
+    rejector = ClaimRelease.objects.filter(
+        claim_id=_id, claim_approval_status='N').order_by('sequence').first() if claim.status == 'REJECTED' else None
 
     context = {
         'data': claim,
@@ -6111,6 +6119,7 @@ def claim_view(request, _tab, _id, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
         'tab': _tab,
         'program': program,
         'approval': approval,
+        'rejector': rejector,
         'status': claim.status,
         'from_yr': _from_yr,
         'from_mo': _from_mo,
@@ -7607,6 +7616,8 @@ def cl_view(request, _tab, _id):
             cl_id=_id, sequence__lt=highest_sequence).order_by('sequence')
     else:
         approval = CLRelease.objects.filter(cl_id=_id).order_by('sequence')
+    rejector = CLRelease.objects.filter(
+        cl_id=_id, cl_approval_status='N').order_by('sequence').first() if cl.status == 'REJECTED' else None
 
     if request.POST:
         check = request.POST.getlist('checks[]')
@@ -7630,6 +7641,7 @@ def cl_view(request, _tab, _id):
         'sum_cl_detail': sum_cl_detail,
         'tab': _tab,
         'approval': approval,
+        'rejector': rejector,
         'status': cl.status,
         'segment': 'cl_archive' if _tab == 'reject' else 'cl',
         'group_segment': 'cl',

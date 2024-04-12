@@ -85,14 +85,14 @@
                                             <td>
                                                 <div class="d-flex pe-2 py-0">
                                                     <div class="d-flex flex-column justify-content-center">
-                                                        <h6 class="mb-0 cursor-default text-sm">{% if item.cl_approval_date == NONE %}Waiting for approval ... {% else %}{{ item.cl_approval_date }}{% endif %}</h6>
+                                                        <h6 class="mb-0 cursor-default text-sm">{% if item.cl_approval_id == rejector.cl_approval_id %}Rejected by Approver{% else %}{% if item.cl_approval_date == NONE %}{% if data.status == 'REJECTED' %}-{% else %}Waiting for approval ... {% endif %}{% else %}{{ item.cl_approval_date }}{% endif %}{% endif %}</h6>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
                                                 <div class="d-flex py-0">
                                                     <div class="d-flex flex-column justify-content-center">
-                                                        <i class="mb-0 cursor-default text-sm fas {% if item.cl_approval_status == 'Y' %}fa-check text-danger{% else %}fa-clock{% endif %}"></i>
+                                                        <i class="mb-0 cursor-default text-sm fas {% if item.cl_approval_id == rejector.cl_approval_id %}fa-ban text-danger{% else %}{% if item.cl_approval_status == 'Y' %}fa-check text-danger{% else %}{% if data.status == 'REJECTED' %}fa-minus-circle{% else %}fa-clock{% endif %}{% endif %}{% endif %}"></i>
                                                     </div>
                                                 </div>
                                             </td>
