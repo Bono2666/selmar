@@ -5955,60 +5955,6 @@ def claim_add(request, _area, _distributor, _program):
                 draft.is_tax = True if request.POST.get('is_tax') else False
                 draft.save()
 
-                sum_amount = Claim.objects.filter(
-                    proposal_id=draft.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-                sum_add_amount = Claim.objects.filter(additional_proposal=draft.proposal_id).exclude(
-                    status__in=['REJECTED']).aggregate(Sum('additional_amount'))
-
-                sum_amount2 = Claim.objects.filter(
-                    proposal_id=draft.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-                sum_add_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
-                    Sum('additional_amount'))
-
-                amount = sum_amount.get('amount__sum') if sum_amount.get(
-                    'amount__sum') else 0
-                additional_amount = sum_add_amount.get(
-                    'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
-
-                amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
-                    'amount__sum') else 0
-                additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
-                    'additional_amount__sum') else 0
-
-                # update parked claim
-                sum_parked_amount = Claim.objects.filter(
-                    proposal_id=draft.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
-                sum_add_parked_amount = Claim.objects.filter(additional_proposal=draft.proposal_id, status__in=[
-                                                             'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
-
-                parked_amount = sum_parked_amount.get(
-                    'amount__sum') if sum_parked_amount.get('amount__sum') else 0
-                additional_parked_amount = sum_add_parked_amount.get(
-                    'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
-
-                sum_parked_amount2 = Claim.objects.filter(proposal_id=draft.additional_proposal, status__in=[
-                                                          'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
-                sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal, status__in=[
-                                                              'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
-
-                parked_amount2 = sum_parked_amount2.get(
-                    'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
-                additional_parked_amount2 = sum_add_parked_amount2.get(
-                    'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
-
-                proposal.proposal_claim = amount + additional_amount
-                proposal.parked_claim = parked_amount + additional_parked_amount
-                proposal.balance = proposal.total_cost - proposal.proposal_claim
-                proposal.save()
-
-                proposal2 = Proposal.objects.get(
-                    proposal_id=draft.additional_proposal) if draft.additional_proposal else None
-                if proposal2:
-                    proposal2.proposal_claim = amount2 + additional_amount2
-                    proposal2.parked_claim = parked_amount2 + additional_parked_amount2
-                    proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
-                    proposal2.save()
-
                 for approver in approvers:
                     release = ClaimRelease(
                         claim_id=draft.claim_id,
@@ -6065,8 +6011,65 @@ def claim_add(request, _area, _distributor, _program):
 @role_required(allowed_roles='CLAIM')
 def claim_submit(request, _id):
     claim = Claim.objects.get(claim_id=_id)
+    program = Program.objects.get(program_id=claim.program_id)
+    proposal = Proposal.objects.get(proposal_id=program.proposal.proposal_id)
+
     claim.status = 'IN APPROVAL'
     claim.save()
+
+    sum_amount = Claim.objects.filter(
+        proposal_id=claim.proposal_id).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
+    sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
+        status__in=['DRAFT', 'REJECTED']).aggregate(Sum('additional_amount'))
+
+    sum_amount2 = Claim.objects.filter(
+        proposal_id=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
+    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(
+        Sum('additional_amount'))
+
+    amount = sum_amount.get('amount__sum') if sum_amount.get(
+        'amount__sum') else 0
+    additional_amount = sum_add_amount.get(
+        'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+
+    amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+        'amount__sum') else 0
+    additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+        'additional_amount__sum') else 0
+
+    # update parked claim
+    sum_parked_amount = Claim.objects.filter(
+        proposal_id=claim.proposal_id, status__in=['IN APPROVAL']).aggregate(Sum('amount'))
+    sum_add_parked_amount = Claim.objects.filter(additional_proposal=claim.proposal_id, status__in=[
+        'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+    parked_amount = sum_parked_amount.get(
+        'amount__sum') if sum_parked_amount.get('amount__sum') else 0
+    additional_parked_amount = sum_add_parked_amount.get(
+        'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
+
+    sum_parked_amount2 = Claim.objects.filter(proposal_id=claim.additional_proposal, status__in=[
+        'IN APPROVAL']).aggregate(Sum('amount'))
+    sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal, status__in=[
+        'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+    parked_amount2 = sum_parked_amount2.get(
+        'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
+    additional_parked_amount2 = sum_add_parked_amount2.get(
+        'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
+
+    proposal.proposal_claim = amount + additional_amount
+    proposal.parked_claim = parked_amount + additional_parked_amount
+    proposal.balance = proposal.total_cost - proposal.proposal_claim
+    proposal.save()
+
+    proposal2 = Proposal.objects.get(
+        proposal_id=claim.additional_proposal) if claim.additional_proposal else None
+    if proposal2:
+        proposal2.proposal_claim = amount2 + additional_amount2
+        proposal2.parked_claim = parked_amount2 + additional_parked_amount2
+        proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+        proposal2.save()
 
     mail_sent = ClaimRelease.objects.filter(
         claim_id=_id).order_by('sequence').values_list('mail_sent', flat=True)
@@ -6180,67 +6183,67 @@ def claim_update(request, _tab, _id):
                 draft.is_tax = True if request.POST.get('is_tax') else False
                 draft.save()
 
-                sum_amount = Claim.objects.filter(
-                    proposal_id=draft.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-                sum_add_amount = Claim.objects.filter(additional_proposal=draft.proposal_id).exclude(
-                    status__in=['REJECTED']).aggregate(Sum('additional_amount'))
+                # sum_amount = Claim.objects.filter(
+                #     proposal_id=draft.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+                # sum_add_amount = Claim.objects.filter(additional_proposal=draft.proposal_id).exclude(
+                #     status__in=['REJECTED']).aggregate(Sum('additional_amount'))
 
-                sum_amount2 = Claim.objects.filter(
-                    proposal_id=draft.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-                sum_add_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
-                    Sum('additional_amount'))
+                # sum_amount2 = Claim.objects.filter(
+                #     proposal_id=draft.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+                # sum_add_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
+                #     Sum('additional_amount'))
 
-                amount = sum_amount.get('amount__sum') if sum_amount.get(
-                    'amount__sum') else 0
-                additional_amount = sum_add_amount.get(
-                    'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+                # amount = sum_amount.get('amount__sum') if sum_amount.get(
+                #     'amount__sum') else 0
+                # additional_amount = sum_add_amount.get(
+                #     'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
 
-                amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
-                    'amount__sum') else 0
-                additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
-                    'additional_amount__sum') else 0
+                # amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+                #     'amount__sum') else 0
+                # additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+                #     'additional_amount__sum') else 0
 
-                # update parked claim
-                sum_parked_amount = Claim.objects.filter(
-                    proposal_id=draft.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
-                sum_add_parked_amount = Claim.objects.filter(additional_proposal=draft.proposal_id, status__in=[
-                                                             'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+                # # update parked claim
+                # sum_parked_amount = Claim.objects.filter(
+                #     proposal_id=draft.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+                # sum_add_parked_amount = Claim.objects.filter(additional_proposal=draft.proposal_id, status__in=[
+                #                                              'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
-                parked_amount = sum_parked_amount.get(
-                    'amount__sum') if sum_parked_amount.get('amount__sum') else 0
-                additional_parked_amount = sum_add_parked_amount.get(
-                    'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
+                # parked_amount = sum_parked_amount.get(
+                #     'amount__sum') if sum_parked_amount.get('amount__sum') else 0
+                # additional_parked_amount = sum_add_parked_amount.get(
+                #     'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
 
-                sum_parked_amount2 = Claim.objects.filter(proposal_id=draft.additional_proposal, status__in=[
-                                                          'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
-                sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal, status__in=[
-                                                              'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+                # sum_parked_amount2 = Claim.objects.filter(proposal_id=draft.additional_proposal, status__in=[
+                #                                           'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+                # sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=draft.additional_proposal, status__in=[
+                #                                               'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
-                parked_amount2 = sum_parked_amount2.get(
-                    'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
-                additional_parked_amount2 = sum_add_parked_amount2.get(
-                    'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
+                # parked_amount2 = sum_parked_amount2.get(
+                #     'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
+                # additional_parked_amount2 = sum_add_parked_amount2.get(
+                #     'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
 
-                proposal.proposal_claim = amount + additional_amount
-                proposal.parked_claim = parked_amount + additional_parked_amount
-                proposal.balance = proposal.total_cost - proposal.proposal_claim
-                proposal.save()
+                # proposal.proposal_claim = amount + additional_amount
+                # proposal.parked_claim = parked_amount + additional_parked_amount
+                # proposal.balance = proposal.total_cost - proposal.proposal_claim
+                # proposal.save()
 
-                proposal2 = Proposal.objects.get(
-                    proposal_id=draft.additional_proposal) if draft.additional_proposal else None
-                if proposal2:
-                    proposal2.proposal_claim = amount2 + additional_amount2
-                    proposal2.parked_claim = parked_amount2 + additional_parked_amount2
-                    proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
-                    proposal2.save()
-                else:
-                    proposal3 = Proposal.objects.get(
-                        proposal_id=add_prop_before) if add_prop_before else None
-                    if proposal3:
-                        proposal3.proposal_claim = amount2 + additional_amount2
-                        proposal3.parked_claim = parked_amount2 + additional_parked_amount2
-                        proposal3.balance = proposal3.total_cost - proposal3.proposal_claim
-                        proposal3.save()
+                # proposal2 = Proposal.objects.get(
+                #     proposal_id=draft.additional_proposal) if draft.additional_proposal else None
+                # if proposal2:
+                #     proposal2.proposal_claim = amount2 + additional_amount2
+                #     proposal2.parked_claim = parked_amount2 + additional_parked_amount2
+                #     proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+                #     proposal2.save()
+                # else:
+                #     proposal3 = Proposal.objects.get(
+                #         proposal_id=add_prop_before) if add_prop_before else None
+                #     if proposal3:
+                #         proposal3.proposal_claim = amount2 + additional_amount2
+                #         proposal3.parked_claim = parked_amount2 + additional_parked_amount2
+                #         proposal3.balance = proposal3.total_cost - proposal3.proposal_claim
+                #         proposal3.save()
 
                 return HttpResponseRedirect(reverse('claim-view', args=[_tab, _id, '0', '0', '0', '0', 'all']))
     else:
@@ -6276,59 +6279,59 @@ def claim_delete(request, _tab, _id):
     proposal = Proposal.objects.get(proposal_id=claim.proposal.proposal_id)
     claim.delete()
 
-    sum_amount = Claim.objects.filter(
-        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-    sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
-        status__in=['REJECTED']).aggregate(Sum('additional_amount'))
+    # sum_amount = Claim.objects.filter(
+    #     proposal_id=claim.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+    # sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
+    #     status__in=['REJECTED']).aggregate(Sum('additional_amount'))
 
-    sum_amount2 = Claim.objects.filter(
-        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
-        Sum('additional_amount'))
+    # sum_amount2 = Claim.objects.filter(
+    #     proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+    # sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
+    #     Sum('additional_amount'))
 
-    amount = sum_amount.get('amount__sum') if sum_amount.get(
-        'amount__sum') else 0
-    additional_amount = sum_add_amount.get(
-        'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+    # amount = sum_amount.get('amount__sum') if sum_amount.get(
+    #     'amount__sum') else 0
+    # additional_amount = sum_add_amount.get(
+    #     'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
 
-    amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
-        'amount__sum') else 0
-    additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
-        'additional_amount__sum') else 0
+    # amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+    #     'amount__sum') else 0
+    # additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+    #     'additional_amount__sum') else 0
 
-    # update parked claim
-    sum_parked_amount = Claim.objects.filter(
-        proposal_id=claim.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
-    sum_add_parked_amount = Claim.objects.filter(additional_proposal=claim.proposal_id, status__in=[
-        'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+    # # update parked claim
+    # sum_parked_amount = Claim.objects.filter(
+    #     proposal_id=claim.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+    # sum_add_parked_amount = Claim.objects.filter(additional_proposal=claim.proposal_id, status__in=[
+    #     'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
-    parked_amount = sum_parked_amount.get(
-        'amount__sum') if sum_parked_amount.get('amount__sum') else 0
-    additional_parked_amount = sum_add_parked_amount.get(
-        'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
+    # parked_amount = sum_parked_amount.get(
+    #     'amount__sum') if sum_parked_amount.get('amount__sum') else 0
+    # additional_parked_amount = sum_add_parked_amount.get(
+    #     'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
 
-    sum_parked_amount2 = Claim.objects.filter(proposal_id=claim.additional_proposal, status__in=[
-        'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
-    sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal, status__in=[
-        'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+    # sum_parked_amount2 = Claim.objects.filter(proposal_id=claim.additional_proposal, status__in=[
+    #     'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+    # sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal, status__in=[
+    #     'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
-    parked_amount2 = sum_parked_amount2.get(
-        'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
-    additional_parked_amount2 = sum_add_parked_amount2.get(
-        'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
+    # parked_amount2 = sum_parked_amount2.get(
+    #     'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
+    # additional_parked_amount2 = sum_add_parked_amount2.get(
+    #     'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
 
-    proposal.proposal_claim = amount + additional_amount
-    proposal.parked_claim = parked_amount + additional_parked_amount
-    proposal.balance = proposal.total_cost - proposal.proposal_claim
-    proposal.save()
+    # proposal.proposal_claim = amount + additional_amount
+    # proposal.parked_claim = parked_amount + additional_parked_amount
+    # proposal.balance = proposal.total_cost - proposal.proposal_claim
+    # proposal.save()
 
-    proposal2 = Proposal.objects.get(
-        proposal_id=claim.additional_proposal) if claim.additional_proposal else None
-    if proposal2:
-        proposal2.proposal_claim = amount2 + additional_amount2
-        proposal2.parked_claim = parked_amount2 + additional_parked_amount2
-        proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
-        proposal2.save()
+    # proposal2 = Proposal.objects.get(
+    #     proposal_id=claim.additional_proposal) if claim.additional_proposal else None
+    # if proposal2:
+    #     proposal2.proposal_claim = amount2 + additional_amount2
+    #     proposal2.parked_claim = parked_amount2 + additional_parked_amount2
+    #     proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+    #     proposal2.save()
 
     return HttpResponseRedirect(reverse('claim-index', args=[_tab, ]))
 
@@ -6446,13 +6449,13 @@ def claim_release_update(request, _id):
                 parent.save()
 
                 sum_amount = Claim.objects.filter(
-                    proposal_id=parent.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+                    proposal_id=parent.proposal_id).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
                 sum_add_amount = Claim.objects.filter(additional_proposal=parent.proposal_id).exclude(
-                    status__in=['REJECTED']).aggregate(Sum('additional_amount'))
+                    status__in=['DRAFT', 'REJECTED']).aggregate(Sum('additional_amount'))
 
                 sum_amount2 = Claim.objects.filter(
-                    proposal_id=parent.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-                sum_add_amount2 = Claim.objects.filter(additional_proposal=parent.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
+                    proposal_id=parent.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
+                sum_add_amount2 = Claim.objects.filter(additional_proposal=parent.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(
                     Sum('additional_amount'))
 
                 amount = sum_amount.get('amount__sum') if sum_amount.get(
@@ -6467,9 +6470,9 @@ def claim_release_update(request, _id):
 
                 # update parked claim
                 sum_parked_amount = Claim.objects.filter(
-                    proposal_id=parent.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+                    proposal_id=parent.proposal_id, status__in=['IN APPROVAL']).aggregate(Sum('amount'))
                 sum_add_parked_amount = Claim.objects.filter(additional_proposal=parent.proposal_id, status__in=[
-                                                             'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+                                                             'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
                 parked_amount = sum_parked_amount.get(
                     'amount__sum') if sum_parked_amount.get('amount__sum') else 0
@@ -6477,9 +6480,9 @@ def claim_release_update(request, _id):
                     'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
 
                 sum_parked_amount2 = Claim.objects.filter(proposal_id=parent.additional_proposal, status__in=[
-                                                          'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+                                                          'IN APPROVAL']).aggregate(Sum('amount'))
                 sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=parent.additional_proposal, status__in=[
-                                                              'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+                                                              'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
                 parked_amount2 = sum_parked_amount2.get(
                     'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
@@ -6703,13 +6706,13 @@ def claim_release_approve(request, _id):
     claim.save()
 
     sum_amount = Claim.objects.filter(
-        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+        proposal_id=claim.proposal_id).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
     sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
-        status__in=['REJECTED']).aggregate(Sum('additional_amount'))
+        status__in=['DRAFT', 'REJECTED']).aggregate(Sum('additional_amount'))
 
     sum_amount2 = Claim.objects.filter(
-        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
+        proposal_id=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
+    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(
         Sum('additional_amount'))
 
     amount = sum_amount.get('amount__sum') if sum_amount.get(
@@ -6724,9 +6727,9 @@ def claim_release_approve(request, _id):
 
     # update parked claim
     sum_parked_amount = Claim.objects.filter(
-        proposal_id=claim.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+        proposal_id=claim.proposal_id, status__in=['IN APPROVAL']).aggregate(Sum('amount'))
     sum_add_parked_amount = Claim.objects.filter(additional_proposal=claim.proposal_id, status__in=[
-        'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+        'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
     parked_amount = sum_parked_amount.get(
         'amount__sum') if sum_parked_amount.get('amount__sum') else 0
@@ -6734,9 +6737,9 @@ def claim_release_approve(request, _id):
         'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
 
     sum_parked_amount2 = Claim.objects.filter(proposal_id=claim.additional_proposal, status__in=[
-        'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+        'IN APPROVAL']).aggregate(Sum('amount'))
     sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal, status__in=[
-        'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+        'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
     parked_amount2 = sum_parked_amount2.get(
         'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
@@ -6823,13 +6826,13 @@ def claim_release_bulk_approve(request):
         claim.save()
 
         sum_amount = Claim.objects.filter(
-            proposal_id=claim.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+            proposal_id=claim.proposal_id).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
         sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
-            status__in=['REJECTED']).aggregate(Sum('additional_amount'))
+            status__in=['DRAFT', 'REJECTED']).aggregate(Sum('additional_amount'))
 
         sum_amount2 = Claim.objects.filter(
-            proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-        sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(
+            proposal_id=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
+        sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(
             Sum('additional_amount'))
 
         amount = sum_amount.get('amount__sum') if sum_amount.get(
@@ -6844,9 +6847,9 @@ def claim_release_bulk_approve(request):
 
         # update parked claim
         sum_parked_amount = Claim.objects.filter(
-            proposal_id=claim.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+            proposal_id=claim.proposal_id, status__in=['IN APPROVAL']).aggregate(Sum('amount'))
         sum_add_parked_amount = Claim.objects.filter(additional_proposal=claim.proposal_id, status__in=[
-            'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+            'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
         parked_amount = sum_parked_amount.get(
             'amount__sum') if sum_parked_amount.get('amount__sum') else 0
@@ -6854,9 +6857,9 @@ def claim_release_bulk_approve(request):
             'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
 
         sum_parked_amount2 = Claim.objects.filter(proposal_id=claim.additional_proposal, status__in=[
-            'DRAFT', 'IN APPROVAL']).aggregate(Sum('amount'))
+            'IN APPROVAL']).aggregate(Sum('amount'))
         sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal, status__in=[
-            'DRAFT', 'IN APPROVAL']).aggregate(Sum('additional_amount'))
+            'IN APPROVAL']).aggregate(Sum('additional_amount'))
 
         parked_amount2 = sum_parked_amount2.get(
             'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
@@ -6884,6 +6887,10 @@ def claim_release_bulk_approve(request):
 @login_required(login_url='/login/')
 @role_required(allowed_roles='CLAIM-RELEASE')
 def claim_release_return(request, _id):
+    claim = Claim.objects.get(claim_id=_id)
+    program = Program.objects.get(program_id=claim.program_id)
+    proposal = Proposal.objects.get(proposal_id=program.proposal.proposal_id)
+
     recipients = []
     draft = False
 
@@ -6944,6 +6951,60 @@ def claim_release_return(request, _id):
     recipient_list = list(dict.fromkeys(recipients))
     send_email(subject, msg, recipient_list)
 
+    sum_amount = Claim.objects.filter(
+        proposal_id=claim.proposal_id).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
+    sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
+        status__in=['DRAFT', 'REJECTED']).aggregate(Sum('additional_amount'))
+
+    sum_amount2 = Claim.objects.filter(
+        proposal_id=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
+    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(
+        Sum('additional_amount'))
+
+    amount = sum_amount.get('amount__sum') if sum_amount.get(
+        'amount__sum') else 0
+    additional_amount = sum_add_amount.get(
+        'additional_amount__sum') if sum_add_amount.get('additional_amount__sum') else 0
+
+    amount2 = sum_amount2.get('amount__sum') if sum_amount2.get(
+        'amount__sum') else 0
+    additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
+        'additional_amount__sum') else 0
+
+    # update parked claim
+    sum_parked_amount = Claim.objects.filter(
+        proposal_id=claim.proposal_id, status__in=['IN APPROVAL']).aggregate(Sum('amount'))
+    sum_add_parked_amount = Claim.objects.filter(additional_proposal=claim.proposal_id, status__in=[
+        'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+    parked_amount = sum_parked_amount.get(
+        'amount__sum') if sum_parked_amount.get('amount__sum') else 0
+    additional_parked_amount = sum_add_parked_amount.get(
+        'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
+
+    sum_parked_amount2 = Claim.objects.filter(proposal_id=claim.additional_proposal, status__in=[
+        'IN APPROVAL']).aggregate(Sum('amount'))
+    sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal, status__in=[
+        'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+    parked_amount2 = sum_parked_amount2.get(
+        'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
+    additional_parked_amount2 = sum_add_parked_amount2.get(
+        'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
+
+    proposal.proposal_claim = amount + additional_amount
+    proposal.parked_claim = parked_amount + additional_parked_amount
+    proposal.balance = proposal.total_cost - proposal.proposal_claim
+    proposal.save()
+
+    proposal2 = Proposal.objects.get(
+        proposal_id=claim.additional_proposal) if claim.additional_proposal else None
+    if proposal2:
+        proposal2.proposal_claim = amount2 + additional_amount2
+        proposal2.parked_claim = parked_amount2 + additional_parked_amount2
+        proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
+        proposal2.save()
+
     return HttpResponseRedirect(reverse('claim-release-index'))
 
 
@@ -6991,13 +7052,13 @@ def claim_release_reject(request, _id):
     claim.save()
 
     sum_amount = Claim.objects.filter(
-        proposal_id=claim.proposal_id).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
+        proposal_id=claim.proposal_id).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
     sum_add_amount = Claim.objects.filter(additional_proposal=claim.proposal_id).exclude(
-        status__in=['REJECTED']).aggregate(Sum('additional_amount'))
+        status__in=['DRAFT', 'REJECTED']).aggregate(Sum('additional_amount'))
 
     sum_amount2 = Claim.objects.filter(
-        proposal_id=claim.additional_proposal).exclude(status__in=['REJECTED']).aggregate(Sum('amount'))
-    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['REJECTED', 'DRAFT']).aggregate(
+        proposal_id=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
+    sum_add_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(
         Sum('additional_amount'))
 
     amount = sum_amount.get('amount__sum') if sum_amount.get(
@@ -7010,9 +7071,29 @@ def claim_release_reject(request, _id):
     additional_amount2 = sum_add_amount2.get('additional_amount__sum') if sum_add_amount2.get(
         'additional_amount__sum') else 0
 
+    # update parked claim
+    sum_parked_amount = Claim.objects.filter(
+        proposal_id=claim.proposal_id, status__in=['IN APPROVAL']).aggregate(Sum('amount'))
+    sum_add_parked_amount = Claim.objects.filter(additional_proposal=claim.proposal_id, status__in=[
+        'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+    parked_amount = sum_parked_amount.get(
+        'amount__sum') if sum_parked_amount.get('amount__sum') else 0
+    additional_parked_amount = sum_add_parked_amount.get(
+        'additional_amount__sum') if sum_add_parked_amount.get('additional_amount__sum') else 0
+
+    sum_parked_amount2 = Claim.objects.filter(proposal_id=claim.additional_proposal, status__in=[
+        'IN APPROVAL']).aggregate(Sum('amount'))
+    sum_add_parked_amount2 = Claim.objects.filter(additional_proposal=claim.additional_proposal, status__in=[
+        'IN APPROVAL']).aggregate(Sum('additional_amount'))
+
+    parked_amount2 = sum_parked_amount2.get(
+        'amount__sum') if sum_parked_amount2.get('amount__sum') else 0
+    additional_parked_amount2 = sum_add_parked_amount2.get(
+        'additional_amount__sum') if sum_add_parked_amount2.get('additional_amount__sum') else 0
+
     proposal.proposal_claim = amount + additional_amount
-    proposal.parked_claim = Claim.objects.filter(proposal_id=claim.proposal.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(
-        Sum('total_claim')).get('total_claim__sum') if Claim.objects.filter(proposal_id=claim.proposal.proposal_id, status__in=['DRAFT', 'IN APPROVAL']).aggregate(Sum('total_claim')).get('total_claim__sum') else 0
+    proposal.parked_claim = parked_amount + additional_parked_amount
     proposal.balance = proposal.total_cost - proposal.proposal_claim
     proposal.save()
 
@@ -7020,6 +7101,7 @@ def claim_release_reject(request, _id):
         proposal_id=claim.additional_proposal) if claim.additional_proposal else None
     if proposal2:
         proposal2.proposal_claim = amount2 + additional_amount2
+        proposal2.parked_claim = parked_amount2 + additional_parked_amount2
         proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
         proposal2.save()
 
