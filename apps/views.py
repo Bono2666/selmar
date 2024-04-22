@@ -80,11 +80,12 @@ def user_add(request):
             form.save()
             if not settings.DEBUG:
                 user = User.objects.get(user_id=form.instance.user_id)
-                my_file = user.signature
-                filename = '../../www/selmar/apps/media/' + my_file.name
-                with open(filename, 'wb+') as temp_file:
-                    for chunk in my_file.chunks():
-                        temp_file.write(chunk)
+                if user.signature:
+                    my_file = user.signature
+                    filename = '../../www/selmar/apps/media/' + my_file.name
+                    with open(filename, 'wb+') as temp_file:
+                        for chunk in my_file.chunks():
+                            temp_file.write(chunk)
 
             return HttpResponseRedirect(reverse('user-view', args=[form.instance.user_id, ]))
         else:
@@ -277,11 +278,12 @@ def user_update(request, _id):
         if form.is_valid():
             form.save()
             if not settings.DEBUG:
-                my_file = users.signature
-                filename = '../../www/selmar/apps/media/' + my_file.name
-                with open(filename, 'wb+') as temp_file:
-                    for chunk in my_file.chunks():
-                        temp_file.write(chunk)
+                if users.signature:
+                    my_file = users.signature
+                    filename = '../../www/selmar/apps/media/' + my_file.name
+                    with open(filename, 'wb+') as temp_file:
+                        for chunk in my_file.chunks():
+                            temp_file.write(chunk)
             return HttpResponseRedirect(reverse('user-view', args=[_id, ]))
     else:
         form = FormUserUpdate(instance=users)
@@ -478,7 +480,7 @@ def distributor_delete(request, _id):
 def area_sales_index(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT area_id, area_name, username FROM apps_areasales INNER JOIN apps_user ON apps_areasales.manager = apps_user.user_id")
+            "SELECT area_id, area_name, username FROM apps_areasales LEFT JOIN apps_user ON apps_areasales.manager = apps_user.user_id")
         area_sales = cursor.fetchall()
 
     context = {
