@@ -26,7 +26,7 @@
                                 <div class="col-md-6">
                                     <div class="shadow-none">
                                         <label for="year_closed" class="form-label">Year</label>
-                                        <select name="year_closed" id="year_closed" class="form-control form-select-sm form-control-alternative" {% if crud == 'view' %}disabled{% endif %}>
+                                        <select name="year_closed" id="year_closed" class="form-control form-select-sm form-control-alternative" {% if crud == 'view' %}disabled{% endif %} {% if not request.user.is_superuser %}disabled{% endif %}>
                                             {% for year in years %}
                                             <option value="{{ year }}" {% if year == data.year_open %}selected{% endif %}>{{ year }}</option>
                                             {% endfor %}
@@ -39,7 +39,7 @@
                                 <div class="col-md-6">
                                     <div class="shadow-none">
                                         <label for="month_closed" class="form-label">Month</label>
-                                        <select name="month_closed" id="month_closed" class="form-control form-select-sm form-control-alternative" {% if crud == 'view' %}disabled{% endif %}>
+                                        <select name="month_closed" id="month_closed" class="form-control form-select-sm form-control-alternative" {% if crud == 'view' %}disabled{% endif %} {% if not request.user.is_superuser %}disabled{% endif %}>
                                             {% for month in months %}
                                             <option value="{{ month }}" {% if month == data.month_open %}selected{% endif %}>{{ month }}</option>
                                             {% endfor %}
