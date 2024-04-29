@@ -3047,7 +3047,7 @@ def proposal_print(request, _id):
     pdf_file.setFont("Helvetica-Bold", 11)  # Set font to bold
 
     # Add logo in the top left corner
-    logo_path = 'https://ksisolusi.com/apps/static/img/favicon.png'
+    logo_path = host.url + 'apps/static/img/favicon.png'
     pdf_file.drawImage(logo_path, 25, 515, width=60, height=60)
 
     # Add title beside the logo in the center of the page
@@ -7129,7 +7129,7 @@ def claim_print(request, _id):
     pdf_file.setFont('Helvetica-Bold', 11)
 
     # Add logo in the center of the page
-    logo_path = 'https://ksisolusi.com/apps/static/img/favicon.png'
+    logo_path = host.url + 'apps/static/img/favicon.png'
     logo_width = 60
     logo_height = 60
     page_width = landscape(A4)
@@ -8246,7 +8246,7 @@ def cl_print(request, _id):
     pdf_file.setFont('Helvetica-Bold', 8)
 
     # Add logo in the center of the page
-    logo_path = 'https://ksisolusi.com/apps/static/img/favicon.png'
+    logo_path = host.url + 'apps/static/img/favicon.png'
     logo_width = 60
     logo_height = 60
     page_width = landscape(A4)
