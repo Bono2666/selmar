@@ -5158,7 +5158,7 @@ def program_add(request, _area, _distributor, _proposal):
         status='OPEN',
         area=selected_area,
         balance__gt=0,
-        period_end__gte=datetime.datetime.now().date(),
+        # period_end__gte=datetime.datetime.now().date(),
         budget__budget_distributor=selected_distributor,
     ).order_by('proposal_id') if selected_distributor != '0' else None
 
