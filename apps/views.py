@@ -5945,6 +5945,7 @@ def claim_add(request, _area, _distributor, _program):
         else:
             if form.is_valid():
                 draft = form.save(commit=False)
+                draft.claim_date = datetime.datetime.now().date()
                 draft.program_id = selected_program
                 draft.seq_number = _no.seq_number + 1 if _no else 1
                 draft.entry_pos = request.user.position.position_id
