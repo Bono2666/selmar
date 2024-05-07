@@ -5898,8 +5898,9 @@ def claim_add(request, _area, _distributor, _program):
         'area_id', 'area__area_name')
     distributors = Program.objects.filter(status='OPEN', area=selected_area).values_list(
         'proposal__budget__budget_distributor__distributor_id', 'proposal__budget__budget_distributor__distributor_name').distinct() if selected_area != '0' else None
-    programs = Program.objects.filter(status='OPEN', deadline__gte=datetime.datetime.now().date(
-    ), area=selected_area, proposal__budget__budget_distributor__distributor_id=selected_distributor, proposal__balance__gt=0).distinct() if selected_distributor != '0' else None
+    programs = Program.objects.filter(status='OPEN',
+                                      #   deadline__gte=datetime.datetime.now().date(),
+                                      area=selected_area, proposal__budget__budget_distributor__distributor_id=selected_distributor, proposal__balance__gt=0).distinct() if selected_distributor != '0' else None
     proposal = Proposal.objects.get(
         proposal_id=program.proposal.proposal_id) if selected_program != '0' else None
     proposals = Proposal.objects.filter(

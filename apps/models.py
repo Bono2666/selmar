@@ -732,8 +732,9 @@ class IncrementalSales(models.Model):
     incrp_nom = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
     incpst_carton = models.DecimalField(
-        max_digits=5, decimal_places=1, default=0)
-    incpst_nom = models.DecimalField(max_digits=5, decimal_places=1, default=0)
+        max_digits=12, decimal_places=1, default=0)
+    incpst_nom = models.DecimalField(
+        max_digits=12, decimal_places=1, default=0)
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True, blank=True)
