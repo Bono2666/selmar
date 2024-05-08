@@ -717,7 +717,7 @@ class ProposalAttachment(models.Model):
 
 class IncrementalSales(models.Model):
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
-    product = models.CharField(max_length=50)
+    product = models.CharField(max_length=100)
     swop_carton = models.IntegerField(default=0)
     swop_nom_carton = models.DecimalField(
         max_digits=12, decimal_places=0, default=0)
