@@ -234,7 +234,7 @@ urlpatterns = [
     path('closing/proposal/single/<path:_id>/', views.proposal_single_close,
          name='proposal-single-close'),
     path('program/<str:_tab>/', views.program_index, name='program-index'),
-    path('program/add/<str:_area>/<str:_distributor>/<path:_proposal>/',
+    path('program/add/<str:_area>/<str:_distributor>/<path:_proposal>/<int:_seq>/',
          views.program_add, name='program-add'),
     path('program/view/<str:_tab>/<path:_id>/',
          views.program_view, name='program-view'),

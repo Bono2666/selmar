@@ -9,7 +9,7 @@
 <div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
-            <form action="{% url 'program-add' selected_area selected_distributor selected_proposal %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'program-add' selected_area selected_distributor selected_proposal seq %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="card mb-6">
                     <div class="card-header">
@@ -52,6 +52,7 @@
                                 </div>
                             </div>
                             <div class="row mt-3">
+                                {{ form.program_id }}
                                 {{ form.area }}
                                 <div class="col-md-12">
                                     <div class="shadow-none">
@@ -97,7 +98,7 @@
                             </thead>
                             <tbody>
                                 {% for item in area %}
-                                <tr data-href="{% url 'program-add' item.0 '0' '0' %}" class="cursor-pointer">
+                                <tr data-href="{% url 'program-add' item.0 '0' '0' seq %}" class="cursor-pointer">
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
@@ -141,7 +142,7 @@
                             </thead>
                             <tbody>
                                 {% for item in distributors %}
-                                <tr data-href="{% url 'program-add' selected_area item.0 '0' %}" class="cursor-pointer">
+                                <tr data-href="{% url 'program-add' selected_area item.0 '0' seq %}" class="cursor-pointer">
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
@@ -163,7 +164,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 d-flex">
-                    <a href="{% url 'program-add' '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
+                    <a href="{% url 'program-add' '0' '0' '0' seq %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
                     <a href="{% url 'program-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
                 </div>             
             </div>
@@ -201,7 +202,7 @@
                                 {% for item in proposals %}
                                     {% if item.reference %}
                                     {% else %}
-                                        <tr data-href="{% url 'program-add' selected_area selected_distributor item.proposal_id %}" class="cursor-pointer">
+                                        <tr data-href="{% url 'program-add' selected_area selected_distributor item.proposal_id seq %}" class="cursor-pointer">
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
@@ -252,7 +253,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 d-flex">
-                    <a href="{% url 'program-add' selected_area '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
+                    <a href="{% url 'program-add' selected_area '0' '0' seq %}" type="button" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-angle-left"></i>&nbsp;&nbsp;Back</a>
                     <a href="{% url 'program-index' 'open' %}" type="button" class="btn btn-sm bg-gradient-danger mb-0"><i class="fas fa-times"></i>&nbsp;&nbsp;Cancel</a>
                 </div>             
             </div>

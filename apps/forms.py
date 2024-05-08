@@ -998,13 +998,15 @@ class FormProgram(ModelForm):
     def __init__(self, *args, **kwargs):
         super(FormProgram, self).__init__(*args, **kwargs)
         self.label_suffix = ''
+        self.fields['program_id'].widget = forms.TextInput(
+            attrs={'class': 'd-none'})
         self.fields['area'].widget = forms.TextInput(
             attrs={'class': 'd-none'})
         self.fields['deadline'].label = 'Claim Deadline'
 
     class Meta:
         model = Program
-        fields = ['area', 'deadline', 'header', 'content', 'disclaimer',
+        fields = ['program_id', 'area', 'deadline', 'header', 'content', 'disclaimer',
                   'approval', 'footer']
 
         widgets = {

@@ -5140,7 +5140,7 @@ def program_index(request, _tab):
 
 @login_required(login_url='/login/')
 @role_required(allowed_roles='PROGRAM')
-def program_add(request, _area, _distributor, _proposal):
+def program_add(request, _area, _distributor, _proposal, _seq):
     selected_area = _area
     selected_distributor = _distributor
     selected_proposal = _proposal
@@ -5164,6 +5164,8 @@ def program_add(request, _area, _distributor, _proposal):
 
     message = ''
     no_save = False
+    seq = _seq
+
     if selected_area != '0' and selected_proposal != '0':
         approvers = ProgramMatrix.objects.filter(
             area_id=_area, channel_id=proposal.channel).order_by('sequence')
@@ -5173,15 +5175,22 @@ def program_add(request, _area, _distributor, _proposal):
             message = "No program's approver found for this area and channel."
             no_save = True
 
-    try:
-        _no = Program.objects.filter(
-            program_date__year=datetime.datetime.now().year).latest('seq_number')
-    except Program.DoesNotExist:
-        _no = None
-    if _no is None:
-        format_no = '{:04d}'.format(1)
+    if _seq == 0:
+        try:
+            _no = Program.objects.filter(
+                program_date__year=datetime.datetime.now().year).latest('seq_number')
+        except Program.DoesNotExist:
+            _no = None
+        if _no is None:
+            format_no = '{:04d}'.format(1)
+            seq = 1
+        else:
+            format_no = '{:04d}'.format(_no.seq_number + 1)
+            _no.seq_number += 1
+            _no.save()
+            seq = _no.seq_number
     else:
-        format_no = '{:04d}'.format(_no.seq_number + 1)
+        format_no = '{:04d}'.format(seq)
 
     _id = 'SBS-3' + format_no + '/' + proposal.channel + '/' + selected_area + '/' + \
         str(proposal.budget.budget_distributor.distributor_id) + '/' + \
@@ -5192,10 +5201,9 @@ def program_add(request, _area, _distributor, _proposal):
         form = FormProgram(request.POST, request.FILES)
         if form.is_valid():
             draft = form.save(commit=False)
-            draft.program_id = _id
             draft.program_date = datetime.datetime.now().date()
             draft.proposal_id = selected_proposal
-            draft.seq_number = _no.seq_number + 1 if _no else 1
+            draft.seq_number = seq
             draft.entry_pos = request.user.position.position_id
             draft.save()
 
@@ -5283,6 +5291,7 @@ def program_add(request, _area, _distributor, _proposal):
         'selected_area': selected_area,
         'selected_distributor': selected_distributor,
         'selected_proposal': selected_proposal,
+        'seq': seq,
         'msg': msg,
         'message': message,
         'no_save': no_save,
