@@ -76,6 +76,7 @@ class FormUserUpdate(ModelForm):
             {'class': 'form-control-sm'})
         self.fields['email'].widget = forms.EmailInput(
             {'class': 'form-control-sm'})
+        self.fields['signature'].required = False
 
     class Meta:
         model = User

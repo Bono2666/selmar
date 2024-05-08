@@ -4189,8 +4189,12 @@ def closing(request):
         if proposals:
             message = 'There are still proposals in approval process. Please approve or reject them first.'
         else:
-            period.year_closed = request.POST.get('year_closed')
-            period.month_closed = request.POST.get('month_closed')
+            if request.user.is_superuser:
+                period.year_closed = request.POST.get('year_closed')
+                period.month_closed = request.POST.get('month_closed')
+            else:
+                period.year_closed = period.year_open
+                period.month_closed = period.month_open
             next_month = (datetime.datetime(int(period.year_closed),
                                             int(period.month_closed), 1) + datetime.timedelta(days=32)).month
             next_year = (datetime.datetime(int(period.year_closed),
