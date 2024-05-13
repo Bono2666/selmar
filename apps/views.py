@@ -1896,12 +1896,12 @@ def budget_transfer_view(request, _tab, _id):
     form = FormBudgetTransferView(instance=transfer)
     approval = BudgetTransferRelease.objects.filter(
         transfer_id=_id).order_by('sequence')
-    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor, budget_area=transfer.area, budget_status='OPEN').budget_id,
+    channel = BudgetDetail.objects.filter(budget__budget_distributor_id=transfer.distributor, budget__budget_area=transfer.area, budget__budget_status='OPEN',
                                           budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance')
-    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor_id, budget_area=transfer.area_id, budget_status='OPEN').budget_id).exclude(
+    channel_to = BudgetDetail.objects.filter(budget__budget_distributor_id=transfer.distributor_id, budget__budget_area=transfer.area_id, budget__budget_status='OPEN').exclude(
         budget_channel_id=transfer.channel_from).values_list('budget_channel_id', 'budget_channel__channel_name')
-    budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor,
-                                              budget_area=transfer.area, budget_status='OPEN').budget_id, budget_channel_id=transfer.channel_from).budget_balance
+    budget_balance = BudgetDetail.objects.get(budget__budget_distributor_id=transfer.distributor, budget__budget_area=transfer.area,
+                                              budget__budget_status='OPEN', budget_channel_id=transfer.channel_from).budget_balance
     selected_channel = transfer.channel_from_id
     message = '0'
 
