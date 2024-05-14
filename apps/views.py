@@ -9635,12 +9635,30 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 
     if _distributor == 'all':
         with connection.cursor() as cursor:
+
+            # Spending = Budget Amount + Upping - Claim Amount <- Rumus Spending
+            # cursor.execute(
+            #     """
+            #     SELECT budget_area_id, apps_budget.budget_id, distributor_name, region_name, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) as balance,
+            #     DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
+            #     FROM apps_budget
+            #     LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id
+            #     INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
+            #     INNER JOIN apps_regiondetail ON budget_area_id = area_id
+            #     INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
+            #     WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+            #         SELECT area_id FROM apps_areauser WHERE user_id = %s
+            #     ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s
+            #     """, [request.user.user_id, from_date, to_date]
+            # )
+
+            # Spending = Budget Amount + Upping - Proposal <- Rumus Spending
             cursor.execute(
                 """
-                SELECT budget_area_id, apps_budget.budget_id, distributor_name, region_name, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) as balance,
+                SELECT budget_area_id, apps_budget.budget_id, distributor_name, region_name, (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)) as balance,
                 DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date 
                 FROM apps_budget 
-                LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id 
+                LEFT JOIN (SELECT SUM(budget_proposed) as proposed_amount, SUM(budget_remaining) as remaining_amount, budget_id FROM apps_budgetdetail GROUP BY budget_id) as detail ON apps_budget.budget_id = detail.budget_id 
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id 
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
@@ -9652,12 +9670,30 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
             budget_region = cursor.fetchall()
     else:
         with connection.cursor() as cursor:
+
+            # Spending = Budget Amount + Upping - Claim Amount <- Rumus Spending
+            # cursor.execute(
+            #     """
+            #     SELECT budget_area_id, budget_id, distributor_name, region_name, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) as balance,
+            #     DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
+            #     FROM apps_budget
+            #     LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id
+            #     INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
+            #     INNER JOIN apps_regiondetail ON budget_area_id = area_id
+            #     INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
+            #     WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+            #         SELECT area_id FROM apps_areauser WHERE user_id = %s
+            #     ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s AND budget_distributor_id = %s
+            #     """, [request.user.user_id, from_date, to_date, _distributor]
+            # )
+
+            # Spending = Budget Amount + Upping - Proposal <- Rumus Spending
             cursor.execute(
                 """
-                SELECT budget_area_id, budget_id, distributor_name, region_name, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) as balance,
+                SELECT budget_area_id, budget_id, distributor_name, region_name, (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)) as balance,
                 DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
                 FROM apps_budget
-                LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id 
+                LEFT JOIN (SELECT SUM(budget_proposed) as proposed_amount, SUM(budget_remaining) as remaining_amount, budget_id FROM apps_budgetdetail GROUP BY budget_id) as detail ON apps_budget.budget_id = detail.budget_id 
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id

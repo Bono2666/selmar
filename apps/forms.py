@@ -5,6 +5,8 @@ from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm, UserC
 import datetime
 from django.forms import DateInput
 from tinymce.widgets import TinyMCE
+from django.conf import settings
+from django import forms
 
 
 class DateInput(forms.DateInput):

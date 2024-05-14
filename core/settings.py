@@ -124,6 +124,8 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Jakarta'
 
+DATE_INPUT_FORMATS = ('%d/%m/%Y')
+
 USE_I18N = True
 
 USE_TZ = False
