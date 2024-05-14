@@ -38,6 +38,7 @@
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Parked</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Assigned</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Available</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -89,6 +90,9 @@
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm text-end">{{ item.12|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.13 == 'OPEN' %}COMPLETED{% else %}{{ item.13 }}{% endif %}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}

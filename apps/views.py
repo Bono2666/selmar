@@ -8976,17 +8976,17 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
 
     if _distributor == 'all':
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN').annotate(
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status__in=['OPEN', 'CLOSED']).annotate(
             difference=F('proposal_claim') - F('parked_claim')
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status'
         )
     else:
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN', budget__budget_distributor=_distributor).annotate(
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status__in=['OPEN', 'CLOSED'], budget__budget_distributor=_distributor).annotate(
             difference=F('proposal_claim') - F('parked_claim')
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status'
         )
 
     context = {
@@ -9018,17 +9018,17 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 
     if _distributor == 'all':
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN').annotate(
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status__in=['OPEN', 'CLOSED']).annotate(
             difference=F('proposal_claim') - F('parked_claim')
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status'
         )
     else:
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status='OPEN', budget__budget_distributor=_distributor).annotate(
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status__in=['OPEN', 'CLOSED'], budget__budget_distributor=_distributor).annotate(
             difference=F('proposal_claim') - F('parked_claim')
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status'
         )
 
     # Create a HttpResponse object with the csv data
@@ -9045,7 +9045,7 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 
     # Define column headers
     headers = ['Area', 'Distributor', 'Channel', 'Proposal No.', 'Program Name',
-               'Division', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Available']
+               'Division', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Available', 'Status']
 
     # Define cell formats
     header_format = workbook.add_format({
@@ -9069,6 +9069,7 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     worksheet.set_column('F:F', 16)
     worksheet.set_column('G:H', 11)
     worksheet.set_column('I:M', 14)
+    worksheet.set_column('N:N', 10)
 
     # Write data to XlsxWriter Object
     for idx, record in enumerate(proposal):
@@ -9081,6 +9082,9 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
                 worksheet.write(idx + 1, col_idx, col_value, date_format)
             elif col_idx == 8 or col_idx == 9 or col_idx == 10 or col_idx == 11 or col_idx == 12:
                 worksheet.write(idx + 1, col_idx, col_value, num_format)
+            elif col_idx == 13:
+                worksheet.write(
+                    idx + 1, col_idx, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format)
             else:
                 worksheet.write(idx + 1, col_idx, col_value, cell_format)
 
