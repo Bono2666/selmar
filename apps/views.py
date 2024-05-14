@@ -9868,12 +9868,30 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
 
     if _distributor == 'all':
         with connection.cursor() as cursor:
+
+            # Spending = Budget Amount + Upping - Claim Amount <- Rumus Spending
+            # cursor.execute(
+            #     """
+            #     SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 4_balance,
+            #     DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
+            #     FROM apps_budget
+            #     LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id
+            #     INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
+            #     INNER JOIN apps_regiondetail ON budget_area_id = area_id
+            #     INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
+            #     WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+            #         SELECT area_id FROM apps_areauser WHERE user_id = %s
+            #     ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s
+            #     """, [request.user.user_id, from_date, to_date]
+            # )
+
+            # Spending = Budget Amount + Upping - Proposal <- Rumus Spending
             cursor.execute(
                 """
-                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 4_balance,
+                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(detail.proposed_amount, 0) AS 3_proposed, (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)) AS 4_balance,
                 DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
                 FROM apps_budget 
-                LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id 
+                LEFT JOIN (SELECT SUM(budget_proposed) as proposed_amount, SUM(budget_remaining) as remaining_amount, budget_id FROM apps_budgetdetail GROUP BY budget_id) as detail ON apps_budget.budget_id = detail.budget_id 
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
@@ -9885,12 +9903,30 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
             budget_detail = cursor.fetchall()
     else:
         with connection.cursor() as cursor:
+
+            # Spending = Budget Amount + Upping - Claim Amount <- Rumus Spending
+            # cursor.execute(
+            #     """
+            #     SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 4_balance,
+            #     DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
+            #     FROM apps_budget
+            #     LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id
+            #     INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
+            #     INNER JOIN apps_regiondetail ON budget_area_id = area_id
+            #     INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
+            #     WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+            #         SELECT area_id FROM apps_areauser WHERE user_id = %s
+            #     ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s AND budget_distributor_id = %s
+            #     """, [request.user.user_id, from_date, to_date, _distributor]
+            # )
+
+            # Spending = Budget Amount + Upping - Proposal <- Rumus Spending
             cursor.execute(
                 """
-                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 4_balance,
+                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(detail.proposed_amount, 0) AS 3_proposed, (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)) AS 4_balance,
                 DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
                 FROM apps_budget
-                LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id
+                LEFT JOIN (SELECT SUM(budget_proposed) as proposed_amount, SUM(budget_remaining) as remaining_amount, budget_id FROM apps_budgetdetail GROUP BY budget_id) as detail ON apps_budget.budget_id = detail.budget_id
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
@@ -9906,20 +9942,20 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
 
     # Convert budgets queryset to DataFrame
     df = pd.DataFrame(budget_detail, columns=[
-        'budget_id', 'distributor_name', 'region_name', 'budget_area_id', '1_opening', '2_upping', '3_claim', '4_balance', 'budget_date'])
+        'budget_id', 'distributor_name', 'region_name', 'budget_area_id', '1_opening', '2_upping', '3_proposed', '4_balance', 'budget_date'])
 
     # Create a pivot table
     pivot_table = (pd.pivot_table(df,
                                   index=['budget_date'],
                                   columns=['distributor_name', 'region_name'],
                                   values=['1_opening', '2_upping',
-                                          '3_claim', '4_balance'],
+                                          '3_proposed', '4_balance'],
                                   aggfunc='sum', fill_value=0)).T.swaplevel(1, 0).swaplevel(2, 1).sort_index(level=0)
 
     pivot_total = (pd.pivot_table(df,
                                   index=['budget_date'],
                                   values=['1_opening', '2_upping',
-                                          '3_claim', '4_balance'],
+                                          '3_proposed', '4_balance'],
                                   aggfunc='sum', fill_value=0)).T
 
     pivot_region = pd.pivot_table(df,
@@ -10002,7 +10038,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
         elif record[0][2] == '2_upping':
             worksheet.write(idx + 1 + gap, 2, 'Upping Price',
                             cell_format if not back else back_format)
-        elif record[0][2] == '3_claim':
+        elif record[0][2] == '3_proposed':
             worksheet.write(idx + 1 + gap, 2, 'Spending',
                             cell_format if not back else back_format)
         elif record[0][2] == '4_balance':
@@ -10017,7 +10053,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
                 worksheet.write(idx + 1 + gap, col_idx +
                                 3, col_value, cell_format if not back else back_format)
 
-            if record[0][2] == '3_claim':
+            if record[0][2] == '3_proposed':
                 worksheet.write(idx + 1 + gap, col_idx + 3,
                                 col_value * -1, cell_format if not back else back_format)
 
@@ -10029,7 +10065,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
             worksheet.write(foot + idx, 2, 'Opening Balance', cell_format)
         elif record[0] == '2_upping':
             worksheet.write(foot + idx, 2, 'Upping Price', cell_format)
-        elif record[0] == '3_claim':
+        elif record[0] == '3_proposed':
             worksheet.write(foot + idx, 2, 'Spending', cell_format)
         elif record[0] == '4_balance':
             worksheet.write(foot + idx, 2, 'Ending Balance', total_num_format)
