@@ -251,11 +251,14 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
                                         Total Budget</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
+                                        Transfer (-)</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
+                                        Transfer (+)</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
                                         Proposed</th>
                                     <!-- <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
                                         Program</th> -->
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
-                                        Claim</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">Remaining</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">
                                         Balance</th>
                                 </tr>
@@ -283,13 +286,19 @@
                                         <h6 class="mb-0 text-sm text-end">{{ item.budget_total }}</h6>
                                     </td>
                                     <td>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_transfer_minus|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_transfer_plus|intcomma }}</h6>
+                                    </td>
+                                    <td>
                                         <h6 class="mb-0 text-sm text-end">{{ item.budget_proposed }}</h6>
                                     </td>
                                     <!-- <td>
                                         <h6 class="mb-0 text-sm text-end">{{ item.budget_program }}</h6>
                                     </td> -->
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_claim }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_remaining|intcomma }}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm text-end">{{ item.budget_balance }}</h6>
@@ -297,6 +306,39 @@
                                 </tr>
                                 {% endfor %}
                             </tbody>
+                            <tfoot>
+                                {% if budget_detail %}
+                                <tr>
+                                    <td colspan="2">
+                                        <h6 class="text-sm font-weight-bolder text-end">Total</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_beginning|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_upping|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_total|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_transfer_minus|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_transfer_plus|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_proposed|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_remaining|intcomma }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-sm font-weight-bolder text-end">{{ total_balance|intcomma }}</h6>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tfoot>
                         </table>
                     </div>
                 </div>

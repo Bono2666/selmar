@@ -2326,6 +2326,22 @@ def budget_release_view(request, _id, _msg, _is_revise):
     budget.budget_upping = '{:,}'.format(budget.budget_upping)
     budget.budget_total = '{:,}'.format(budget.budget_total)
     form = FormBudgetView(instance=budget)
+    total_beginning = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_amount'))['total']
+    total_upping = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_upping'))['total']
+    total_total = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_total'))['total']
+    total_transfer_minus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_transfer_minus'))['total']
+    total_transfer_plus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_transfer_plus'))['total']
+    total_proposed = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_proposed'))['total']
+    total_remaining = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_remaining'))['total']
+    total_balance = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_balance'))['total']
 
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
     for detail in budget_detail:
@@ -2352,6 +2368,14 @@ def budget_release_view(request, _id, _msg, _is_revise):
     context = {
         'form': form,
         'data': budget,
+        'total_beginning': total_beginning,
+        'total_upping': total_upping,
+        'total_total': total_total,
+        'total_balance': total_balance,
+        'total_transfer_minus': total_transfer_minus,
+        'total_transfer_plus': total_transfer_plus,
+        'total_proposed': total_proposed,
+        'total_remaining': total_remaining,
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
