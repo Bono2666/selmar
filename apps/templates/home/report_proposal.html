@@ -44,7 +44,8 @@
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Incremental % (CTN)</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Incremental % (Rp)</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Wait for Approval</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">By</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Note</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -116,7 +117,10 @@
                                         <h6 class="mb-0 text-sm">{% if item.18 == 'OPEN' %}COMPLETED{% else %}{{ item.18 }}{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.18 == 'IN APPROVAL' %}{{ item.19 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.18 == 'IN APPROVAL' or item.18 == 'REJECTED' %}{{ item.19 }}{% endif %}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.18 == 'IN APPROVAL' and item.20 %}{{ item.20|truncatechars:30 }}{% else %}{% if item.18 == 'IN APPROVAL' and item.21 %}{{ item.21|truncatechars:30 }}{% else %}{% if item.18 == 'REJECTED' and item.22 %}{{ item.22|truncatechars:30 }}{% endif %}{% endif %}{% endif %}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}

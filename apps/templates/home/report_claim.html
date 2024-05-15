@@ -41,6 +41,7 @@
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Amount</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">By</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Note</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -100,7 +101,10 @@
                                         <h6 class="mb-0 text-sm">{% if item.12 == 'OPEN' %}COMPLETED{% else %}{{ item.12 }}{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.12 == 'IN APPROVAL' %}{{ item.13 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.12 == 'IN APPROVAL' or item.12 == 'REJECTED' %}{{ item.13 }}{% endif %}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.12 == 'IN APPROVAL' and item.15 %}{{ item.15|truncatechars:30 }}{% elif item.12 == 'IN APPROVAL' and item.16 %}{{ item.16|truncatechars:30 }}{% elif item.12 == 'REJECTED' and item.17 %}{{ item.17|truncatechars:30 }}{% endif %}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}

@@ -39,6 +39,7 @@ from django.db.models import DateTimeField
 from django_pivot.pivot import pivot
 import pandas as pd
 from datetime import timedelta
+from django.db.models.functions import Concat
 
 
 @login_required(login_url='/login/')
@@ -82,7 +83,7 @@ def user_add(request):
                 user = User.objects.get(user_id=form.instance.user_id)
                 if user.signature:
                     my_file = user.signature
-                    filename = '../../www/selmar/apps/media/' + my_file.name
+                    filename = '../../www/' + host.folder + '/apps/media/' + my_file.name
                     with open(filename, 'wb+') as temp_file:
                         for chunk in my_file.chunks():
                             temp_file.write(chunk)
@@ -280,7 +281,7 @@ def user_update(request, _id):
             if not settings.DEBUG:
                 if users.signature:
                     my_file = users.signature
-                    filename = '../../www/selmar/apps/media/' + my_file.name
+                    filename = '../../www/' + host.folder + '/apps/media/' + my_file.name
                     with open(filename, 'wb+') as temp_file:
                         for chunk in my_file.chunks():
                             temp_file.write(chunk)
@@ -4678,7 +4679,7 @@ def proposal_attachment_add(request, _tab, _id):
                     id=attachment.id)
                 if proposal_attachment.attachment:
                     my_file = proposal_attachment.attachment
-                    filename = '../../www/selmar/apps/media/' + my_file.name
+                    filename = '../../www/' + host.folder + '/apps/media/' + my_file.name
                     with open(filename, 'wb+') as temp_file:
                         for chunk in my_file.chunks():
                             temp_file.write(chunk)
@@ -4865,7 +4866,7 @@ def remove_attachment(request, _tab, _id):
 
     if not settings.DEBUG and attachment.attachment:
         my_file = attachment.attachment
-        filename = '../../www/selmar/apps/media/' + my_file.name
+        filename = '../../www/' + host.folder + '/apps/media/' + my_file.name
         os.remove(filename)
 
     return HttpResponseRedirect(reverse('proposal-view', args=[_tab, attachment.proposal_id, '0', '0', '0']))
@@ -4884,7 +4885,7 @@ def remove_release_attachment(request, _id):
 
     if not settings.DEBUG and attachment.attachment:
         my_file = attachment.attachment
-        filename = '../../www/selmar/apps/media/' + my_file.name
+        filename = '../../www/' + host.folder + '/apps/media/' + my_file.name
         os.remove(filename)
 
     return HttpResponseRedirect(reverse('proposal-release-view', args=[attachment.proposal_id, '0', '0', '0', 1]))
@@ -8856,10 +8857,28 @@ def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 
     if _distributor == 'all':
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                     claim_date__gte=from_date, claim_date__lt=to_date).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
+                                     claim_date__gte=from_date, claim_date__lt=to_date).annotate(
+                                         approver=ClaimRelease.objects.filter(claim_id=OuterRef(
+                                             'claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1],
+                                         revise_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                                             'claim_id'), claim_approval_status='N').order_by('sequence').values('revise_note')[:1],
+                                         return_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                                             'claim_id'), claim_approval_status='N').order_by('sequence').values('return_note')[:1],
+                                         reject_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                                             'claim_id'), claim_approval_status='N').order_by('sequence').values('reject_note')[:1]
+        ).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', 'approver', 'claim_period', 'revise_note', 'return_note', 'reject_note')
     else:
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1], 'claim_period')
+                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).annotate(
+                                         approver=ClaimRelease.objects.filter(claim_id=OuterRef(
+                                             'claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1],
+                                         revise_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                                             'claim_id'), claim_approval_status='N').order_by('sequence').values('revise_note')[:1],
+                                         return_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                                             'claim_id'), claim_approval_status='N').order_by('sequence').values('return_note')[:1],
+                                         reject_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                                             'claim_id'), claim_approval_status='N').order_by('sequence').values('reject_note')[:1]
+        ).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', 'approver', 'claim_period', 'revise_note', 'return_note', 'reject_note')
 
     context = {
         'data': claim,
@@ -8890,10 +8909,28 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
 
     if _distributor == 'all':
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                     claim_date__gte=from_date, claim_date__lt=to_date).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1])
+                                     claim_date__gte=from_date, claim_date__lt=to_date).annotate(
+            approver=ClaimRelease.objects.filter(claim_id=OuterRef(
+                'claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1],
+            revise_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                'claim_id'), claim_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            return_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                'claim_id'), claim_approval_status='N').order_by('sequence').values('return_note')[:1],
+            reject_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                'claim_id'), claim_approval_status='N').order_by('sequence').values('reject_note')[:1]
+        ).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'claim_period', 'total_claim', 'status', 'approver', 'revise_note', 'return_note', 'reject_note')
     else:
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', ClaimRelease.objects.filter(claim_id=OuterRef('claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1])
+                                     claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).annotate(
+            approver=ClaimRelease.objects.filter(claim_id=OuterRef(
+                'claim_id'), claim_approval_status='N').order_by('sequence').values('claim_approval_name')[:1],
+            revise_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                'claim_id'), claim_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            return_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                'claim_id'), claim_approval_status='N').order_by('sequence').values('return_note')[:1],
+            reject_note=ClaimRelease.objects.filter(claim_id=OuterRef(
+                'claim_id'), claim_approval_status='N').order_by('sequence').values('reject_note')[:1]
+        ).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'claim_period', 'total_claim', 'status', 'approver', 'revise_note', 'return_note', 'reject_note')
 
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
@@ -8909,7 +8946,7 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
 
     # Define column headers
     headers = ['No.', 'Claim No.', 'Invoice No.', 'Claim Date', 'Invoice Date', 'Distributor', 'Area', 'Depo',
-               'Channel', 'Proposal No.', 'Program Name', 'Invoice Description', 'Curr', 'Amount', 'Status', 'Wait For Approval']
+               'Channel', 'Proposal No.', 'Program Name', 'Invoice Description', 'Claim Period', 'Curr', 'Amount', 'Status', 'By', 'Note']
 
     # Define cell formats
     header_format = workbook.add_format({
@@ -8940,10 +8977,12 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
     worksheet.set_column('J:J', 29)
     worksheet.set_column('K:K', 78)
     worksheet.set_column('L:L', 50)
-    worksheet.set_column('M:M', 6)
-    worksheet.set_column('N:N', 14)
-    worksheet.set_column('O:O', 11)
-    worksheet.set_column('P:P', 30)
+    worksheet.set_column('M:M', 16)
+    worksheet.set_column('N:N', 6)
+    worksheet.set_column('O:O', 14)
+    worksheet.set_column('P:P', 11)
+    worksheet.set_column('Q:Q', 30)
+    worksheet.set_column('R:R', 50)
 
     # Write data to XlsxWriter Object
     for idx, record in enumerate(claim):
@@ -8951,8 +8990,6 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
             if idx == 0:
                 # Write the column headers on the first row
                 worksheet.write(idx, col_idx, headers[col_idx], header_format)
-                worksheet.write(idx, 14, headers[14], header_format)
-                worksheet.write(idx, 15, headers[15], header_format)
             # Write the data rows
             if col_idx == 0:
                 worksheet.write(idx + 1, col_idx, idx + 1, cell_format) if idx % 2 == 0 else worksheet.write(
@@ -8960,25 +8997,46 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
             if col_idx == 2 or col_idx == 3:
                 worksheet.write(idx + 1, col_idx + 1, col_value, date_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx + 1, col_value, date_back_format)
-            elif col_idx == 11:
+            elif col_idx == 12:
                 worksheet.write(idx + 1, col_idx + 2, col_value, num_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx + 2, col_value, num_back_format)
-            elif col_idx == 12:
+            elif col_idx == 13:
                 worksheet.write(idx + 1, col_idx + 2, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx + 2, 'COMPLETED' if col_value == 'OPEN' else col_value, back_format)
-            elif col_idx == 13:
+            elif col_idx == 14:
                 if idx % 2 == 0:
-                    worksheet.write(idx + 1, col_idx + 2, col_value, cell_format) if record[12] == 'IN APPROVAL' else worksheet.write(
+                    worksheet.write(idx + 1, col_idx + 2, col_value, cell_format) if record[13] == 'IN APPROVAL' or record[13] == 'REJECTED' else worksheet.write(
                         idx + 1, col_idx + 2, '', cell_format)
                 else:
-                    worksheet.write(idx + 1, col_idx + 2, col_value, back_format) if record[12] == 'IN APPROVAL' else worksheet.write(
+                    worksheet.write(idx + 1, col_idx + 2, col_value, back_format) if record[13] == 'IN APPROVAL' or record[13] == 'REJECTED' else worksheet.write(
                         idx + 1, col_idx + 2, '', back_format)
+            elif col_idx == 15:
+                if idx % 2 == 0:
+                    worksheet.write(idx + 1, 17, col_value, cell_format) if record[13] == 'IN APPROVAL' and record[15] else worksheet.write(
+                        idx + 1, 17, '', cell_format)
+                else:
+                    worksheet.write(idx + 1, 17, col_value, back_format) if record[13] == 'IN APPROVAL' and record[15] else worksheet.write(
+                        idx + 1, 17, '', back_format)
+            elif col_idx == 16:
+                if idx % 2 == 0:
+                    worksheet.write(idx + 1, 17, col_value, cell_format) if record[13] == 'IN APPROVAL' and record[16] else worksheet.write(
+                        idx + 1, 17, '', cell_format)
+                else:
+                    worksheet.write(idx + 1, 17, col_value, back_format) if record[13] == 'IN APPROVAL' and record[16] else worksheet.write(
+                        idx + 1, 17, '', back_format)
+            elif col_idx == 17:
+                if idx % 2 == 0:
+                    worksheet.write(idx + 1, 17, col_value, cell_format) if record[13] == 'REJECTED' and record[17] else worksheet.write(
+                        idx + 1, 17, '', cell_format)
+                else:
+                    worksheet.write(idx + 1, 17, col_value, back_format) if record[13] == 'REJECTED' and record[17] else worksheet.write(
+                        idx + 1, 17, '', back_format)
             else:
                 worksheet.write(idx + 1, col_idx + 1, col_value, cell_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx + 1, col_value, back_format)
 
-            worksheet.write(idx + 1, 12, 'IDR', cell_format) if idx % 2 == 0 else worksheet.write(
-                idx + 1, 12, 'IDR', back_format)
+            worksheet.write(idx + 1, 13, 'IDR', cell_format) if idx % 2 == 0 else worksheet.write(
+                idx + 1, 13, 'IDR', back_format)
 
     # Close the workbook before sending the data.
     workbook.close()
@@ -9000,17 +9058,33 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
 
     if _distributor == 'all':
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status__in=['OPEN', 'CLOSED']).annotate(
-            difference=F('proposal_claim') - F('parked_claim')
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date).annotate(
+            difference=F('proposal_claim') - F('parked_claim'),
+            approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
+            revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+            reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1]
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
         )
     else:
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status__in=['OPEN', 'CLOSED'], budget__budget_distributor=_distributor).annotate(
-            difference=F('proposal_claim') - F('parked_claim')
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, budget__budget_distributor=_distributor).annotate(
+            difference=F('proposal_claim') - F('parked_claim'),
+            approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
+            revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+            reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1]
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
         )
 
     context = {
@@ -9042,17 +9116,33 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 
     if _distributor == 'all':
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status__in=['OPEN', 'CLOSED']).annotate(
-            difference=F('proposal_claim') - F('parked_claim')
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date).annotate(
+            difference=F('proposal_claim') - F('parked_claim'),
+            approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
+            revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+            reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1],
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
         )
     else:
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, status__in=['OPEN', 'CLOSED'], budget__budget_distributor=_distributor).annotate(
-            difference=F('proposal_claim') - F('parked_claim')
+                                           proposal_date__gte=from_date, proposal_date__lt=to_date, budget__budget_distributor=_distributor).annotate(
+            difference=F('proposal_claim') - F('parked_claim'),
+            approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
+            revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+            reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1],
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
         )
 
     # Create a HttpResponse object with the csv data
@@ -9069,7 +9159,7 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 
     # Define column headers
     headers = ['Area', 'Distributor', 'Channel', 'Proposal No.', 'Program Name',
-               'Division', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Available', 'Status']
+               'Division', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Available', 'Status', 'By', 'Note']
 
     # Define cell formats
     header_format = workbook.add_format({
@@ -9094,11 +9184,13 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     worksheet.set_column('G:H', 11)
     worksheet.set_column('I:M', 14)
     worksheet.set_column('N:N', 10)
+    worksheet.set_column('O:O', 30)
+    worksheet.set_column('P:P', 50)
 
     # Write data to XlsxWriter Object
     for idx, record in enumerate(proposal):
         for col_idx, col_value in enumerate(record):
-            if idx == 0:
+            if idx == 0 and col_idx < 16:
                 # Write the column headers on the first row
                 worksheet.write(idx, col_idx, headers[col_idx], header_format)
             # Write the data rows
@@ -9109,6 +9201,18 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
             elif col_idx == 13:
                 worksheet.write(
                     idx + 1, col_idx, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format)
+            elif col_idx == 14:
+                worksheet.write(idx + 1, col_idx, col_value, cell_format) if record[13] == 'IN APPROVAL' or record[13] == 'REJECTED' else worksheet.write(
+                    idx + 1, col_idx, '', cell_format)
+            elif col_idx == 15:
+                worksheet.write(
+                    idx + 1, 15, col_value, cell_format) if record[13] == 'IN APPROVAL' and record[15] else worksheet.write(idx + 1, 15, '', cell_format)
+            elif col_idx == 16:
+                worksheet.write(
+                    idx + 1, 15, col_value, cell_format) if record[13] == 'IN APPROVAL' and record[16] else worksheet.write(idx + 1, 15, '', cell_format)
+            elif col_idx == 17:
+                worksheet.write(
+                    idx + 1, 15, col_value, cell_format) if record[13] == 'REJECTED' and record[17] else worksheet.write(idx + 1, 15, '', cell_format)
             else:
                 worksheet.write(idx + 1, col_idx, col_value, cell_format)
 
@@ -9146,7 +9250,13 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
         ).values_list(
             'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
             ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
-                'sequence').values('proposal_approval_name')[:1], 'total_cost'
+                'sequence').values('proposal_approval_name')[:1],
+            ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+            ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1]
         )
     else:
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -9164,7 +9274,13 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
         ).values_list(
             'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
             ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
-                'sequence').values('proposal_approval_name')[:1], 'total_cost'
+                'sequence').values('proposal_approval_name')[:1],
+            ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+            ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1]
         )
 
     context = {
@@ -9206,11 +9322,18 @@ def report_proposal_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
             incpct_carton=Sum('incrementalsales__incrp_carton') /
             Sum('incrementalsales__swop_carton'),
             incpct_nom=Sum('incrementalsales__incrp_nom') /
-            Sum('incrementalsales__swop_nom')
+            Sum('incrementalsales__swop_nom'),
+            approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
+            revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+            reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1],
         ).values_list(
             'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
-            ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
-                'sequence').values('proposal_approval_name')[:1]
+            'approver', 'revise_note', 'return_note', 'reject_note'
         )
     else:
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -9224,11 +9347,18 @@ def report_proposal_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
             incpct_carton=Sum('incrementalsales__incrp_carton') /
             Sum('incrementalsales__swop_carton'),
             incpct_nom=Sum('incrementalsales__incrp_nom') /
-            Sum('incrementalsales__swop_nom')
+            Sum('incrementalsales__swop_nom'),
+            approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
+            revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+            return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+            reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1],
         ).values_list(
             'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
-            ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
-                'sequence').values('proposal_approval_name')[:1]
+            'approver', 'revise_note', 'return_note', 'reject_note'
         )
 
     # Create a HttpResponse object with the csv data
@@ -9245,7 +9375,7 @@ def report_proposal_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
 
     # Define column headers
     headers = ['Area', 'Distributor', 'Channel', 'Proposal No.', 'Program Name', 'Program No.', 'Division', 'Start', 'End', 'Budget',
-               'Sales Without Program (CTN)', 'Sales Without Program (Rp)', 'Sales With Program (CTN)', 'Sales With Program (Rp)', 'Incremental (CTN)', 'Incremental (Rp)', 'Incremental % (CTN)', 'Incremental % (Rp)', 'Status', 'Wait For Approval']
+               'Sales Without Program (CTN)', 'Sales Without Program (Rp)', 'Sales With Program (CTN)', 'Sales With Program (Rp)', 'Incremental (CTN)', 'Incremental (Rp)', 'Incremental % (CTN)', 'Incremental % (Rp)', 'Status', 'By', 'Note']
 
     # Define cell formats
     header_format = workbook.add_format({
@@ -9275,11 +9405,12 @@ def report_proposal_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
     worksheet.set_column('K:R', 24)
     worksheet.set_column('S:S', 12)
     worksheet.set_column('T:T', 30)
+    worksheet.set_column('U:U', 50)
 
     # Write data to XlsxWriter Object
     for idx, record in enumerate(proposal):
         for col_idx, col_value in enumerate(record):
-            if idx == 0:
+            if idx == 0 and col_idx < 21:
                 # Write the column headers on the first row
                 worksheet.write(idx, col_idx, headers[col_idx], header_format)
             # Write the data rows
@@ -9297,8 +9428,17 @@ def report_proposal_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
                 worksheet.write(
                     idx + 1, col_idx, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format)
             elif col_idx == 19:
-                worksheet.write(idx + 1, col_idx, col_value, cell_format) if record[18] == 'IN APPROVAL' else worksheet.write(
+                worksheet.write(idx + 1, col_idx, col_value, cell_format) if record[18] == 'IN APPROVAL' or record[18] == 'REJECTED' else worksheet.write(
                     idx + 1, col_idx, '', cell_format)
+            elif col_idx == 20:
+                worksheet.write(
+                    idx + 1, 20, col_value, cell_format) if record[18] == 'IN APPROVAL' and record[20] else worksheet.write(idx + 1, 20, '', cell_format)
+            elif col_idx == 21:
+                worksheet.write(
+                    idx + 1, 20, col_value, cell_format) if record[18] == 'IN APPROVAL' and record[21] else worksheet.write(idx + 1, 20, '', cell_format)
+            elif col_idx == 22:
+                worksheet.write(
+                    idx + 1, 20, col_value, cell_format) if record[18] == 'REJECTED' and record[22] else worksheet.write(idx + 1, 20, '', cell_format)
             else:
                 worksheet.write(idx + 1, col_idx, col_value, cell_format)
 
