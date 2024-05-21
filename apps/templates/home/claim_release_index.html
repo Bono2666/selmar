@@ -6,22 +6,39 @@
 
 {% load humanize %}
 
+{% load user_agents %}
+
 <!-- Page content -->
 <div class="container-fluid py-0">
     <div class="row">
         <div class="col-12">
             <div class="card mb-4 p-4">
                 <div class="row mb-4">
-                    <div class="col-6 d-flex align-items-center">
+                    <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                         <h4 class="mb-2">Claim List Awaiting Approval</h4>
                     </div>
-                    <div class="col-6 d-flex justify-content-end">
+                    <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} d-flex justify-content-end">
+                        {% if request|is_mobile %}
+                        <div class="dropdown float-lg-end pe-2 mt-1">
+                            <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                <li><a id="btn-bulk-approve" class="dropdown-item border-radius-md" hidden data-bs-toggle="modal" data-bs-target="#confirm-approve">Bulk Approve</a></li>
+                                <li>
+                                    <label for="select-all" class="dropdown-item border-radius-md text-sm ms-0">Select All</label>
+                                    <span></span><input type="checkbox" id="select-all" class="cursor-pointer border mt-1 me-3 mb-0 d-none"/></span>
+                                </li>
+                            </ul>
+                        </div>
+                        {% else %}
                         <button id="btn-bulk-approve" type="button" class="btn btn-sm px-3 py-0 bg-gradient-danger my-1 disabled" data-bs-toggle="modal" data-bs-target="#confirm-approve"><i class="fas fa-check"></i>&nbsp;&nbsp;Bulk Approve</button>
                         &nbsp;&nbsp;&nbsp;&nbsp;
                         <span class="text-end mt-2">
                             <label for="select-all">Select All</label>&nbsp;&nbsp;
                             <input type="checkbox" id="select-all" class="cursor-pointer border mt-1 me-3 mb-0" />
                         </span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
@@ -103,7 +120,19 @@
 
 <script>
     $(document).ready(function() {
-        $('#relTable').DataTable();
+        if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            $('#relTable').DataTable({
+                scrollX: true,
+                pageLength: 25, 
+                order: [[0, 'desc']],
+                lengthChange: false,
+            });
+        } else {
+            $('#relTable').DataTable({
+                pageLength: 25, 
+                order: [[0, 'desc']],
+            });
+        }
 
         $('#relTable').on('click', 'tbody tr td:not(:last-child)', function() {
             // Get the href from the parent row
@@ -112,7 +141,7 @@
                 window.location = href;
             }
         });
-
+        
         var table = $('#relTable').DataTable();
         let btnBulkApprove = document.getElementById('btn-bulk-approve');
         
@@ -121,10 +150,20 @@
             table.column(6).nodes().to$().each(function() {
                 if (checked) {
                     $(this).find('.my-checkbox').prop('checked', 'checked');
-                    btnBulkApprove.classList.remove('disabled');
+                    if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        // show bulk approve button
+                        btnBulkApprove.hidden = false;
+                    } else {
+                        btnBulkApprove.classList.remove('disabled');
+                    }
                 } else {
                     $(this).find('.my-checkbox').prop('checked', '');
-                    btnBulkApprove.classList.add('disabled');
+                    if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        // hide bulk approve button
+                        btnBulkApprove.hidden = true;
+                    } else {
+                        btnBulkApprove.classList.add('disabled');
+                    }
                 }
             });
             // check current page number
@@ -148,10 +187,28 @@
 
             // Enable or disable btnBulkClose based on whether any checkboxes are checked
             if (anyChecked) {
-                btnBulkApprove.classList.remove('disabled');
+                if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    // show bulk approve button
+                    btnBulkApprove.hidden = false;
+                } else {
+                    btnBulkApprove.classList.remove('disabled');
+                }
             } else {
-                btnBulkApprove.classList.add('disabled');
+                if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    // hide bulk approve button
+                    btnBulkApprove.hidden = true;
+                } else {
+                    btnBulkApprove.classList.add('disabled');
+                }
             }
+        });
+
+        let btn_menu = document.getElementById('dropdownTable');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
         });
 
         let bulkApprove = document.getElementById('bulk-approve');

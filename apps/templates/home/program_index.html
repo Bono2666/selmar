@@ -6,23 +6,36 @@
 
 {% load humanize %}
 
+{% load user_agents %}
+
 <!-- Page content -->
 <div class="container-fluid py-0">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4 p-4">
+            <div class="card mb-5 p-4">
                 <div class="row mb-4">
                     <div class="col-6 d-flex align-items-center">
                         <h4 class="mb-2">Program List</h4>
                     </div>
                     <div class="col-6 text-end">
+                        {% if request|is_mobile %}
+                        <div class="dropdown float-lg-end pe-2 {% if not btn.add and not request.user.is_superuser %}d-none{% endif %}">
+                            <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                <li><a class="dropdown-item border-radius-md" href="{% url 'program-add' '0' '0' '0' 0 %}">Add New Program</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
                         <a class="btn btn-sm bg-gradient-danger mb-0 {% if not btn.add and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'program-add' '0' '0' '0' 0 %}"><i class="fas fa-plus"></i>&nbsp;&nbsp;Add New Program</a>
+                        {% endif %}
                     </div>
                 </div>
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link text-sm text-body {% if tab == 'open' %}active{% endif %}" id="open-tab" data-bs-toggle="tab" data-bs-target="#open-tab-pane" type="button"
-                            role="tab" aria-controls="open-tab-pane" aria-selected="true">Completed {% if open_count > 0 %}({{ open_count }}){% endif %}</button>
+                            role="tab" aria-controls="open-tab-pane" aria-selected="true">{% if request|is_mobile %}Compl...{% else %}Completed{% endif %} {% if open_count > 0 %}({{ open_count }}){% endif %}</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link text-sm text-body {% if tab == 'draft' %}active{% endif %}" id="draft-tab" data-bs-toggle="tab" data-bs-target="#draft-tab-pane" type="button"
@@ -30,7 +43,7 @@
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link text-sm text-body {% if tab == 'inapproval' %}active{% endif %}" id="inapproval-tab" data-bs-toggle="tab" data-bs-target="#inapproval-tab-pane" type="button"
-                            role="tab" aria-controls="inapproval-tab-pane" aria-selected="false">In Approval {% if inapproval_count > 0 %}({{ inapproval_count }}){% endif %}</button>
+                            role="tab" aria-controls="inapproval-tab-pane" aria-selected="false">{% if request|is_mobile %}In Ap...{% else %}In Approval{% endif %} {% if inapproval_count > 0 %}({{ inapproval_count }}){% endif %}</button>
                     </li>
                 </ul>
                 <div class="tab-content pt-4" id="myTabContent">
@@ -184,13 +197,52 @@
 
 <script>
     $(document).ready( function () {
-        $('#openTable').DataTable();
-        $('#draftTable').DataTable();
-        $('#pendingTable').DataTable();
-        $('#inapprovalTable').DataTable();
+        if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            $('#openTable').DataTable({
+                scrollX: true,
+                pageLength: 25, 
+                order: [[0, 'desc']],
+                lengthChange: false,
+            });
+            $('#draftTable').DataTable({
+                scrollX: true,
+                pageLength: 25, 
+                order: [[0, 'desc']],
+                lengthChange: false,
+            });
+            $('#inapprovalTable').DataTable({
+                scrollX: true,
+                pageLength: 25, 
+                order: [[0, 'desc']],
+                lengthChange: false,
+            });
+        } else {
+            new DataTable('#openTable', {
+                // scrollX: true,
+                order: [[0, 'desc']],
+            });
+
+            new DataTable('#draftTable', {
+                // scrollX: true,
+                order: [[0, 'desc']],
+            });
+            
+            new DataTable('#inapprovalTable', {
+                // scrollX: true,
+                order: [[0, 'desc']],
+            });
+        }
 
         $(document).on('click', 'tbody tr', function() {
             window.location = $(this).data('href');
+        });
+
+        let btn_menu = document.getElementById('dropdownTable');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
         });
 
         let btn = document.getElementsByClassName('paginate_button');

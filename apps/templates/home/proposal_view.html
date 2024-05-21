@@ -10,6 +10,8 @@
 
 {% load mathfilters %}
 
+{% load user_agents %}
+
 <div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
@@ -22,6 +24,23 @@
                                 <h5 class="mb-2">Proposal No. {{ data.proposal_id }}</h5>
                             </div>
                             <div class="col-6 text-end">
+                                {% if request|is_mobile %}
+                                <div class="dropdown float-lg-end pe-2">
+                                    <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </a>
+                                    <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                        <li><a class="dropdown-item border-radius-md" href="{% if crud == 'view' %}{% if tab == 'closing' %}{% url 'proposal-closing-index' %}{% else %}{% if tab == 'close' or tab == 'reject' %}{% url 'proposal-archive-index' tab %}{% else %}{% url 'proposal-index' tab %}{% endif %}{% endif %}{% else %}{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}{% endif %}">{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a></li>
+                                        <li><a class="dropdown-item border-radius-md" href="{% url 'proposal-update' tab data.proposal_id %}" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.edit and not request.user.is_superuser %}hidden{% endif %}{% endif %} {% if crud == 'update' %}hidden{% endif %}>Edit</a></li>
+                                        <li><button type="submit" class="dropdown-item border-radius-md" {% if crud == 'view' %}hidden{% endif %}>Save</button></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}{% endif %} {% if tab == 'closing' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.proposal_id }}">Delete</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if status != 'OPEN' and not request.user.is_superuser %}hidden{% endif %} {% if crud == 'update' %}hidden{% endif %} {% if tab != 'closing' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-close">Close</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#approval">Status</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} {% if total_cost <= 0 %}hidden{% endif %} {% if not btn.submit %}hidden{% endif %} {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit">Submit</a></li>
+                                        <li><a href="{% url 'proposal-print' data.proposal_id %}" class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} {% if data.status != 'OPEN' %}hidden{% endif %} {% if data.status == 'DRAFT' %}hidden{% endif %} target="_blank">Print</a></li>
+                                    </ul>
+                                </div>
+                                {% else %}
                                 <a href="{% if crud == 'view' %}{% if tab == 'closing' %}{% url 'proposal-closing-index' %}{% else %}{% if tab == 'close' or tab == 'reject' %}{% url 'proposal-archive-index' tab %}{% else %}{% url 'proposal-index' tab %}{% endif %}{% endif %}{% else %}{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
                                 <a href="{% url 'proposal-update' tab data.proposal_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
@@ -30,6 +49,7 @@
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if total_cost <= 0 %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button>
                                 <a href="{% url 'proposal-print' data.proposal_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" {% if data.status == 'DRAFT' %}hidden{% endif %} target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -304,7 +324,18 @@
                         <h5 class="mb-0">Attachment</h5>
                     </div>
                     <div class="col-6 text-end">
+                        {% if request|is_mobile %}
+                        <div class="dropdown float-lg-end pe-2 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}d-none{% else %}{% if not btn.edit and not request.user.is_superuser %}d-none{% endif %} {% if crud == 'update' %}d-none{% endif %}{% endif %}">
+                            <a class="cursor-pointer text-body" id="dropdownAttach" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                <li><a class="dropdown-item border-radius-md" data-bs-toggle="modal" data-bs-target="#addAttachment">Add Attachment</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
                         <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#addAttachment"><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Attachment</button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal fade" id="addAttachment" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -405,11 +436,22 @@
         <div class="col-12">
             <div class="card mb-0 p-4">
                 <div class="row mb-3">
-                    <div class="col-6 d-flex align-items-center">
+                    <div class="{% if request|is_mobile %}col-11{% else %}col-8{% endif %} d-flex align-items-center">
                         <h5 class="mb-0">Incremental Sales Projection</h5>
                     </div>
-                    <div class="col-6 text-end">
+                    <div class="{% if request|is_mobile %}col-1{% else %}col-4{% endif %} text-end">
+                        {% if request|is_mobile %}
+                        <div class="dropdown float-lg-end pe-2 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}d-none{% else %}{% if not btn.edit and not request.user.is_superuser %}d-none{% endif %} {% if crud == 'update' %}d-none{% endif %}{% endif %}">
+                            <a class="cursor-pointer text-body" id="dropdownInc" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                <li><a class="dropdown-item border-radius-md" data-bs-toggle="modal" data-bs-target="#addItem">Add Product</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
                         <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#addItem"><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Product</button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal modal-sm fade" id="addItem" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -696,14 +738,25 @@
 </div>
 <div class="container-fluid pt-0 pb-2">
     <div class="row">
-        <div class="col-8">
-            <div class="card mb-4 p-4">
+        <div class="{% if request|is_mobile %}col-12{% else %}col-8{% endif %}">
+            <div class="card {% if not request|is_mobile %}mb-4{% endif %} p-4">
                 <div class="row mb-2">
                     <div class="col-6 d-flex align-items-center">
                         <h5 class="mb-0">Projected Cost</h5>
                     </div>
                     <div class="col-6 text-end">
+                        {% if request|is_mobile %}
+                        <div class="dropdown float-lg-end pe-2 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}d-none{% else %}{% if not btn.edit and not request.user.is_superuser %}d-none{% endif %} {% if crud == 'update' %}d-none{% endif %}{% endif %} {% if not add_cost %}disabled{% endif %} {% if not incremental %}d-none{% endif %}">
+                            <a class="cursor-pointer text-body" id="dropdownCost" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                <li><a class="dropdown-item border-radius-md" data-bs-toggle="modal" data-bs-target="#addCost">Add Cost</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
                         <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#addCost" {% if not add_cost %}disabled{% endif %} {% if not incremental %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Cost</button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal fade" id="addCost" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -871,6 +924,7 @@
                 </div>
             </div>
         </div>
+        {% if not request|is_mobile %}
         <div class="col-4">
             <div class="card mb-0 p-4">
                 <div class="row mb-0">
@@ -920,8 +974,64 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
+{% if request|is_mobile %}
+<div class="container-fluid pt-0 pb-2">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-5 p-4">
+                <div class="row mb-0">
+                    <div class="col-6 d-flex align-items-center">
+                        <h5 class="mb-0">ROI</h5>
+                    </div>
+                </div>
+                <div class="card-body px-0 pt-0 pb-0">
+                    <div class="table-responsive p-0">
+                        <table class="table align-items-center mb-0" id="roiTable">
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-xs">Projected Cost</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-xs text-end">{{ total_cost|floatformat:0|intcomma }}</h6>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-xs">Incremental Sales Projection</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-xs text-end">{{ total_inc|floatformat:0|intcomma }}</h6>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h6 class="mb-0 text-xs font-weight-bolder">ROI</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-xs text-end font-weight-bolder">{{ data.roi|floatformat:0|intcomma }}%</h6>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% endblock content %}
 
@@ -961,6 +1071,29 @@
             'paging': false,
             'info': false,
             'cell-border': true,
+        });
+
+        let btn_menu = document.getElementById('dropdownTable');
+        let btn_attach = document.getElementById('dropdownAttach');
+        let btn_inc = document.getElementById('dropdownInc');
+        let btn_cost = document.getElementById('dropdownCost');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
+        });
+
+        btn_attach.addEventListener('click', function() {
+            dropdown_menu[1].classList.toggle('show');
+        });
+
+        btn_inc.addEventListener('click', function() {
+            dropdown_menu[2].classList.toggle('show');
+        });
+
+        btn_cost.addEventListener('click', function() {
+            dropdown_menu[3].classList.toggle('show');
         });
 
         let btn = document.getElementsByClassName('paginate_button');

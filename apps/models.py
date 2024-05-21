@@ -1189,3 +1189,21 @@ class RegionDetail(models.Model):
         self.update_date = timezone.now()
         self.update_by = get_current_user().user_id
         super(RegionDetail, self).save(*args, **kwargs)
+
+
+class WelcomeMessage(models.Model):
+    message_id = models.CharField(max_length=50, primary_key=True)
+    message = models.TextField()
+    entry_date = models.DateTimeField(null=True)
+    entry_by = models.CharField(max_length=50, null=True)
+    update_date = models.DateTimeField(
+        null=True, blank=True, auto_now=True)
+    update_by = models.CharField(max_length=50, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.entry_date:
+            self.entry_date = timezone.now()
+            self.entry_by = get_current_user().user_id
+        self.update_date = timezone.now()
+        self.update_by = get_current_user().user_id
+        super(WelcomeMessage, self).save(*args, **kwargs)

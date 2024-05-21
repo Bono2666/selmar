@@ -6,6 +6,8 @@
 
 {% load humanize %}
 
+{% load user_agents %}
+
 <div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
@@ -18,11 +20,26 @@
                                 <h4 class="mb-2">Budget No. {{ data.budget_id }}</h4>
                             </div>
                             <div class="col-6 text-end">
+                                {% if request|is_mobile %}
+                                <div class="dropdown float-lg-end pe-2">
+                                    <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </a>
+                                    <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                        <li><a class="dropdown-item border-radius-md" href="{% if crud == 'view' and is_revise == 0 %}{% url 'budget-release-index' %}{% else %}{% if crud == 'update' %}{% url 'budget-release-view' data.budget_id 'NONE' 1 %}{% else %}{% url 'budget-release-view' data.budget_id 'NONE' 0 %}{% endif %}{% endif %}">{% if crud == 'view' and is_revise == 0 %}Back{% else %}Cancel{% endif %}</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if crud == 'update' or is_revise == 1 %}hidden{% endif %} {% if approved == 'Y' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-approve">Approve</a></li>
+                                        <li><a class="dropdown-item border-radius-md" href="{% if is_revise == 0 %}{% url 'budget-release-view' data.budget_id 'NONE' 1 %}{% else %}{% url 'budget-release-update' data.budget_id %}{% endif %}" {% if approved == 'Y' %}hidden{% endif %} {% if not btn.edit %}hidden{% endif %} {% if crud == 'update' %}hidden{% endif %}>{% if is_revise == 0 %}Revise{% else %}Edit{% endif %}</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if crud == 'view' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#upping-note">Save</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if crud == 'update' or is_revise == 1 %}hidden{% endif %} {% if approved == 'Y' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-return">Return</a></li>
+                                    </ul>
+                                </div>
+                                {% else %}
                                 <a href="{% if crud == 'view' and is_revise == 0 %}{% url 'budget-release-index' %}{% else %}{% if crud == 'update' %}{% url 'budget-release-view' data.budget_id 'NONE' 1 %}{% else %}{% url 'budget-release-view' data.budget_id 'NONE' 0 %}{% endif %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' and is_revise == 0 %}Back{% else %}Cancel{% endif %}</a>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' or is_revise == 1 %}disabled{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-approve"><i class="fas fa-check"></i>&nbsp;&nbsp;Approve</button>
                                 <a href="{% if is_revise == 0 %}{% url 'budget-release-view' data.budget_id 'NONE' 1 %}{% else %}{% url 'budget-release-update' data.budget_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 {% if approved == 'Y' %}disabled{% endif %} {% if not btn.edit %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;{% if is_revise == 0 %}Revise{% else %}Edit{% endif %}</a>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#upping-note"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 {% if crud == 'update' or is_revise == 1 %}disabled{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-return"><i class="fas fa-reply-all"></i>&nbsp;&nbsp;Return</button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -164,13 +181,24 @@
 <div class="container-fluid py-2">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4 p-4">
+            <div class="card mb-5 p-4">
                 <div class="row mb-4">
                     <div class="col-6 d-flex align-items-center">
                         <h5 class="mb-0">Budget Detail</h5>
                     </div>
                     <div class="col-6 text-end">
+                        {% if request|is_mobile %}
+                        <div class="dropdown float-lg-end pe-2 {% if crud == 'update' or is_revise == 0 %}d-none{% endif %}">
+                            <a class="cursor-pointer text-body" id="dropdownDetail" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                <li><a class="dropdown-item border-radius-md" data-bs-toggle="modal" data-bs-target="#updPercent">Change Budget Percentage</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
                         <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' or is_revise == 0 %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#updPercent"><i class="fas fa-edit"></i>&nbsp;&nbsp;Change Budget Percentage</button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal fade" id="updPercent" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -352,26 +380,35 @@
 {% block javascripts %}
 <script>
     $(document).ready( function () {
-      $('#myTable').DataTable({
-        'pageLength': 5,
-        'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
-        'searching': false,
-        'lengthChange': false,
-      });
+        $('#myTable').DataTable({
+            'pageLength': 10,
+            'searching': false,
+            'lengthChange': false,
+            'paging': false,
+            'info': false,
+        });
 
-      $('#channelTable').DataTable();
-    
-      $('#updTable').DataTable({
-        'searching': false,
-        'lengthChange': false,
-        'paging': false,
-        'info': false,
-      });
+        $('#channelTable').DataTable();
+        
+        $('#updTable').DataTable({
+            'searching': false,
+            'lengthChange': false,
+            'paging': false,
+            'info': false,
+        });
       
-      btn = document.getElementsByClassName('paginate_button');
-      for (var i = 0; i < btn.length; i++) {
-          btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
-      }
+        let btn_menu = document.getElementById('dropdownTable');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
+        });
+
+        btn = document.getElementsByClassName('paginate_button');
+        for (var i = 0; i < btn.length; i++) {
+            btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
     } );
 
     let msg = "{{ message }}";

@@ -1,20 +1,21 @@
 {% load static %}
+{% load user_agents %}
 <!-- Navbar -->
 <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl" id="navbarBlur" navbar-scroll="true">
   <div class="container-fluid py-1 px-3">
     <nav aria-label="app">
-      <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+      <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5 {% if request|is_mobile %}col-9{% endif %}">
         <li class="text-sm font-weight-bold text-dark active" aria-current="page">
           Integrated System - {% block title %} A&P Manual {% endblock %} | ABC President Indonesia
         </li>
       </ol>
     </nav>
-    <div class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4" id="navbar">
-      <ul class="navbar-nav  ms-xl-auto">
+    <div class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4 z-index-1" id="navbar">
+      <ul class="navbar-nav  ms-xl-auto {% if request|is_mobile %}justify-content-end{% endif %}">
         <li class="nav-item d-flex align-items-center">
           <div class="nav-link text-body font-weight-bold px-0">
             <i class="fa fa-user me-sm-1"></i>
-            <span class="d-sm-inline d-none me-3">{{ request.user.username }}</span>
+            <span class="d-sm-inline me-3">{% if request|is_mobile %}{{ request.user.username|truncatechars:16 }}{% else %}{{ request.user.username }}{% endif %}</span>
           </div>
         </li>
         
@@ -33,6 +34,18 @@
           </label>
           <input type="checkbox" class="d-none" id="theme-switch"/>
         </li>
+
+        {% if request|is_mobile %}
+        <li class="nav-item d-xl-none ps-3 d-flex align-items-center">
+          <a href="javascript:;" class="nav-link text-body p-0 m-0" id="iconNavbarSidenav">
+            <div class="sidenav-toggler-inner">
+              <i class="sidenav-toggler-line"></i>
+              <i class="sidenav-toggler-line"></i>
+              <i class="sidenav-toggler-line"></i>
+            </div>
+          </a>
+        </li>
+        {% endif %}
         
       </ul>
     </div>
@@ -61,7 +74,7 @@
 </div>
 
 <div>
-  <img src="https://ksisolusi.com/apps/static/img/transparent-logo.png" alt="ABC Logo" class="position-fixed h-100 w-40 top-0 d-none d-lg-block start-50 ms-n9 opacity-2" style="object-fit: contain;">
+  <img src="https://ksisolusi.com/apps/static/img/transparent-logo.png" alt="ABC Logo" class="position-fixed h-100 top-0 d-lg-block {% if request|is_mobile %}w-60 translate-middle-x{% else %}w-40 d-none ms-n9{% endif %} start-50 opacity-2" style="object-fit: contain;">
 </div>
 
 {{ redirect_to_login_immediately }}

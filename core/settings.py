@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'mathfilters',
     'tinymce',
+    'django_user_agents',
 ]
 
 MIDDLEWARE = [

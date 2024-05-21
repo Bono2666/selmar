@@ -31,19 +31,14 @@ from datetime import date
 from django.db.models import F
 from django.db.models import Prefetch
 from django.db.models.functions import Length
-from django.db.models.functions import Length
-from django.db.models import ExpressionWrapper, F
-from django.db.models import Value as V
-from django.db.models.functions import Concat, Cast
-from django.db.models import DateTimeField
-from django_pivot.pivot import pivot
 import pandas as pd
 from datetime import timedelta
-from django.db.models.functions import Concat
 
 
 @login_required(login_url='/login/')
 def home(request):
+    print(datetime.datetime.now().date())
+    print(timezone.now().date())
     context = {
         'segment': 'index',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
@@ -4241,6 +4236,7 @@ def closing(request):
                     budget_distributor=budget.budget_distributor,
                     budget_amount=total_amount,
                     budget_upping=0,
+                    budget_balance=total_amount,
                     budget_status='DRAFT')
                 new_budget.save()
 
@@ -5226,6 +5222,11 @@ def program_add(request, _area, _distributor, _proposal, _seq):
         datetime.datetime.now().strftime('%m/%Y') if selected_proposal != '0' else 'SBS-3' + format_no + '/' + selected_area + '/0' + \
         datetime.datetime.now().strftime('%m/%Y')
 
+    bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+             'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+    bln = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+           'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des']
+
     if request.POST:
         form = FormProgram(request.POST, request.FILES)
         if form.is_valid():
@@ -5234,6 +5235,8 @@ def program_add(request, _area, _distributor, _proposal, _seq):
             draft.proposal_id = selected_proposal
             draft.seq_number = seq
             draft.entry_pos = request.user.position.position_id
+            draft.header = '<style>@media only screen and (max-width: 600px) {.mobile-hide {display: none;}} @media (min-width: 601px) {.desktop-hide {display: none;}}</style><b><table style="width: 100%; height: 12;"><tr class="desktop-hide"><td style="text-align: right; padding-right: 0;"><strong>' + area.base_city + ', ' + datetime.datetime.now().strftime('%-d') + ' ' + bulan[int(datetime.datetime.now().strftime('%m')) - 1] + ' ' + datetime.datetime.now().strftime(
+                '%Y') + '</strong></td></tr><tr class="desktop-hide"><td>&nbsp;</td></tr><tr><td style="padding-left: 0;"><b>No. ' + _id + '</b></td><td style="text-align: right; padding-right: 0;" class="mobile-hide"><b>' + area.base_city + ', ' + datetime.datetime.now().strftime('%-d') + ' ' + bulan[int(datetime.datetime.now().strftime('%m')) - 1] + ' ' + datetime.datetime.now().strftime('%Y') + '</b></td></tr></table><br>Kepada Yth.<br>' + proposal.budget.budget_distributor.distributor_name + '<br>Di Tempat,</b><br>'
             draft.save()
 
             for approver in approvers:
@@ -5291,11 +5294,6 @@ def program_add(request, _area, _distributor, _proposal, _seq):
             for approver in range(print_approvers.count()):
                 approver_position += '<td style="padding-left: 0; height: 12">' + \
                     print_approvers[approver].approver.position.position_name + '</td>'
-
-            bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
-            bln = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-                   'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des']
 
             if no_save:
                 form = FormProgram()
@@ -5983,7 +5981,7 @@ def claim_add(request, _area, _distributor, _program):
         else:
             if form.is_valid():
                 draft = form.save(commit=False)
-                draft.claim_date = datetime.datetime.now().date()
+                draft.claim_date = timezone.now().date()
                 draft.program_id = selected_program
                 draft.seq_number = _no.seq_number + 1 if _no else 1
                 draft.entry_pos = request.user.position.position_id
