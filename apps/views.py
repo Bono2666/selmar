@@ -3375,10 +3375,10 @@ def proposal_print(request, _id):
     pdf_file.drawRightString(670, y, "{:,}".format(total['incrp_nom__sum']))
     pdf_file.rect(675, y - 5, 71, 15, stroke=True)
     pdf_file.drawRightString(743, y, "{:.1f}%".format(
-        total['incpst_carton__ratio']))
+        total['incpst_carton__ratio'])) if total['incpst_carton__ratio'] else pdf_file.drawRightString(743, y, "0.0%")
     pdf_file.rect(746, y - 5, 71, 15, stroke=True)
     pdf_file.drawRightString(
-        814, y, "{:.1f}%".format(total['incpst_nom__ratio']))
+        814, y, "{:.1f}%".format(total['incpst_nom__ratio'])) if total['incpst_nom__ratio'] else pdf_file.drawRightString(814, y, "0.0%")
 
     y -= 25
     pdf_file.setFont("Helvetica-Bold", 8)
@@ -9558,7 +9558,7 @@ def report_monthly_budget_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
             F('budget_transfer_minus'),
             beginning_mo=F('budget_transfer_plus') -
             F('budget_transfer_minus') + F('budget_total'),
-        ), to_attr='details')).values('budget_year', 'budget_month', 'budget_area_id', 'budget_distributor__distributor_name', 'details__budget_channel_id', 'details__budget_percent', 'details__budget_amount', 'details__budget_upping', 'details__transfer', 'details__beginning_mo', 'details__budget_proposed', 'details__budget_remaining', 'details__budget_balance')
+        ), to_attr='details'))
 
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
