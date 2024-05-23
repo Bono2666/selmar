@@ -1074,12 +1074,12 @@ class FormClaim(ModelForm):
         self.label_suffix = ''
         self.fields['claim_id'].widget = forms.TextInput(
             attrs={'class': 'd-none'})
-        self.fields['claim_date'].label = 'Date'
-        self.fields['claim_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
-        self.fields['claim_date'].input_formats = ['%d/%m/%Y']
-        self.fields['claim_date'].initial = datetime.date.today().strftime(
-            '%d/%m/%Y')
+        # self.fields['claim_date'].label = 'Date'
+        # self.fields['claim_date'].widget = forms.DateInput(
+        #     attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        # self.fields['claim_date'].input_formats = ['%d/%B/%Y']
+        # self.fields['claim_date'].initial = timezone.now().strftime(
+        #     '%d-%B-%Y')
         self.fields['area'].widget = forms.TextInput(
             attrs={'class': 'd-none'})
         self.fields['invoice'].label = 'Invoice No.'
@@ -1104,12 +1104,12 @@ class FormClaim(ModelForm):
     class Meta:
         model = Claim
         exclude = ['program', 'status', 'tax', 'total', 'total_claim', 'seq_number', 'entry_pos', 'entry_date', 'additional_amount',
-                   'entry_by', 'update_date', 'update_by']
+                   'entry_by', 'update_date', 'update_by', 'claim_date']
 
         widgets = {
             'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 4}),
-            'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
-            'due_date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
+            'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
+            'due_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
         }
 
 
@@ -1151,9 +1151,6 @@ class FormClaimView(ModelForm):
 
         widgets = {
             'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 4, 'readonly': 'readonly'}),
-            'claim_date': DateInput(attrs={'class': 'form-control form-control-sm', 'readonly': 'readonly'}),
-            'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm', 'readonly': 'readonly'}),
-            'due_date': DateInput(attrs={'class': 'form-control form-control-sm', 'readonly': 'readonly'}),
         }
 
 
@@ -1163,9 +1160,6 @@ class FormClaimUpdate(ModelForm):
         self.label_suffix = ''
         self.fields['area'].widget = forms.TextInput(
             attrs={'class': 'd-none'})
-        self.fields['claim_date'].label = 'Date'
-        self.fields['claim_date'].widget = forms.DateInput(
-            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
         self.fields['invoice'].label = 'Invoice No.'
         self.fields['invoice'].widget = forms.TextInput(
             attrs={'class': 'form-control-sm'})
@@ -1188,12 +1182,12 @@ class FormClaimUpdate(ModelForm):
     class Meta:
         model = Claim
         exclude = ['claim_id', 'proposal', 'program', 'status', 'tax', 'total', 'total_claim', 'seq_number', 'entry_pos', 'entry_date', 'additional_amount',
-                   'entry_by', 'update_date', 'update_by']
+                   'entry_by', 'update_date', 'update_by', 'claim_date']
 
         widgets = {
             'remarks': forms.Textarea(attrs={'class': 'form-control-sm', 'rows': 4}),
-            'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
-            'due_date': DateInput(attrs={'class': 'form-control form-control-sm'}),
+            'invoice_date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
+            'due_date': DateInput(attrs={'class': 'form-control form-control-sm', 'data-provide': 'datepicker', 'data-date-format': 'dd/mm/yyyy'}),
         }
 
 

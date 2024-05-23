@@ -172,17 +172,17 @@
                                 {{ message }}
                             </div>
                             {% endif %}
-                            <!-- {% if err %}
+                            {% if err %}
                             <div class="alert text-danger text-bg-light mt-2" role="alert">
                                 {{ err }}
                             </div>
-                            {% endif %} -->
+                            {% endif %}
                             <div class="row">
                                 {{ form.area }}
                                 <div class="col-md-2">
                                     <div class="shadow-none">
-                                        {{ form.claim_date.label_tag }}
-                                        <input type="text" name="claim_date" id="id_claim_date" class="form-control form-control-sm" value="{{ data.claim_date|date:'d/m/Y' }}" readonly>
+                                        <label for="id_claim_date">Claim Date</label>
+                                        <input type="text" name="claim_date" id="id_claim_date" class="form-control form-control-sm" value="{{ data.claim_date|date:'d-M-Y' }}" readonly>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
@@ -211,7 +211,11 @@
                                 <div class="col-md-4">
                                     <div class="shadow-none">
                                         {{ form.invoice_date.label_tag }}
-                                        {{ form.invoice_date }}
+                                        {% if crud == 'view' %}
+                                        <input type="text" name="invoice_date" id="id_invoice_date" class="form-control form-control-sm" value="{{ data.invoice_date|date:'d-M-Y' }}" readonly>
+                                        {% else %}
+                                            {{ form.invoice_date }}
+                                        {% endif %}
                                         <div class="text-sm text-danger">
                                             {{ form.invoice_date.errors }}
                                         </div>
@@ -220,7 +224,11 @@
                                 <div class="col-md-4">
                                     <div class="shadow-none">
                                         {{ form.due_date.label_tag }}
-                                        {{ form.due_date }}
+                                        {% if crud == 'view' %}
+                                        <input type="text" name="due_date" id="id_due_date" class="form-control form-control-sm" value="{{ data.due_date|date:'d-M-Y' }}" readonly>
+                                        {% else %}
+                                            {{ form.due_date }}
+                                        {% endif %}
                                         <div class="text-sm text-danger">
                                             {{ form.due_date.errors }}
                                         </div>
