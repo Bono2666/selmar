@@ -255,6 +255,11 @@
             }
         });
 
+        let btn = document.getElementsByClassName('paginate_button');
+        for (const button of btn) {
+            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
+
         let btn_menu = document.getElementById('dropdownTable');
         let dropdown_menu = document.getElementsByClassName('dropdown-menu');
         
@@ -262,11 +267,6 @@
         btn_menu.addEventListener('click', function() {
             dropdown_menu[0].classList.toggle('show');
         });
-
-        let btn = document.getElementsByClassName('paginate_button');
-        for (const button of btn) {
-            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
-        }
     } );
 </script>
 
