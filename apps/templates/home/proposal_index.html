@@ -34,16 +34,16 @@
                 </div>
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link text-sm text-body {% if tab == 'open' %}active{% endif %}" id="open-tab" data-bs-toggle="tab" data-bs-target="#open-tab-pane" type="button"
-                            role="tab" aria-controls="open-tab-pane" aria-selected="true">{% if request|is_mobile %}Compl...{% else %}Completed{% endif %} {% if open_count > 0 %}({{ open_count }}){% endif %}</button>
+                        <button class="nav-link text-sm text-body {% if request|is_mobile %}px-2 py-1 mt-2{% endif %} {% if tab == 'open' %}active{% endif %}" id="open-tab" data-bs-toggle="tab" data-bs-target="#open-tab-pane" type="button"
+                            role="tab" aria-controls="open-tab-pane" aria-selected="true">Completed{% if open_count > 0 %}{% if request|is_mobile %}<span class="badge bg-gray-500 rounded-pill p-1 ms-2"><span class="visually-hidden"></span></span>{% else %}<span class="badge rounded-pill badge-notification bg-gray-400 ms-2 text-black-50">{{ open_count }}</span>{% endif %}{% endif %}</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link text-sm text-body {% if tab == 'draft' %}active{% endif %}" id="draft-tab" data-bs-toggle="tab" data-bs-target="#draft-tab-pane" type="button"
-                            role="tab" aria-controls="draft-tab-pane" aria-selected="false">Draft {% if draft_count > 0 %}({{ draft_count }}){% endif %}</button>
+                        <button class="nav-link text-sm text-body {% if request|is_mobile %}px-2 py-1 mt-2{% endif %} {% if tab == 'draft' %}active{% endif %}" id="draft-tab" data-bs-toggle="tab" data-bs-target="#draft-tab-pane" type="button"
+                            role="tab" aria-controls="draft-tab-pane" aria-selected="false">Draft{% if draft_count > 0 %}{% if request|is_mobile %}<span class="badge bg-gray-500 rounded-pill p-1 ms-2"><span class="visually-hidden"></span></span>{% else %}<span class="badge rounded-pill badge-notification bg-gray-400 ms-2 text-black-50">{{ draft_count }}</span>{% endif %}{% endif %}</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link text-sm text-body {% if tab == 'inapproval' %}active{% endif %}" id="inapproval-tab" data-bs-toggle="tab" data-bs-target="#inapproval-tab-pane" type="button"
-                            role="tab" aria-controls="inapproval-tab-pane" aria-selected="false">{% if request|is_mobile %}In Ap...{% else %}In Approval{% endif %} {% if inapproval_count > 0 %}({{ inapproval_count }}){% endif %}</button>
+                        <button class="nav-link text-sm text-body {% if request|is_mobile %}px-2 py-1 mt-2{% endif %} {% if tab == 'inapproval' %}active{% endif %}" id="inapproval-tab" data-bs-toggle="tab" data-bs-target="#inapproval-tab-pane" type="button"
+                            role="tab" aria-controls="inapproval-tab-pane" aria-selected="false">In Approval{% if inapproval_count > 0 %}{% if request|is_mobile %}<span class="badge bg-gray-500 rounded-pill p-1 ms-2"><span class="visually-hidden"></span></span>{% else %}<span class="badge rounded-pill badge-notification bg-gray-400 ms-2 text-black-50">{{ inapproval_count }}</span>{% endif %}{% endif %}</button>
                     </li>
                 </ul>
                 <div class="tab-content pt-4" id="myTabContent">
