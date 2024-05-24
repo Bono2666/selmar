@@ -12,7 +12,7 @@
 <div class="container-fluid py-0">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-5 p-4">
+            <div class="card {% if request|is_mobile %}mb-6{% else %}mb-4{% endif %} p-4">
                 <div class="row mb-4">
                     <div class="col-6 d-flex align-items-center">
                         <h4 class="mb-2">Proposal List</h4>
@@ -236,19 +236,16 @@
         if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
             $('#openTable').DataTable({
                 scrollX: true,
-                pageLength: 25, 
                 order: [[0, 'desc']],
                 lengthChange: false,
             });
             $('#draftTable').DataTable({
                 scrollX: true,
-                pageLength: 25, 
                 order: [[0, 'desc']],
                 lengthChange: false,
             });
             $('#inapprovalTable').DataTable({
                 scrollX: true,
-                pageLength: 25, 
                 order: [[0, 'desc']],
                 lengthChange: false,
             });
