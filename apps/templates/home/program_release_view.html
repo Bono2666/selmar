@@ -183,9 +183,9 @@
                             </div>
                             {% else %}
                             <div class="row mt-3">
-                                <div class="col-md-11">
-                                    <div class="shadow-none">   
-                                        {{ form.header }}
+                                <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
+                                    <div class="shadow-none border p-4">   
+                                        {{ data.header|safe }}
                                     </div>
                                 </div>
                             </div>
@@ -200,9 +200,9 @@
                                 </div>
                             </div>
                             <div class="row mt-3">
-                                <div class="col-md-11">
-                                    <div class="shadow-none">   
-                                        {{ form.disclaimer }}
+                                <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
+                                    <div class="shadow-none border p-4">   
+                                        {{ data.disclaimer|safe }}
                                     </div>
                                 </div>
                             </div>
@@ -289,29 +289,12 @@
         }
     } );
 
-    tinyMCE.init({
-        selector: '#id_header',    
-        readonly: 1,
-        width: '75%',
-        height: 150,
-        content_style: "body { font-size: 10pt; overflow: hidden; }", // Add overflow: hidden to disable scroll
-        menubar: false,
-        statusbar: false,
-        toolbar: false,
-        autoresize_min_height: 150,
-        autoresize_max_height: 150,
-        autoresize_bottom_margin: 0, // Keep this line to disable scroll
-    });
-
-    tinyMCE.init({
-        selector: '#id_disclaimer',    
-        readonly: 1,
-        width: '75%',
-        height: 100,
-        content_style: "body { font-size: 10pt; }",
-        menubar: false,
-        statusbar: false,
-        toolbar: false,        
-    });
+    if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        tinyMCE.init({
+            selector: '#id_content',
+            width: '100%',
+            statusbar: false,
+        });
+    }
 </script>
 {% endblock javascripts %}
