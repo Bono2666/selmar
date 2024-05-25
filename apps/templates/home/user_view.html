@@ -4,6 +4,8 @@
 
 {% block content %}
 
+{% load user_agents %}
+
 <div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
@@ -12,15 +14,30 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-4 d-flex align-items-center">
+                            <div class="{% if request|is_mobile %}col-11{% else %}col-4{% endif %} d-flex align-items-center">
                                 <h4 class="mb-2">User ID: {{ data.user_id }}</h4>
                             </div>
-                            <div class="col-8 text-end">
+                            <div class="{% if request|is_mobile %}col-1{% else %}col-8{% endif %} text-end">
+                                {% if request|is_mobile %}
+                                <div class="dropdown float-lg-end pe-2">
+                                    <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </a>
+                                    <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                        <li><a href="{% if crud == 'view' %}{% url 'user-index' %}{% else %}{% url 'user-view' data.user_id %}{% endif %}" class="dropdown-item border-radius-md">{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a></li>
+                                        <li><a href="{% url 'user-update' data.user_id %}" class="dropdown-item border-radius-md" {% if not btn.edit and not request.user.is_superuser %}hidden{% endif %} {% if crud == 'update' %}hidden{% endif %}>Edit</a></li>
+                                        <li><a type="submit" class="dropdown-item border-radius-md" {% if crud == 'view' %}hidden{% endif %}>Save</a></li>
+                                        <li><a href="{% url 'set-password' data.user_id %}" class="dropdown-item border-radius-md" {% if not btn.edit and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}>Change Password</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.user_id }}">Delete</a></li>
+                                    </ul>
+                                </div>
+                                {% else %}
                                 <a href="{% if crud == 'view' %}{% url 'user-index' %}{% else %}{% url 'user-view' data.user_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
                                 <a href="{% url 'user-update' data.user_id %}" class="btn btn-sm bg-gradient-dark mb-0 {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <a href="{% url 'set-password' data.user_id %}" class="btn btn-sm bg-gradient-dark mb-0 {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}"><i class="fas fa-lock"></i>&nbsp;&nbsp;Change Password</a>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 {% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.user_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -76,7 +93,7 @@
                                         {{ form.signature.label_tag }}
                                     </div>
                                     <div class="input-group input-group-alternative">
-                                        <a {% if data.signature %}href="{{ data.signature.url }}"{% endif %} target="_blank" class="form-control form-control-sm border">{% if data.signature %}{{ data.signature }}{% else %}No signature available for this user{% endif %}</a>
+                                        <a {% if data.signature %}href="{{ data.signature.url }}"{% endif %} target="_blank" class="form-control form-control-sm border z-index-0">{% if data.signature %}{{ data.signature }}{% else %}No signature available for this user{% endif %}</a>
                                         <span class="input-group-text bg-transparent end-0 pe-3 py-2 {% if crud == 'update' %}cursor-pointer{% endif %} text-body {% if crud == 'view' %}disabled{% endif %} z-index-0" data-bs-toggle="modal" {% if crud == 'update' %}data-bs-target="#delete-sign"{% endif %}><i class="fas fa-times-circle"></i></span>
                                     </div>
                                 </div>
@@ -118,7 +135,25 @@
 <div class="container-fluid py-2">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4 p-4">
+            <div class="card {% if request|is_mobile %}mb-6{% else %}mb-4{% endif %} p-4">
+                {% if request|is_mobile %}
+                <div class="row {% if not btn.edit and not request.user.is_superuser %}d-none{% else %}{% if crud == 'update' %}d-none{% endif %}{% endif %}">
+                    <div class="col-11 d-flex align-items-center">
+                        <h4 class="mb-0"></h4>
+                    </div>
+                    <div class="col-1 text-end">
+                        <div class="dropdown float-lg-end pe-2">
+                            <a class="cursor-pointer text-body" id="dropdownMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                <li><a id="add_menu" class="dropdown-item border-radius-md" data-bs-toggle="modal" data-bs-target="#dialog-popup">Add Menu</a></li>
+                                <li><a id="add_area" class="dropdown-item border-radius-md" data-bs-toggle="modal" data-bs-target="#dialog-popup2">Add Area</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link text-sm text-body {% if tab == 'auth' %}active{% endif %}" id="auth-tab" data-bs-toggle="tab" data-bs-target="#auth-tab-pane" type="button"
@@ -129,8 +164,9 @@
                             role="tab" aria-controls="area-tab-pane" aria-selected="false">Area</button>
                     </li>
                 </ul>
-                <div class="tab-content" id="myTabContent">
+                <div class="tab-content pt-4" id="myTabContent">
                     <div class="tab-pane fade {% if tab == 'auth' %}show active{% endif %}" id="auth-tab-pane" role="tabpanel" aria-labelledby="auth-tab" tabindex="0">
+                        {% if not request|is_mobile %}
                         <div class="row">
                             <div class="col-6 d-flex align-items-center">
                                 <h5 class="mb-0"></h5>
@@ -139,6 +175,7 @@
                                 <button id="myBtn" type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Menu</button>
                             </div>
                         </div>
+                        {% endif %}
                         <div class="modal fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                             aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered" role="document">
@@ -188,7 +225,7 @@
                         </div>
                         <div class="card-body px-0 pt-0 pb-2">
                             <div class="table-responsive p-0">
-                                <table class="table {% if crud == 'view' %}hover{% endif %} align-items-center mb-0" id="tabTable">
+                                <table class="table {% if crud == 'view' %}hover{% endif %} align-items-center mb-0" id="{% if request|is_mobile %}tabMenuTable{% else %}tabTable{% endif %}">
                                     <thead>
                                         <tr>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
@@ -303,6 +340,7 @@
                         </div>                        
                     </div>
                     <div class="tab-pane fade {% if tab == 'area' %}show active{% endif %}" id="area-tab-pane" role="tabpanel" aria-labelledby="area-tab" tabindex="0">
+                        {% if not request|is_mobile %}
                         <div class="row">
                             <div class="col-6 d-flex align-items-center">
                                 <h5 class="mb-0"></h5>
@@ -311,6 +349,7 @@
                                 <button id="myBtn" type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup2" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Area</button>
                             </div>
                         </div>
+                        {% endif %}
                         <div class="modal fade" id="dialog-popup2" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                             aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered" role="document">
@@ -360,7 +399,7 @@
                         </div>
                         <div class="card-body px-0 pt-0 pb-2">
                             <div class="table-responsive p-0">
-                                <table class="table align-items-center mb-0" id="tabTable2">
+                                <table class="table align-items-center mb-0" id="{% if request|is_mobile %}tabAreaTable{% else %}tabTable2{% endif %}">
                                     <thead>
                                         <tr>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
@@ -417,18 +456,38 @@
 {% block javascripts %}
 <script>
     $(document).ready( function () {
-        $('#tabTable').DataTable({
-            'pageLength': 10,
-            'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
-        });
+        if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            $('#tabMenuTable').DataTable({
+                "scrollX": true,
+                "lengthChange": false,
+            });
 
-        $('#tabTable2').DataTable({
-            'pageLength': 10,
-            'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
-        });
-        
-        $('#menuTable').DataTable();
-        $('#areaTable').DataTable();
+            $('#tabAreaTable').DataTable({
+                "lengthChange": false,
+            });
+
+            $('#menuTable').DataTable({
+                "lengthChange": false,
+            });
+
+            $('#areaTable').DataTable({
+                "lengthChange": false,
+            });
+        } else {
+            $('#tabTable').DataTable({
+                'pageLength': 10,
+                'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
+            });
+
+            $('#tabTable2').DataTable({
+                'pageLength': 10,
+                'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
+            });
+            
+            $('#menuTable').DataTable();
+            $('#areaTable').DataTable();
+        }
+
 
         let btn = document.getElementsByClassName('paginate_button');
         for (const button of btn) {
@@ -442,5 +501,45 @@
             });
         }
     } );
+
+    $(document).ready(function() {
+        let btn_menu = document.getElementById('dropdownTable');
+        let btn_menu2 = document.getElementById('dropdownMenu');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
+        });
+
+        btn_menu2.addEventListener('click', function() {
+            dropdown_menu[1].classList.toggle('show');
+        });
+    });
+
+    $(document).ready(function() {
+        let addMenu = document.getElementById('add_menu');
+        let addArea = document.getElementById('add_area');
+        let tabMenu = document.getElementById('auth-tab');
+        let tabArea = document.getElementById('area-tab');
+
+        tabMenu.addEventListener('click', function() {
+            addMenu.classList.remove('d-none');
+            addArea.classList.add('d-none');
+        });
+
+        tabArea.addEventListener('click', function() {
+            addMenu.classList.add('d-none');
+            addArea.classList.remove('d-none');
+        });
+
+        if (tabMenu.classList.contains('active')) {
+            addMenu.classList.remove('d-none');
+            addArea.classList.add('d-none');
+        } else {
+            addMenu.classList.add('d-none');
+            addArea.classList.remove('d-none');
+        }
+    });
 </script>
 {% endblock javascripts %}
