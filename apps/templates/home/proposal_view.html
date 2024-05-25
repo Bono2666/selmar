@@ -1072,7 +1072,12 @@
             'info': false,
             'cell-border': true,
         });
-
+        
+        let btn = document.getElementsByClassName('paginate_button');
+        for (var button of btn) {
+            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
+        
         let btn_menu = document.getElementById('dropdownTable');
         let btn_attach = document.getElementById('dropdownAttach');
         let btn_inc = document.getElementById('dropdownInc');
@@ -1096,10 +1101,6 @@
             dropdown_menu[3].classList.toggle('show');
         });
 
-        let btn = document.getElementsByClassName('paginate_button');
-        for (var button of btn) {
-            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
-        }
     } );
 
     let msg = '{{ message }}';
