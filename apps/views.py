@@ -6433,6 +6433,7 @@ def claim_release_update(request, _id):
     message = '0'
     add_prop = '0'
     difference = 0
+    revise_note = ''
     add_proposals = None
     add_prop_before = claim.additional_proposal
     amount_before = claim.amount
@@ -6454,6 +6455,7 @@ def claim_release_update(request, _id):
             (int(proposal.balance) + int(claim.amount))
         if int(request.POST.get('amount')) > (int(proposal.balance) + int(claim.amount)) and request.POST.get('add_proposals') == '':
             add_prop = '1'
+            revise_note = request.POST.get('id_revise-note')
             message = 'Claim amount is greater than proposal balance.'
             add_proposals = Proposal.objects.filter(
                 status='OPEN', balance__gte=difference, reference=program.proposal_id).order_by('-proposal_id')
@@ -6673,6 +6675,7 @@ def claim_release_update(request, _id):
         'program': program,
         'message': message,
         'add_prop': add_prop,
+        'revise_note': revise_note,
         'add_proposals': add_proposals,
         'proposals': proposals,
         'difference': difference,

@@ -201,8 +201,8 @@
                                 {{ form.area }}
                                 <div class="col-md-2">
                                     <div class="shadow-none">
-                                        {{ form.claim_date.label_tag }}
-                                        {{ form.claim_date }}
+                                        <label for="id_claim_date">Claim Date</label>
+                                        <input type="text" name="claim_date" id="id_claim_date" class="form-control form-control-sm" value="{{ data.claim_date|date:'d-M-Y' }}" readonly>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
@@ -231,7 +231,11 @@
                                 <div class="col-md-4">
                                     <div class="shadow-none">
                                         {{ form.invoice_date.label_tag }}
-                                        {{ form.invoice_date }}
+                                        {% if crud == 'view' %}
+                                            <input type="text" name="invoice_date" id="id_invoice_date" class="form-control form-control-sm" value="{{ data.invoice_date|date:'d-M-Y' }}" readonly>
+                                        {% else %}
+                                            {{ form.invoice_date }}
+                                        {% endif %}
                                         <div class="text-sm text-danger">
                                             {{ form.invoice_date.errors }}
                                         </div>
@@ -240,7 +244,11 @@
                                 <div class="col-md-4">
                                     <div class="shadow-none">
                                         {{ form.due_date.label_tag }}
-                                        {{ form.due_date }}
+                                        {% if crud == 'view' %}
+                                            <input type="text" name="due_date" id="id_due_date" class="form-control form-control-sm" value="{{ data.due_date|date:'d-M-Y' }}" readonly>
+                                        {% else %}
+                                            {{ form.due_date }}
+                                        {% endif %}
                                         <div class="text-sm text-danger">
                                             {{ form.due_date.errors }}
                                         </div>
@@ -324,7 +332,7 @@
                                 <div class="col-md-4">
                                     <label for="id_revise-note">Revise Note</label>
                                     <div class="shadow-none">
-                                        <textarea name="id_revise-note" id="id_revise-note" class="form-control-sm text-body" aria-label="Revise Note" placeholder="Your note here ..." rows="4" required {% if crud == 'view' %}disabled{% endif %}></textarea>
+                                        <textarea name="id_revise-note" id="id_revise-note" class="form-control-sm text-body" aria-label="Revise Note" placeholder="Your note here ..." rows="4" required {% if crud == 'view' %}disabled{% endif %}>{% if revise_note %}{{ revise_note }}{% endif %}</textarea>
                                     </div>
                                 </div>
                                 {% endif %}
@@ -405,6 +413,11 @@
             'cell-border': true,
         });
 
+        let btn = document.getElementsByClassName('paginate_button');
+        for (var button of btn) {
+            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
+
         let btn_menu = document.getElementById('dropdownTable');
         let dropdown_menu = document.getElementsByClassName('dropdown-menu');
         
@@ -412,11 +425,6 @@
         btn_menu.addEventListener('click', function() {
             dropdown_menu[0].classList.toggle('show');
         });
-
-        let btn = document.getElementsByClassName('paginate_button');
-        for (var button of btn) {
-            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
-        }
     } );
 
     $(document).on('click', addPropCancel, function() {

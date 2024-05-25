@@ -10,6 +10,8 @@
 
 {% load mathfilters %}
 
+{% load user_agents %}
+
 <div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
@@ -18,16 +20,32 @@
                 <div class="card mb-2">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-6 d-flex align-items-center">
+                            <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                                 <h5 class="mb-2">CL No. {{ data.cl_id }}</h5>
                             </div>
-                            <div class="col-6 text-end">
+                            <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
+                                {% if request|is_mobile %}
+                                <div class="dropdown float-lg-end pe-2">
+                                    <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </a>
+                                    <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                        <li><a class="dropdown-item border-radius-md" href="{% if crud == 'view' and is_revise == 0 %}{% url 'cl-release-index' %}{% else %}{% if crud == 'update' %}{% url 'cl-release-view' data.cl_id 1 %}{% else %}{% url 'cl-release-view' data.cl_id 0 %}{% endif %}{% endif %}">{% if crud == 'view' and is_revise == 0 %}Back{% else %}Cancel{% endif %}</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if not btn_release.approve %}hidden{% else %}{% if crud == 'update' or is_revise == 1 %}hidden{% endif %}{% endif %} {% if approved == 'Y' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-approve">Approve</a></li>
+                                        <li><a class="dropdown-item border-radius-md" href="{% if is_revise == 0 %}{% url 'cl-release-view' data.cl_id 1 %}{% else %}{% url 'cl-release-update' data.cl_id %}{% endif %}" {% if not btn_release.revise %}hidden{% endif %} {% if approved == 'Y' %}hidden{% endif %} {% if crud == 'update' %}hidden{% endif %}>{% if is_revise == 0 %}Revise{% else %}Edit{% endif %}</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if crud == 'view' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#revise-note">Save</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if not btn_release.returned %}hidden{% else %}{% if crud == 'update' or is_revise == 1 %}hidden{% endif %}{% endif %} {% if approved == 'Y' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-return">Return</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if not btn_release.reject %}hidden{% else %}{% if crud == 'update' or is_revise == 1 %}hidden{% endif %}{% endif %} {% if approved == 'Y' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-reject">Reject</a></li>
+                                    </ul>
+                                </div>
+                                {% else %}
                                 <a href="{% if crud == 'view' and is_revise == 0 %}{% url 'cl-release-index' %}{% else %}{% if crud == 'update' %}{% url 'cl-release-view' data.cl_id 1 %}{% else %}{% url 'cl-release-view' data.cl_id 0 %}{% endif %}{% endif %}" class="btn btn-sm px-3 bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' and is_revise == 0 %}Back{% else %}Cancel{% endif %}</a>
                                 <button type="button" class="btn btn-sm px-3 bg-gradient-dark mb-0 {% if not btn_release.approve %}disabled{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-approve"><i class="fas fa-check"></i>&nbsp;&nbsp;Approve</button>
                                 <a href="{% if is_revise == 0 %}{% url 'cl-release-view' data.cl_id 1 %}{% else %}{% url 'cl-release-update' data.cl_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if not btn_release.revise %}disabled{% endif %} {% if approved == 'Y' %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;{% if is_revise == 0 %}Revise{% else %}Edit{% endif %}</a>
                                 <button type="button" class="btn btn-sm px-4 bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#revise-note"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm px-4 bg-gradient-dark mb-0 {% if not btn_release.returned %}disabled{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-return"><i class="fas fa-reply-all"></i>&nbsp;&nbsp;Return</button>
                                 <button type="button" class="btn btn-sm px-4 bg-gradient-danger mb-0 {% if not btn_release.reject %}disabled{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-reject"><i class="fas fa-times"></i>&nbsp;&nbsp;Reject</button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -224,16 +242,33 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4 px-4 pb-4">
+            <div class="card {% if request|is_mobile %}mb-6{% else %}mb-4{% endif %} px-4 pb-4">
                 <div class="row">
+                    {% if request|is_mobile %}
+                    <div class="col-6 d-flex align-items-center">
+                        <h5 class="mb-0 mt-4">Claim List</h5>
+                    </div>
+                    {% else %}
                     <div>
                         <h5 class="mb-0 mt-4">Claim List</h5>
                     </div>
                     <div class="col-6 d-flex align-items-center">
                         <h5 class="mb-0"></h5>
                     </div>
+                    {% endif %}
                     <div class="col-6 text-end">
+                        {% if request|is_mobile %}
+                        <div class="dropdown float-lg-end pe-2 mt-4 {% if not btn.edit and not request.user.is_superuser %}d-none{% else %}{% if crud == 'update' %}d-none{% endif %}{% endif %}">
+                            <a class="cursor-pointer text-body" id="dropdownClaim" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                <li><a class="dropdown-item border-radius-md" data-bs-toggle="modal" data-bs-target="#dialog-popup">Add Claim</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
                         <button id="myBtn" type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Claim</button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
@@ -291,9 +326,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-body px-0 pt-0 pb-2">
+                <div class="card-body px-0 {% if request|is_mobile %}pt-4{% else %}pt-0{% endif %} pb-2">
                     <div class="table-responsive p-0">
-                        <table class="table {% if crud == 'view' %}hover{% endif %} align-items-center mb-0" id="detailTable">
+                        <table class="table {% if crud == 'view' %}hover{% endif %} align-items-center mb-0" id="{% if request|is_mobile %}mobileTable{% else %}detailTable{% endif %}">
                             <thead>
                                 <tr>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
@@ -390,14 +425,6 @@
 
 {% block javascripts %}
 <script>
-    let additionProposal = "{{ add_prop }}";
-    let addPropCancel = document.getElementById('addprop_cancel');
-    let selectAddProp = document.getElementById('select_addprop');
-
-    if (additionProposal == "1") {
-        $('#additional_proposal').modal();
-    }
-    
     $(document).ready( function () {
         $('#releaseTable').DataTable({
             'searching': false,
@@ -406,19 +433,36 @@
             'info': false,
             'cell-border': true,
         });
-        $('#detailTable').DataTable({
-            'pageLength': 10,
-            'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
-        });
+
+        if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            $('#mobileTable').DataTable({
+                'scrollX': true,
+                'lengthChange': false,
+            });
+        } else {
+            $('#detailTable').DataTable({
+                'pageLength': 10,
+                'lengthMenu': [[5, 10, 25, 50, -1], [5, 10, 25, 50, 'All']],
+            });    
+        }
 
         let btn = document.getElementsByClassName('paginate_button');
         for (var button of btn) {
             button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
         }
-    } );
 
-    $(document).on('click', addPropCancel, function() {
-        selectAddProp.removeAttribute('required');
-    });
+        let btn_menu = document.getElementById('dropdownTable');
+        let btn_claim = document.getElementById('dropdownClaim');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
+        });
+
+        btn_claim.addEventListener('click', function() {
+            dropdown_menu[1].classList.toggle('show');
+        });
+    } );
 </script>
 {% endblock javascripts %}
