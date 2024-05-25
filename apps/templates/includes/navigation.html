@@ -15,7 +15,7 @@
         <li class="nav-item d-flex align-items-center">
           <div class="nav-link text-body font-weight-bold px-0">
             <i class="fa fa-user me-sm-1"></i>
-            <span class="d-sm-inline me-3">{% if request|is_mobile %}{{ request.user.username|truncatechars:16 }}{% else %}{{ request.user.username }}{% endif %}</span>
+            <span class="d-sm-inline me-3">{% if request|is_mobile %}&nbsp;{{ request.user.username|truncatechars:10 }}{% else %}{{ request.user.username }}{% endif %}</span>
           </div>
         </li>
         
@@ -38,7 +38,12 @@
         {% if request|is_mobile %}
         <li class="nav-item d-xl-none ps-3 d-flex align-items-center">
           <a href="javascript:;" class="nav-link text-body p-0 m-0" id="iconNavbarSidenav">
-            <div class="sidenav-toggler-inner">
+            <div class="sidenav-toggler-inner position-relative">
+              {% if budget_notif > 0 or proposal_notif > 0 or program_notif > 0 or claim_notif > 0 or cl_notif > 0 %}
+              <span class="position-absolute top-0 start-100 translate-middle p-1 bg-gradient-danger border border-light rounded-circle z-index-1">
+                <span class="visually-hidden">New alerts</span>
+              </span>
+              {% endif %}
               <i class="sidenav-toggler-line"></i>
               <i class="sidenav-toggler-line"></i>
               <i class="sidenav-toggler-line"></i>
