@@ -376,4 +376,7 @@ urlpatterns = [
          views.report_budget_detail, name='report-budget-detail'),
     path('report/budget_detail/export/<str:_from_yr>/<str:_from_mo>/<str:_to_yr>/<str:_to_mo>/<str:_distributor>/',
          views.report_budget_detail_toxl, name='report-budget-detail-toxl'),
+    path('message/', views.welcome_message, name='welcome-message'),
+    path('message/update/', views.welcome_message_update,
+         name='welcome-message-update'),
 ]

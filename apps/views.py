@@ -38,7 +38,10 @@ from apps.notifications import *
 
 @login_required(login_url='/login/')
 def home(request):
+    message = WelcomeMessage.objects.all().first()
+
     context = {
+        'message': message,
         'budget_notif': budget_notification(request),
         'proposal_notif': proposal_notification(request),
         'program_notif': program_notification(request),
@@ -10863,3 +10866,61 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
     # Close the workbook before sending the data.
     workbook.close()
     return response
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='MESSAGE')
+def welcome_message(request):
+    message = WelcomeMessage.objects.all().first()
+
+    if request.method == 'POST':
+        form = FormWelcomeMessage(request.POST)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('welcome-message'))
+
+    form = FormWelcomeMessage(instance=message)
+
+    context = {
+        'form': form,
+        'budget_notif': budget_notification(request),
+        'proposal_notif': proposal_notification(request),
+        'program_notif': program_notification(request),
+        'claim_notif': claim_notification(request),
+        'cl_notif': cl_notification(request),
+        'segment': 'welcome-message',
+        'group_segment': 'master',
+        'crud': 'view',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='MESSAGE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/welcome_message_view.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required(allowed_roles='MESSAGE')
+def welcome_message_update(request):
+    message = WelcomeMessage.objects.all().first()
+
+    if request.method == 'POST':
+        form = FormWelcomeMessageUpdate(request.POST, instance=message)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('welcome-message'))
+
+    form = FormWelcomeMessageUpdate(instance=message)
+
+    context = {
+        'form': form,
+        'budget_notif': budget_notification(request),
+        'proposal_notif': proposal_notification(request),
+        'program_notif': program_notification(request),
+        'claim_notif': claim_notification(request),
+        'cl_notif': cl_notification(request),
+        'segment': 'welcome-message',
+        'group_segment': 'master',
+        'crud': 'update',
+        'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+        'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='MESSAGE') if not request.user.is_superuser else Auth.objects.all(),
+    }
+    return render(request, 'home/welcome_message_view.html', context)

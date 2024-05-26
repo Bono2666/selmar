@@ -1193,6 +1193,7 @@ class RegionDetail(models.Model):
 
 class WelcomeMessage(models.Model):
     message_id = models.CharField(max_length=50, primary_key=True)
+    title = models.CharField(max_length=200, null=True)
     message = models.TextField()
     entry_date = models.DateTimeField(null=True)
     entry_by = models.CharField(max_length=50, null=True)

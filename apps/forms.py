@@ -1231,3 +1231,39 @@ class FormRegionView(ModelForm):
     class Meta:
         model = Region
         fields = ['region_id', 'region_name']
+
+
+class FormWelcomeMessage(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormWelcomeMessage, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['title'].label = 'Title'
+        self.fields['title'].required = False
+        self.fields['title'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm', 'readonly': 'readonly'})
+        self.fields['message'].label = 'Message'
+        self.fields['message'].required = False
+        self.fields['message'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 4, 'readonly': 'readonly'})
+
+    class Meta:
+        model = WelcomeMessage
+        fields = ['title', 'message']
+
+
+class FormWelcomeMessageUpdate(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FormWelcomeMessageUpdate, self).__init__(*args, **kwargs)
+        self.label_suffix = ''
+        self.fields['title'].label = 'Title'
+        self.fields['title'].required = False
+        self.fields['title'].widget = forms.TextInput(
+            attrs={'class': 'form-control-sm'})
+        self.fields['message'].label = 'Message'
+        self.fields['message'].required = False
+        self.fields['message'].widget = forms.Textarea(
+            attrs={'class': 'form-control-sm', 'rows': 4})
+
+    class Meta:
+        model = WelcomeMessage
+        fields = ['title', 'message']
