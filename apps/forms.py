@@ -99,11 +99,11 @@ class FormChangePassword(PasswordChangeForm):
         self.fields['new_password1'].label = 'New Password'
         self.fields['new_password2'].label = 'New Password Confirmation'
         self.fields['old_password'].widget = forms.PasswordInput(
-            {'class': 'form-control-sm'})
+            {'class': 'form-control-sm z-index-0'})
         self.fields['new_password1'].widget = forms.PasswordInput(
-            {'class': 'form-control-sm'})
+            {'class': 'form-control-sm z-index-0'})
         self.fields['new_password2'].widget = forms.PasswordInput(
-            {'class': 'form-control-sm'})
+            {'class': 'form-control-sm z-index-0'})
 
 
 class FormSetPassword(SetPasswordForm):
@@ -113,9 +113,9 @@ class FormSetPassword(SetPasswordForm):
         self.fields['new_password1'].label = 'New Password'
         self.fields['new_password2'].label = 'New Password Confirmation'
         self.fields['new_password1'].widget = forms.PasswordInput(
-            {'class': 'form-control-sm'})
+            {'class': 'form-control-sm z-index-0'})
         self.fields['new_password2'].widget = forms.PasswordInput(
-            {'class': 'form-control-sm'})
+            {'class': 'form-control-sm z-index-0'})
 
 
 class FormDistributor(ModelForm):
@@ -1048,13 +1048,11 @@ class FormProgramUpdate(ModelForm):
 
     class Meta:
         model = Program
-        fields = ['deadline', 'header', 'content', 'disclaimer']
+        fields = ['deadline', 'content']
 
         widgets = {
             'deadline': DateInput(attrs={'class': 'form-control form-control-sm'}),
-            'header': TinyMCE(attrs={'cols': 80, 'rows': 5, 'readonly': 'readonly'}),
             'content': TinyMCE(attrs={'cols': 80, 'rows': 40}),
-            'disclaimer': TinyMCE(attrs={'cols': 80, 'rows': 2, 'readonly': 'readonly'}),
         }
 
 
