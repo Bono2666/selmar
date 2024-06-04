@@ -4,22 +4,38 @@
 
 {% block content %}
 
+{% load user_agents %}
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
             <form action="{% url 'region-update' data.region_id %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card">
+                <div class="card z-index-1">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-6 d-flex align-items-center">
+                            <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                                 <h4 class="mb-2">Region ID: {{ data.region_id }}</h4>
                             </div>
-                            <div class="col-6 text-end">
+                            <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
+                                {% if request|is_mobile %}
+                                <div class="dropdown float-lg-end pe-2">
+                                    <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </a>
+                                    <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                        <li><a class="dropdown-item border-radius-md" href="{% if crud == 'view' %}{% url 'region-index' %}{% else %}{% url 'region-view' data.region_id %}{% endif %}">{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a></li>
+                                        <li><a class="dropdown-item border-radius-md" href="{% url 'region-update' data.region_id %}" {% if not btn.edit and not request.user.is_superuser %}hidden{% endif %} {% if crud == 'update' %}hidden{% endif %}>Edit</a></li>
+                                        <li><button type="submit" class="dropdown-item border-radius-md text-body" {% if crud == 'view' %}hidden{% endif %}>Save</button></li>
+                                        <li><a class="dropdown-item border-radius-md text-danger" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.region_id }}" {% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}>Delete</a></li>
+                                    </ul>
+                                </div>
+                                {% else %}
                                 <a href="{% if crud == 'view' %}{% url 'region-index' %}{% else %}{% url 'region-view' data.region_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
                                 <a href="{% url 'region-update' data.region_id %}" class="btn btn-sm bg-gradient-dark mb-0 {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 {% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.region_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -34,7 +50,7 @@
                                     Are you sure you want to delete region <strong>{{ data.region_name }}</strong>?
                                 </div>
                                 <div class="modal-footer border-0">
-                                    <button type="button" class="btn btn-sm bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-sm bg-gradient-dark" data-bs-dismiss="modal">Cancel</button>
                                     <a href="{% url 'region-delete' data.region_id %}" role="button" class="btn btn-sm bg-gradient-danger text-white">Delete
                                     </a>
                                 </div>
@@ -59,13 +75,24 @@
                     </div>
                 </div>
             </form>
-            <div class="card mt-2 mb-4 p-4">
+            <div class="card mt-2 {% if request|is_mobile %}mb-6{% else %}mb-4{% endif %} p-4 z-index-0">
                 <div class="row mb-0">
-                    <div class="col-6 d-flex align-items-center">
+                    <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                         <h5 class="mb-0">Area List</h5>
                     </div>
-                    <div class="col-6 text-end">
+                    <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
+                        {% if request|is_mobile %}
+                        <div class="dropdown float-lg-end pe-2 {% if not btn.edit and not request.user.is_superuser %}d-none{% else %}{% if crud == 'update' %}d-none{% endif %}{% endif %}">
+                            <a class="cursor-pointer text-body" id="dropdownArea" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownArea">
+                                <li><a class="dropdown-item border-radius-md" data-bs-toggle="modal" data-bs-target="#dialog-popup">Add Area</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
                         <button type="button" class="btn btn-sm bg-gradient-danger mb-0" data-bs-toggle="modal" data-bs-target="#dialog-popup" {% if not btn.edit and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Area</button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
@@ -186,5 +213,42 @@
             button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
         }
     } );
+
+    $(document).ready(function() {
+        let btn_menu = document.getElementById('dropdownTable');
+        let btn_area = document.getElementById('dropdownArea');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
+        });
+
+        btn_area.addEventListener('click', function() {
+            dropdown_menu[1].classList.toggle('show');
+        });
+    });
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+
+        for (const item of modal) {
+            if (item.id == 'confirm-{{ data.region_id }}') {
+                item.addEventListener('show.bs.modal', function() {
+                    this.closest('.card').classList.remove('z-index-1');
+                });
+                item.addEventListener('hidden.bs.modal', function() {
+                    this.closest('.card').classList.add('z-index-1');
+                });
+            } else {
+                item.addEventListener('show.bs.modal', function() {
+                    this.closest('.card').classList.remove('z-index-0');
+                });
+                item.addEventListener('hidden.bs.modal', function() {
+                    this.closest('.card').classList.add('z-index-0');
+                });
+            }
+        }
+    });
 </script>
 {% endblock javascripts %}

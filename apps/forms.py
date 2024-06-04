@@ -1048,11 +1048,12 @@ class FormProgramUpdate(ModelForm):
 
     class Meta:
         model = Program
-        fields = ['deadline', 'content']
+        fields = ['deadline', 'content', 'disclaimer']
 
         widgets = {
             'deadline': DateInput(attrs={'class': 'form-control form-control-sm'}),
             'content': TinyMCE(attrs={'cols': 80, 'rows': 40}),
+            'disclaimer': TinyMCE(attrs={'cols': 80, 'rows': 2, 'readonly': 'readonly'}),
         }
 
 

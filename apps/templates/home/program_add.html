@@ -13,7 +13,7 @@
         <div class="col-xl-12 order-xl-1">
             <form action="{% url 'program-add' selected_area selected_distributor selected_proposal seq %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card mb-6">
+                <div class="card mb-6 z-index-0">
                     <div class="card-header">
                         <div class="row">
                             <div class="{% if request|is_mobile %}col-11{% else %}col-sm-8{% endif %} d-flex align-items-center">
@@ -318,14 +318,6 @@
             "searching": false,
             "lengthChange": false,
         });
-
-        let btn_menu = document.getElementById('dropdownTable');
-        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
-        
-        // open dropdown menu
-        btn_menu.addEventListener('click', function() {
-            dropdown_menu[0].classList.toggle('show');
-        });
     });
 
     $(document).on('click', 'tbody tr', function() {
@@ -342,7 +334,7 @@
             selector: '#id_header',    
             readonly: 1,
             width: '100%',
-            height: 200,
+            height: 100,
             content_style: "body { font-size: 10pt; overflowY: hidden; }", // Add overflow: hidden to disable scroll
             menubar: false,
             statusbar: false,
@@ -355,7 +347,7 @@
         tinyMCE.init({
             selector: '#id_content',
             width: '100%',
-            height: 800,
+            height: 400,
             content_style: "body { font-size: 10pt; }",
             menubar: false,
             statusbar: false,
@@ -365,7 +357,7 @@
             selector: '#id_disclaimer',    
             readonly: 1,
             width: '100%',
-            height: 200,
+            height: 100,
             content_style: "body { font-size: 10pt; }",
             menubar: false,
             statusbar: false,
@@ -397,5 +389,30 @@
             toolbar: false,        
         });
     }
+
+    $(document).ready(function() {
+        let btn_menu = document.getElementById('dropdownTable');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
+        });
+    });
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
+    });
 </script>
 {% endblock javascripts %}

@@ -17,7 +17,7 @@
         <div class="col-xl-12 order-xl-1">
             <form action="{% url 'cl-release-update' data.cl_id %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card mb-2">
+                <div class="card mb-2 z-index-0">
                     <div class="card-header">
                         <div class="row">
                             <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
@@ -242,10 +242,10 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="card {% if request|is_mobile %}mb-6{% else %}mb-4{% endif %} px-4 pb-4">
+            <div class="card {% if request|is_mobile %}mb-6{% else %}mb-4{% endif %} px-4 pb-4 z-index-0">
                 <div class="row">
                     {% if request|is_mobile %}
-                    <div class="col-6 d-flex align-items-center">
+                    <div class="col-11 d-flex align-items-center">
                         <h5 class="mb-0 mt-4">Claim List</h5>
                     </div>
                     {% else %}
@@ -256,7 +256,7 @@
                         <h5 class="mb-0"></h5>
                     </div>
                     {% endif %}
-                    <div class="col-6 text-end">
+                    <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                         {% if request|is_mobile %}
                         <div class="dropdown float-lg-end pe-2 mt-4 {% if not btn.edit and not request.user.is_superuser %}d-none{% else %}{% if crud == 'update' %}d-none{% endif %}{% endif %}">
                             <a class="cursor-pointer text-body" id="dropdownClaim" data-bs-toggle="dropdown" aria-expanded="false">
@@ -464,5 +464,20 @@
             dropdown_menu[1].classList.toggle('show');
         });
     } );
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
+    });
 </script>
 {% endblock javascripts %}

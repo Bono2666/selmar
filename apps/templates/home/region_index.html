@@ -4,17 +4,30 @@
 
 {% block content %}
 
+{% load user_agents %}
+
 <!-- Page content -->
 <div class="container-fluid py-0">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4 p-4">
+            <div class="card {% if request|is_mobile %}mb-6{% else %}mb-4{% endif %} p-4 z-index-0">
                 <div class="row mb-4">
-                    <div class="col-6 d-flex align-items-center">
+                    <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                         <h4 class="mb-0">Region List</h4>
                     </div>
-                    <div class="col-6 text-end">
+                    <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
+                        {% if request|is_mobile %}
+                        <div class="dropdown float-lg-end pe-2 {% if not btn.add and not request.user.is_superuser %}d-none{% endif %}">
+                            <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+                            <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                <li><a class="dropdown-item border-radius-md" href="{% url 'region-add' %}">Add New Region</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
                         <a class="btn btn-sm bg-gradient-danger mb-0 {% if not btn.add and not request.user.is_superuser %}disabled{% endif %}" href="{% url 'region-add' %}"><i class="fas fa-plus"></i>&nbsp;&nbsp;Add New Region</a>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
@@ -58,16 +71,47 @@
 
 <script>
     $(document).ready( function () {
-      $('#myTable').DataTable();
-      
-      btn = document.getElementsByClassName('paginate_button');
-      for (var i = 0; i < btn.length; i++) {
-          btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
-      }
+        if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            $('#myTable').DataTable({
+                "lengthChange": false,
+            });
+        } else {
+            $('#myTable').DataTable();
+        }
+        
+        btn = document.getElementsByClassName('paginate_button');
+        for (var i = 0; i < btn.length; i++) {
+            btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
     } );
 
     $(document).on('click', 'tbody tr', function() {
         window.location = $(this).data('href');
+    });
+
+    $(document).ready(function() {
+        let btn_menu = document.getElementById('dropdownTable');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
+        });
+    });
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
     });
 </script>
 

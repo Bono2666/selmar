@@ -12,7 +12,7 @@
 <div class="container-fluid py-0">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4 p-4">
+            <div class="card mb-4 p-4 z-index-0">
                 <div class="row mb-4">
                     <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                         <h4 class="mb-2">Claim List Awaiting Approval</h4>
@@ -229,6 +229,21 @@
         btn_menu.addEventListener('click', function() {
             dropdown_menu[0].classList.toggle('show');
         });
+    });
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
     });
 </script>
 

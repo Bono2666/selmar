@@ -13,13 +13,13 @@
         <div class="col-xl-12 order-xl-1">
             <form action="{% url 'budget-update' tab data.budget_id %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card">
+                <div class="card z-index-0">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-6 d-flex align-items-center">
+                            <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                                 <h4 class="mb-2">Budget No. {{ data.budget_id }}</h4>
                             </div>
-                            <div class="col-6 text-end">
+                            <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                                 {% if request|is_mobile %}
                                 <div class="dropdown float-lg-end pe-2">
                                     <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
@@ -29,7 +29,7 @@
                                         <li><a class="dropdown-item border-radius-md" href="{% if crud == 'view' %}{% if tab == 'closed' %}{% url 'budget-archive-index' %}{% else %}{% url 'budget-index' tab %}{% endif %}{% else %}{% url 'budget-view' tab data.budget_id 'NONE' %}{% endif %}">{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a></li>
                                         <li><a class="dropdown-item border-radius-md" href="{% url 'budget-update' tab data.budget_id %}" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.edit and not request.user.is_superuser %}hidden{% endif %}{% endif %} {% if crud == 'update' %}hidden{% endif %} {% if crud == 'update' %}hidden{% endif %}>Edit</a></li>
                                         <li><button class="dropdown-item border-radius-md" {% if crud == 'view' %}hidden{% endif %} type="submit">Save</button></li>
-                                        <li><a class="dropdown-item border-radius-md" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.budget_id }}">Delete</a></li>
+                                        <li><a class="dropdown-item border-radius-md text-danger" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.budget_id }}">Delete</a></li>
                                         <li><a class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#approval">Status</a></li>
                                         <li><a class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} {% if hundreds == 0 %}hidden{% endif %} {% if not btn.submit %}hidden{% endif %} {% if data.budget_status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit">Submit</a></li>
                                     </ul>
@@ -215,12 +215,12 @@
 <div class="container-fluid py-2">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-5 p-4">
+            <div class="card mb-5 p-4 z-index-0">
                 <div class="row mb-4">
-                    <div class="col-6 d-flex align-items-center">
+                    <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                         <h5 class="mb-0">Budget Detail</h5>
                     </div>
-                    <div class="col-6 text-end">
+                    <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                         {% if btn_percent != None %}
                             {% if request|is_mobile %}
                             <div class="dropdown float-lg-end pe-2 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}d-none{% else %}{% if not btn_percent.edit and not request.user.is_superuser %}d-none{% endif %} {% if crud == 'update' %}d-none{% endif %}{% endif %}">
@@ -481,5 +481,20 @@
             keyboard: false
         });
     }
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
+    });
 </script>
 {% endblock javascripts %}

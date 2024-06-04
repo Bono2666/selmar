@@ -8,6 +8,8 @@
 
 {% load my_filter %}
 
+{% load user_agents %}
+
 <div class="container-fluid mt-0">
     <div class="row">
         <div class="col-xl-12 order-xl-1">
@@ -16,16 +18,30 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-7 d-flex align-items-center">
+                            <div class="{% if request|is_mobile %}col-11{% else %}col-7{% endif %} d-flex align-items-center">
                                 <h4 class="mb-2">Budget Transfer No. {{ data.transfer_id }}</h4>
                             </div>
-                            <div class="col-5 text-end">
+                            <div class="{% if request|is_mobile %}col-1{% else %}col-5{% endif %} text-end">
+                                {% if request|is_mobile %}
+                                <div class="dropdown float-lg-end pe-2">
+                                    <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </a>
+                                    <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5 z-index-3" aria-labelledby="dropdownTable">
+                                        <li><a class="dropdown-item border-radius-md" href="{% if crud == 'view' %}{% url 'budget-transfer-index' tab %}{% else %}{% url 'budget-transfer-view' 'open' data.transfer_id %}{% endif %}">{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a></li>
+                                        <li><a class="dropdown-item border-radius-md" href="{% url 'budget-transfer-update' data.transfer_id data.area_id data.distributor_id data.channel_from_id '0' %}" {% if status != 'DRAFT' and not request.user.is_superuser %}hidden{% else %}{% if not btn.edit and not request.user.is_superuser %}hidden{% endif %}{% endif %} {% if crud == 'update' %}hidden{% endif %} {% if not channel %}hidden{% endif %}>Edit</a></li>
+                                        <li><button type="submit" class="dropdown-item border-radius-md text-body" {% if crud == 'view' %}hidden{% endif %}>Save</button></li>
+                                        <li><a class="dropdown-item border-radius-md text-danger" {% if status != 'DRAFT' and not request.user.is_superuser %}hidden{% else %}{% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}{% endif %} {% if not channel %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.transfer_id }}">Delete</a></li>
+                                    </ul>
+                                </div>
+                                {% else %}
                                 <a href="{% if crud == 'view' %}{% url 'budget-transfer-index' tab %}{% else %}{% url 'budget-transfer-view' 'open' data.transfer_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-3"><i class="fas fa-reply"></i>&nbsp;&nbsp;{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a>
-                                <a href="{% url 'budget-transfer-update' data.transfer_id data.area_id data.distributor_id data.channel_from_id '0' %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if status != 'DRAFT' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
+                                <a href="{% url 'budget-transfer-update' data.transfer_id data.area_id data.distributor_id data.channel_from_id '0' %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if status != 'DRAFT' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}{% endif %} {% if not channel %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;Edit</a>
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
-                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.transfer_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
+                                <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %} {% if not channel %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.transfer_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
                                 <!-- <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" {% if data.status == 'DRAFT' %}hidden{% endif %} data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if hundreds == 0 %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button> -->
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -160,38 +176,48 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-4">
+                                <div class="{% if request|is_mobile %}col-12{% else %}col-4{% endif %}">
                                     <div class="shadow-none">   
                                         <label class="form-control-label" for="channel_from">Channel From</label>
+                                        {% if crud == 'view' %}
+                                        <input type="text" name="channel_from" id="channel_from" class="form-control form-control-sm" value="{{ data.channel_from }}" disabled>
+                                        {% else %}
                                         <select name="channel_from" id="channel_from" class="form-control form-select-sm" {% if crud == 'view' %}disabled{% endif %} onchange="window.location.href = this.value;">
                                             {% for item in channel %}
                                             <option value="{% url 'budget-transfer-update' data.transfer_id data.area_id data.distributor_id item.0 '0' %}" {% if item.0 == selected_channel %}selected{% endif %}>{{ item.0 }} = {{ item.2|intcomma }}</option>
                                             {% endfor %}
                                         </select>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-4">
+                                <div class="{% if request|is_mobile %}col-12{% else %}col-4{% endif %}">
                                     <div class="shadow-none">
                                         {{ form.channel_to.label_tag }}
+                                        {% if crud == 'view' %}
+                                        <input type="text" name="channel_to" id="channel_to" class="form-control form-control-sm" value="{{ data.channel_to }}" disabled>
+                                        {% else %}
                                         <select name="channel_to" id="channel_to" class="form-control form-select-sm" {% if crud == 'view' %}disabled{% endif %} required>
                                             <option value="">-- Select Channel To --</option>
                                             {% for item in channel_to %}
                                             <option value="{{ item.0 }}" {% if item.0 == data.channel_to_id %}selected{% endif %}>{{ item.0 }} - {{ item.1 }}</option>
                                             {% endfor %}
                                         </select>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-4">
+                                <div class="{% if request|is_mobile %}col-12{% else %}col-4{% endif %}">
                                     <div class="shadow-none">
                                         {{ form.amount.label_tag }}
                                         {{ form.amount }}
+                                        {% if crud == 'update' %}
                                         <label class="text-muted text-xs">
                                             <span class="text-danger">*</span> Maximum amount is {% if budget_balance %}{{ budget_balance|intcomma }}{% else %}0{% endif %}
                                         </label>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -248,5 +274,30 @@
             btn[i].classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
         }
     } );
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
+    });
+
+    $(document).ready(function() {
+        let btn_menu = document.getElementById('dropdownTable');
+        let dropdown_menu = document.getElementsByClassName('dropdown-menu');
+        
+        // open dropdown menu
+        btn_menu.addEventListener('click', function() {
+            dropdown_menu[0].classList.toggle('show');
+        });
+    });
 </script>
 {% endblock javascripts %}

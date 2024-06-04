@@ -2134,7 +2134,7 @@ def budget_transfer_view(request, _tab, _id):
     channel_to = BudgetDetail.objects.filter(budget__budget_distributor_id=transfer.distributor_id, budget__budget_area=transfer.area_id, budget__budget_status='OPEN').exclude(
         budget_channel_id=transfer.channel_from).values_list('budget_channel_id', 'budget_channel__channel_name')
     budget_balance = BudgetDetail.objects.get(budget__budget_distributor_id=transfer.distributor, budget__budget_area=transfer.area,
-                                              budget__budget_status='OPEN', budget_channel_id=transfer.channel_from).budget_balance
+                                              budget__budget_status='OPEN', budget_channel_id=transfer.channel_from).budget_balance if channel else 0
     selected_channel = transfer.channel_from_id
     message = '0'
 
@@ -5831,11 +5831,13 @@ def program_update(request, _tab, _id):
     else:
         form = FormProgramUpdate(instance=program)
 
+    msg = form.errors
     context = {
         'form': form,
         'data': program,
         'tab': _tab,
         'message': message,
+        'msg': msg,
         'budget_notif': budget_notification(request),
         'proposal_notif': proposal_notification(request),
         'program_notif': program_notification(request),
@@ -9295,8 +9297,8 @@ def report_cl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
     to_date = datetime.date(int(_to_yr), int(
         _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
-    years = [str(year) for year in BudgetTransfer.objects.dates(
-        'date', 'year').distinct().values_list('date__year', flat=True)]
+    years = [str(year) for year in CL.objects.dates(
+        'cl_date', 'year').distinct().values_list('cl_date__year', flat=True)]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
@@ -9423,8 +9425,8 @@ def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
     to_date = datetime.date(int(_to_yr), int(
         _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
-    years = [str(year) for year in BudgetTransfer.objects.dates(
-        'date', 'year').distinct().values_list('date__year', flat=True)]
+    years = [str(year) for year in Claim.objects.dates(
+        'claim_date', 'year').distinct().values_list('claim_date__year', flat=True)]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
@@ -9629,8 +9631,8 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
     to_date = datetime.date(int(_to_yr), int(
         _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
-    years = [str(year) for year in BudgetTransfer.objects.dates(
-        'date', 'year').distinct().values_list('date__year', flat=True)]
+    years = [str(year) for year in Proposal.objects.dates(
+        'proposal_date', 'year').distinct().values_list('proposal_date__year', flat=True)]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
@@ -9812,8 +9814,8 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
     to_date = datetime.date(int(_to_yr), int(
         _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
-    years = [str(year) for year in BudgetTransfer.objects.dates(
-        'date', 'year').distinct().values_list('date__year', flat=True)]
+    years = [str(year) for year in Proposal.objects.dates(
+        'proposal_date', 'year').distinct().values_list('proposal_date__year', flat=True)]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
@@ -10039,8 +10041,8 @@ def report_proposal_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
 @login_required(login_url='/login/')
 @role_required(allowed_roles='REPORT')
 def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
-    years = [str(year) for year in BudgetTransfer.objects.dates(
-        'date', 'year').distinct().values_list('date__year', flat=True)]
+    years = [str(year) for year in Budget.objects.filter(budget_status__in=[
+        'OPEN', 'CLOSED']).values_list('budget_year', flat=True).distinct()]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
@@ -10363,8 +10365,8 @@ def report_monthly_budget_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 @login_required(login_url='/login/')
 @role_required(allowed_roles='REPORT')
 def report_budget_summary(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
-    years = [str(year) for year in BudgetTransfer.objects.dates(
-        'date', 'year').distinct().values_list('date__year', flat=True)]
+    years = [str(year) for year in Budget.objects.filter(budget_status__in=[
+        'OPEN', 'CLOSED']).values_list('budget_year', flat=True).distinct()]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
@@ -10601,8 +10603,8 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 @login_required(login_url='/login/')
 @role_required(allowed_roles='REPORT')
 def report_budget_detail(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
-    years = [str(year) for year in BudgetTransfer.objects.dates(
-        'date', 'year').distinct().values_list('date__year', flat=True)]
+    years = [str(year) for year in Budget.objects.filter(budget_status__in=[
+        'OPEN', 'CLOSED']).values_list('budget_year', flat=True).distinct()]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 

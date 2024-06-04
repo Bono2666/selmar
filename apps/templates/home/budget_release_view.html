@@ -13,13 +13,13 @@
         <div class="col-xl-12 order-xl-1">
             <form action="{% url 'budget-release-update' data.budget_id %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card">
+                <div class="card z-index-0">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-6 d-flex align-items-center">
+                            <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                                 <h4 class="mb-2">Budget No. {{ data.budget_id }}</h4>
                             </div>
-                            <div class="col-6 text-end">
+                            <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                                 {% if request|is_mobile %}
                                 <div class="dropdown float-lg-end pe-2">
                                     <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
@@ -181,12 +181,12 @@
 <div class="container-fluid py-2">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-5 p-4">
+            <div class="card mb-5 p-4 z-index-0">
                 <div class="row mb-4">
-                    <div class="col-6 d-flex align-items-center">
+                    <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                         <h5 class="mb-0">Budget Detail</h5>
                     </div>
-                    <div class="col-6 text-end">
+                    <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                         {% if request|is_mobile %}
                         <div class="dropdown float-lg-end pe-2 {% if crud == 'update' or is_revise == 0 %}d-none{% endif %}">
                             <a class="cursor-pointer text-body" id="dropdownDetail" data-bs-toggle="dropdown" aria-expanded="false">
@@ -418,5 +418,20 @@
             keyboard: false
         });
     }
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
+    });
 </script>
 {% endblock javascripts %}

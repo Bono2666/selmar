@@ -17,13 +17,13 @@
         <div class="col-xl-12 order-xl-1">
             <form action="{% url 'program-release-update' data.program_id %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card mb-6">
+                <div class="card mb-6 z-index-0">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-6 d-flex align-items-center">
+                            <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                                 <h5 class="mb-2">Program No. {{ data.program_id }}</h5>
                             </div>
-                            <div class="col-6 text-end">
+                            <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                                 {% if request|is_mobile %}
                                 <div class="dropdown float-lg-end pe-2">
                                     <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
@@ -171,41 +171,63 @@
                                 </div>
                             </div>
                             {{ form.media }}
-                            {% if crud == 'view' %}
-                            <div class="row mt-3">
-                                <div class="col-md-11">
-                                    <div class="shadow-none border p-4">   
+                            {% if request|is_mobile %}
+                            <div class="row mt-3 {% if crud == 'update' %}d-none{% endif %}">
+                                <div class="col-md-12">
+                                    <div class="shadow-none border text-sm">
                                         {{ data.header|safe }}
-                                        {{ data.content|safe }}
-                                        {{ data.disclaimer|safe }}
                                     </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <div class="shadow-none">
+                                        {{ form.content }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3 {% if crud == 'update' %}d-none{% endif %}">
+                                <div class="col-md-12">
+                                    {{ form.disclaimer }}
                                 </div>
                             </div>
                             {% else %}
-                            <div class="row mt-3">
-                                <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
-                                    <div class="shadow-none border p-4">   
-                                        {{ data.header|safe }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-md-11">
-                                    <div class="shadow-none">   
-                                        {{ form.content }}
-                                        <div class="text-sm text-danger">
-                                            {{ form.content.errors }}
+                                {% if crud == 'view' %}
+                                <div class="row mt-3">
+                                    <div class="col-md-11">
+                                        <div class="shadow-none border p-4">   
+                                            {{ data.header|safe }}
+                                            {{ data.content|safe }}
+                                            {{ data.disclaimer|safe }}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
-                                    <div class="shadow-none border p-4">   
-                                        {{ data.disclaimer|safe }}
+                                {% else %}
+                                <div class="row mt-3">
+                                    <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
+                                        <div class="shadow-none border p-4">   
+                                            {{ data.header|safe }}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-11">
+                                        <div class="shadow-none">   
+                                            {{ form.content }}
+                                            <div class="text-sm text-danger">
+                                                {{ form.content.errors }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
+                                        <div class="shadow-none border p-4">   
+                                            {{ data.disclaimer|safe }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </div>
@@ -289,11 +311,67 @@
         }
     } );
 
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
+    });
+
     if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
         tinyMCE.init({
-            selector: '#id_content',
+            selector: '#id_header',    
+            readonly: 1,
             width: '100%',
+            height: 100,
+            content_style: "body { font-size: 10pt; overflowY: hidden; }", // Add overflow: hidden to disable scroll
+            menubar: false,
             statusbar: false,
+            toolbar: false,
+            autoresize_min_height: 150,
+            autoresize_max_height: 200,
+            autoresize_bottom_margin: 0, // Keep this line to disable scroll
+        });
+    
+        if (opsStatus == 'view') {
+            tinyMCE.init({
+                selector: '#id_content',
+                width: '100%',
+                height: 400,
+                content_style: "body { font-size: 10pt; }",
+                menubar: false,
+                statusbar: false,
+                readonly: 1,
+                toolbar: false,
+            });
+        } else {
+            tinyMCE.init({
+                selector: '#id_content',
+                width: '100%',
+                height: 400,
+                content_style: "body { font-size: 10pt; }",
+                menubar: false,
+                statusbar: false,
+            });
+        }
+    
+        tinyMCE.init({
+            selector: '#id_disclaimer',    
+            readonly: 1,
+            width: '100%',
+            height: 100,
+            content_style: "body { font-size: 10pt; }",
+            menubar: false,
+            statusbar: false,
+            toolbar: false,        
         });
     }
 </script>

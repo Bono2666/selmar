@@ -4,13 +4,15 @@
 
 {% block content %}
 
+{% load user_agents %}
+
 <!-- Page content -->
 <div class="container-fluid py-0">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4 p-4">
+            <div class="card {% if request|is_mobile %}mb-6{% else %}mb-4{% endif %} p-4">
                 <div class="row mb-4">
-                    <div class="col-6 d-flex align-items-center">
+                    <div class="col-12 d-flex align-items-center">
                         <h4 class="mb-2">Program Approval List</h4>
                     </div>
                 </div>
@@ -55,7 +57,13 @@
 
 <script>
     $(document).ready( function () {
-      $('#myTable').DataTable();
+        if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            $('#myTable').DataTable({
+                "lengthChange": false,
+            });
+        } else {
+            $('#myTable').DataTable();
+        }
       
     let btn = document.getElementsByClassName('paginate_button');
     for (var button of btn) {
@@ -65,6 +73,21 @@
 
     $(document).on('click', 'tbody tr', function() {
         window.location = $(this).data('href');
+    });
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
     });
 </script>
 

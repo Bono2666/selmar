@@ -17,13 +17,13 @@
         <div class="col-xl-12 order-xl-1">
             <form action="" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card mb-6">
+                <div class="card mb-6 z-index-0">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-6 d-flex align-items-center">
+                            <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                                 <h5 class="mb-2">Program No. {{ data.program_id }}</h5>
                             </div>
-                            <div class="col-6 text-end">
+                            <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                                 {% if request|is_mobile %}
                                 <div class="dropdown float-lg-end pe-2">
                                     <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
@@ -33,7 +33,7 @@
                                         <li><a class="dropdown-item border-radius-md" href="{% if crud == 'view' %}{% if tab == 'close' or tab == 'reject' %}{% url 'program-archive-index' %}{% else %}{% url 'program-index' tab %}{% endif %}{% else %}{% url 'program-view' tab data.program_id %}{% endif %}">{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a></li>
                                         <li><a class="dropdown-item border-radius-md" href="{% url 'program-update' tab data.program_id %}" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.edit and not request.user.is_superuser %}hidden{% endif %}{% endif %} {% if crud == 'update' %}hidden{% endif %}>Edit</a></li>
                                         <li><button type="submit" class="dropdown-item border-radius-md text-body" {% if crud == 'view' %}hidden{% endif %}>Save</button></li>
-                                        <li><a class="dropdown-item border-radius-md" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.program_id }}">Delete</a></li>
+                                        <li><a class="dropdown-item border-radius-md text-danger" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.program_id }}">Delete</a></li>
                                         <li><a class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#approval">Status</a></li>
                                         <li><a class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} {% if not btn.submit %}hidden{% endif %} {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit">Submit</a></li>
                                         <li><a href="{% url 'program-print' data.program_id %}" class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} {% if data.status != 'OPEN' %}hidden{% endif %} {% if data.status == 'DRAFT' %}hidden{% endif %} target="_blank">Print</a></li>
@@ -152,6 +152,11 @@
                                 {{ message }}
                             </div>
                             {% endif %}
+                            <!-- {% if msg %}
+                            <div class="alert text-danger text-bg-light mt-2" role="alert">
+                                {{ msg }}
+                            </div>
+                            {% endif %} -->
                             <div class="row">
                                 {{ form.area }}
                                 <div class="col-md-3">
@@ -164,42 +169,67 @@
                                     </div>
                                 </div>
                             </div>
-                            {{ form.media }}
-                            {% if crud == 'view' %}
-                            <div class="row mt-3">
-                                <div class="col-md-11">
-                                    <div class="shadow-none border p-4">   
+                            <!-- {{ form.media }} -->
+                            {% if request|is_mobile %}
+                            <div class="row mt-3 {% if crud == 'update' %}d-none{% endif %}">
+                                <div class="col-md-12">
+                                    <div class="shadow-none border text-sm">
                                         {{ data.header|safe }}
-                                        {{ data.content|safe }}
-                                        {{ data.disclaimer|safe }}
                                     </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <div class="shadow-none">
+                                        {{ form.content }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3 {% if crud == 'update' %}d-none{% endif %}">
+                                <div class="col-md-12">
+                                    {{ form.disclaimer }}
                                 </div>
                             </div>
                             {% else %}
-                            <div class="row mt-3">
-                                <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
-                                    <div class="shadow-none border p-4">   
-                                        {{ data.header|safe }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-md-11">
-                                    <div class="shadow-none">   
-                                        {{ form.content }}
-                                        <div class="text-sm text-danger">
-                                            {{ form.content.errors }}
+                                {% if crud == 'view' %}
+                                <div class="row mt-3">
+                                    <div class="col-md-11">
+                                        <div class="shadow-none border p-4">   
+                                            {{ data.header|safe }}
+                                            {{ data.content|safe }}
+                                            {{ data.disclaimer|safe }}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
-                                    <div class="shadow-none border p-4">   
-                                        {{ data.disclaimer|safe }}
+                                {% else %}
+                                <div class="row mt-3">
+                                    <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
+                                        <div class="shadow-none border p-4">   
+                                            {{ data.header|safe }}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-11">
+                                        <div class="shadow-none">   
+                                            {{ form.content }}
+                                            <div class="text-sm text-danger">
+                                                {{ form.content.errors }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="{% if request|is_mobile %}col-md-12{% else %}col-md-8_5{% endif %}">
+                                        <div class="shadow-none border p-4">   
+                                            {{ data.disclaimer|safe }}
+                                        </div>
+                                        <div class="d-none">
+                                            {{ form.disclaimer }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </div>
@@ -221,6 +251,64 @@
             'cell-border': true,
         });
 
+        let btn = document.getElementsByClassName('paginate_button');
+        for (var button of btn) {
+            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+        }
+    } );
+
+    let opsStatus = '{{ crud }}';
+
+    if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        tinyMCE.init({
+            selector: '#id_header',    
+            readonly: 1,
+            width: '100%',
+            height: 100,
+            content_style: "body { font-size: 10pt; overflowY: hidden; }", // Add overflow: hidden to disable scroll
+            menubar: false,
+            statusbar: false,
+            toolbar: false,
+            autoresize_min_height: 150,
+            autoresize_max_height: 200,
+            autoresize_bottom_margin: 0, // Keep this line to disable scroll
+        });
+    
+        if (opsStatus == 'view') {
+            tinyMCE.init({
+                selector: '#id_content',
+                width: '100%',
+                height: 400,
+                content_style: "body { font-size: 10pt; }",
+                menubar: false,
+                statusbar: false,
+                readonly: 1,
+                toolbar: false,
+            });
+        } else {
+            tinyMCE.init({
+                selector: '#id_content',
+                width: '100%',
+                height: 400,
+                content_style: "body { font-size: 10pt; }",
+                menubar: false,
+                statusbar: false,
+            });
+        }
+    
+        tinyMCE.init({
+            selector: '#id_disclaimer',    
+            readonly: 1,
+            width: '100%',
+            height: 100,
+            content_style: "body { font-size: 10pt; }",
+            menubar: false,
+            statusbar: false,
+            toolbar: false,        
+        });
+    }
+
+    $(document).ready(function() {
         let btn_menu = document.getElementById('dropdownTable');
         let dropdown_menu = document.getElementsByClassName('dropdown-menu');
         
@@ -228,21 +316,23 @@
         btn_menu.addEventListener('click', function() {
             dropdown_menu[0].classList.toggle('show');
         });
-
-        let btn = document.getElementsByClassName('paginate_button');
-        for (var button of btn) {
-            button.classList.add('border-radius-top-start-circle', 'border-radius-bottom-end-circle', 'border-radius-top-end-circle', 'border-radius-bottom-start-circle');
+    });
+    
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
         }
-    } );
-
-    if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        tinyMCE.init({
-            selector: '#id_content',
-            width: '100%',
-            statusbar: false,
-        });
-    }
-
+    });
+    
     // tinyMCE.init({
     //     selector: '#id_content',
     //     setup: function(ed) {

@@ -17,13 +17,13 @@
         <div class="col-xl-12 order-xl-1">
             <form action="" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card">
+                <div class="card z-index-0">
                     <div class="card-header">
                         <div class="row">
-                            <div class="col-6 d-flex align-items-center">
+                            <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                                 <h5 class="mb-2">Proposal No. {{ data.proposal_id }}</h5>
                             </div>
-                            <div class="col-6 text-end">
+                            <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                                 {% if request|is_mobile %}
                                 <div class="dropdown float-lg-end pe-2">
                                     <a class="cursor-pointer text-body" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
@@ -33,7 +33,7 @@
                                         <li><a class="dropdown-item border-radius-md" href="{% if crud == 'view' %}{% if tab == 'closing' %}{% url 'proposal-closing-index' %}{% else %}{% if tab == 'close' or tab == 'reject' %}{% url 'proposal-archive-index' tab %}{% else %}{% url 'proposal-index' tab %}{% endif %}{% endif %}{% else %}{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}{% endif %}">{% if crud == 'view' %}Back{% else %}Cancel{% endif %}</a></li>
                                         <li><a class="dropdown-item border-radius-md" href="{% url 'proposal-update' tab data.proposal_id %}" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.edit and not request.user.is_superuser %}hidden{% endif %}{% endif %} {% if crud == 'update' %}hidden{% endif %}>Edit</a></li>
                                         <li><button type="submit" class="dropdown-item border-radius-md" {% if crud == 'view' %}hidden{% endif %}>Save</button></li>
-                                        <li><a class="dropdown-item border-radius-md" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}{% endif %} {% if tab == 'closing' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.proposal_id }}">Delete</a></li>
+                                        <li><a class="dropdown-item border-radius-md text-danger" {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}hidden{% else %}{% if not btn.delete and not request.user.is_superuser %}hidden{% else %}{% if crud == 'update' %}hidden{% endif %}{% endif %}{% endif %} {% if tab == 'closing' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-{{ data.proposal_id }}">Delete</a></li>
                                         <li><a class="dropdown-item border-radius-md" {% if status != 'OPEN' and not request.user.is_superuser %}hidden{% endif %} {% if crud == 'update' %}hidden{% endif %} {% if tab != 'closing' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-close">Close</a></li>
                                         <li><a class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#approval">Status</a></li>
                                         <li><a class="dropdown-item border-radius-md" {% if crud == 'update' %}hidden{% endif %} {% if total_cost <= 0 %}hidden{% endif %} {% if not btn.submit %}hidden{% endif %} {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit">Submit</a></li>
@@ -318,12 +318,12 @@
 <div class="container-fluid py-2">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-0 p-4">
+            <div class="card mb-0 p-4 z-index-0">
                 <div class="row mb-2">
-                    <div class="col-6 d-flex align-items-center">
+                    <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
                         <h5 class="mb-0">Attachment</h5>
                     </div>
-                    <div class="col-6 text-end">
+                    <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                         {% if request|is_mobile %}
                         <div class="dropdown float-lg-end pe-2 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}d-none{% else %}{% if not btn.edit and not request.user.is_superuser %}d-none{% endif %} {% if crud == 'update' %}d-none{% endif %}{% endif %}">
                             <a class="cursor-pointer text-body" id="dropdownAttach" data-bs-toggle="dropdown" aria-expanded="false">
@@ -434,7 +434,7 @@
 <div class="container-fluid pt-0 pb-2">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-0 p-4">
+            <div class="card mb-0 p-4 z-index-0">
                 <div class="row mb-3">
                     <div class="{% if request|is_mobile %}col-11{% else %}col-8{% endif %} d-flex align-items-center">
                         <h5 class="mb-0">Incremental Sales Projection</h5>
@@ -739,7 +739,7 @@
 <div class="container-fluid pt-0 pb-2">
     <div class="row">
         <div class="{% if request|is_mobile %}col-12{% else %}col-8{% endif %}">
-            <div class="card {% if not request|is_mobile %}mb-4{% endif %} p-4">
+            <div class="card {% if not request|is_mobile %}mb-4{% endif %} p-4 z-index-0">
                 <div class="row mb-2">
                     <div class="col-6 d-flex align-items-center">
                         <h5 class="mb-0">Projected Cost</h5>
@@ -1130,5 +1130,20 @@
             keyboard: false
         });
     }
+
+    $(document).ready(function() {
+        let modal = document.getElementsByClassName('modal');
+        
+        for (const item of modal) {
+            item.addEventListener('show.bs.modal', function() {
+                // remove z-index-0 from nearest card class
+                item.closest('.card').classList.remove('z-index-0');
+            });
+            item.addEventListener('hidden.bs.modal', function() {
+                // add z-index-0 from nearest card class
+                item.closest('.card').classList.add('z-index-0');
+            });
+        }
+    });
 </script>
 {% endblock javascripts %}
