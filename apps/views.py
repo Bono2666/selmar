@@ -5454,8 +5454,8 @@ def proposal_delete(request, _tab, _id):
 def proposal_closing_index(request):
     proposals = Proposal.objects.exclude(proposal_id__in=Program.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list(
         'proposal_id', flat=True)).exclude(proposal_id__in=Claim.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list('proposal_id', flat=True)).exclude(proposal_id__in=Claim.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list(
-            'additional_proposal', flat=True)).filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                                      status='OPEN', period_end__lt=datetime.datetime.now().date()).order_by('-proposal_id').all()
+            'additional_proposal', flat=True)).filter(area__in=Budget.objects.filter(budget_status='OPEN', budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True)).values_list('budget_area', flat=True), budget__budget_distributor__in=Budget.objects.filter(budget_status='OPEN').values_list('budget_distributor', flat=True),
+                                                      status='OPEN').order_by('-proposal_id').all()
 
     context = {
         'data': proposals,
@@ -5987,11 +5987,12 @@ def program_release_update(request, _id):
     else:
         form = FormProgramUpdate(instance=program)
 
-    # msg = form.errors
+    err = form.errors
     context = {
         'form': form,
         'data': program,
         'message': message,
+        'msg': err,
         'budget_notif': budget_notification(request),
         'proposal_notif': proposal_notification(request),
         'program_notif': program_notification(request),
@@ -10458,7 +10459,7 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
             # Spending = Budget Amount + Upping - Proposal <- Rumus Spending
             cursor.execute(
                 """
-                SELECT budget_area_id, budget_id, distributor_name, region_name, (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)) as balance,
+                SELECT budget_area_id, apps_budget.budget_id, distributor_name, region_name, (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)) as balance,
                 DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
                 FROM apps_budget
                 LEFT JOIN (SELECT SUM(budget_proposed) as proposed_amount, SUM(budget_remaining) as remaining_amount, budget_id FROM apps_budgetdetail GROUP BY budget_id) as detail ON apps_budget.budget_id = detail.budget_id 
