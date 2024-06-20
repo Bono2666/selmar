@@ -4850,7 +4850,7 @@ def proposal_add(request, _area, _budget, _channel):
     name = AreaSales.objects.get(
         area_id=selected_area) if selected_area != '0' else None
     divs = Division.objects.all()
-    budgets = Budget.objects.filter(budget_balance__gt=0, budget_status='OPEN',
+    budgets = Budget.objects.filter(budget_balance__gt=0, budget_status__in=['OPEN', 'DRAFT'],
                                     budget_area=selected_area) if selected_area != '0' else None
     budget_detail = BudgetDetail.objects.filter(
         budget_id=selected_budget) if selected_budget != '0' else None
