@@ -644,10 +644,10 @@
                                         <h6 class="mb-0 text-xs text-end">{{ item.incrp_nom|floatformat:0|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-xs text-end">{{ item.incpst_carton }}%</h6>
+                                        <h6 class="mb-0 text-xs text-end">{{ item.incpst_carton|intcomma }}%</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-xs text-end">{{ item.incpst_nom }}%</h6>
+                                        <h6 class="mb-0 text-xs text-end">{{ item.incpst_nom|intcomma }}%</h6>
                                     </td>
                                     <td>
                                         <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit or request.user.is_superuser %}data-bs-target="#delete-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if status != 'DRAFT' and status != 'PENDING' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>

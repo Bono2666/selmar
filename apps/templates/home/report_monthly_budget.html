@@ -107,10 +107,10 @@
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">100%</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_amount|intcomma }}</td>
-                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_upping|intcomma }}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' %}0{% else %}{{ budget.budget_upping|intcomma }}{% endif %}</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">0</td>
-                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_total|intcomma }}</td>
-                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.proposed|intcomma }}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' %}{{ budget.budget_amount|intcomma }}{% else %}{{ budget.budget_total|intcomma }}{% endif %}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' %}{{ budget.draft_proposed|intcomma }}{% else %}{{ budget.proposed|intcomma }}{% endif %}</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.remaining|intcomma }}</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_balance|intcomma }}</td>
                                     </tr>

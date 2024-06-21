@@ -1513,6 +1513,22 @@ def budget_archive_index(request):
 def budget_update(request, _tab, _id):
     budgets = Budget.objects.get(budget_id=_id)
     budget_detail = BudgetDetail.objects.filter(budget_id=_id)
+    total_beginning = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_amount'))['total']
+    total_upping = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_upping'))['total']
+    total_total = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_total'))['total']
+    total_transfer_minus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_transfer_minus'))['total']
+    total_transfer_plus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_transfer_plus'))['total']
+    total_proposed = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_proposed'))['total']
+    total_remaining = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_remaining'))['total']
+    total_balance = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_balance'))['total']
 
     if request.POST:
         form = FormNewBudgetUpdate(
@@ -1521,8 +1537,9 @@ def budget_update(request, _tab, _id):
             update = form.save(commit=False)
             update.budget_year = budgets.budget_year
             update.budget_month = budgets.budget_month
-            update.budget_balance = int(request.POST.get('budget_amount')) + \
-                int(request.POST.get('budget_upping'))
+            if budget_detail.aggregate(total=Sum('budget_percent'))['total'] == 100:
+                update.budget_balance = int(request.POST.get('budget_amount')) + \
+                    int(request.POST.get('budget_upping'))
             update.save()
             for i in budget_detail:
                 i.budget_amount = (i.budget_percent/100) * \
@@ -1566,6 +1583,15 @@ def budget_update(request, _tab, _id):
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
+        'total_beginning': total_beginning,
+        'total_upping': total_upping,
+        'total_total': total_total,
+        'total_balance': total_balance,
+        'total_transfer_minus': total_transfer_minus,
+        'total_transfer_plus': total_transfer_plus,
+        'total_proposed': total_proposed,
+        'total_remaining': total_remaining,
+        'total_balance': total_balance,
         'new': budgets.budget_new,
         'tab': _tab,
         'budget_notif': budget_notification(request),
@@ -4850,8 +4876,8 @@ def proposal_add(request, _area, _budget, _channel):
     name = AreaSales.objects.get(
         area_id=selected_area) if selected_area != '0' else None
     divs = Division.objects.all()
-    budgets = Budget.objects.filter(budget_balance__gt=0, budget_status__in=['OPEN', 'DRAFT'],
-                                    budget_area=selected_area) if selected_area != '0' else None
+    budgets = Budget.objects.filter(budget_balance__gt=0, budget_status__in=['OPEN', 'DRAFT'], budget_area=selected_area).exclude(
+        budget_status='DRAFT', budget_new=True) if selected_area != '0' else None
     budget_detail = BudgetDetail.objects.filter(
         budget_id=selected_budget) if selected_budget != '0' else None
     distributor = Budget.objects.get(
@@ -10043,21 +10069,23 @@ def report_proposal_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
 @role_required(allowed_roles='REPORT')
 def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     years = [str(year) for year in Budget.objects.filter(budget_status__in=[
-        'OPEN', 'CLOSED']).values_list('budget_year', flat=True).distinct()]
+        'OPEN', 'CLOSED', 'DRAFT']).exclude(budget_status='DRAFT', budget_new=True).values_list('budget_year', flat=True).distinct()]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
     if _distributor == 'all':
-        max_name = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
-            max_length=Max(Length('budget_distributor__distributor_name')))
+        max_name = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED', 'DRAFT'], budget_year=_from_yr, budget_month='{:02d}'.format(
+            int(_from_mo))).exclude(budget_status='DRAFT', budget_new=True).aggregate(max_length=Max(Length('budget_distributor__distributor_name')))
         max_len = max_name.get('max_length') if max_name.get(
             'max_length') else 0
         scrollX = True if max_len > 25 else False
 
-        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED', 'DRAFT'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).exclude(budget_status='DRAFT', budget_new=True).annotate(
             proposed=F('budget_total') +
             Sum('budgetdetail__budget_remaining') - F('budget_balance'),
+            draft_proposed=F(
+                'budget_amount') + Sum('budgetdetail__budget_remaining') - F('budget_balance'),
             remaining=Sum('budgetdetail__budget_remaining'),
         ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
             transfer=F('budget_transfer_plus') -
@@ -10066,8 +10094,8 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
             F('budget_transfer_minus') + F('budget_total'),
         ), to_attr='details'))
 
-        total = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
+        total = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED', 'DRAFT'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).exclude(budget_status='DRAFT', budget_new=True).aggregate(
             begin_bal=Sum('budgetdetail__budget_amount'),
             upping=Sum('budgetdetail__budget_upping'),
             begin_mo=Sum('budgetdetail__budget_total'),
@@ -10076,16 +10104,18 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
             remaining=Sum('budgetdetail__budget_remaining'),
             balance=Sum('budgetdetail__budget_balance'))
     else:
-        max_name = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo)), budget_distributor=_distributor).aggregate(
+        max_name = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED', 'DRAFT'], budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo)), budget_distributor=_distributor).exclude(budget_status='DRAFT', budget_new=True).aggregate(
             max_length=Max(Length('budget_distributor__distributor_name')))
         max_len = max_name.get('max_length') if max_name.get(
             'max_length') else 0
         scrollX = True if max_len > 25 else False
 
-        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED', 'DRAFT'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).exclude(budget_status='DRAFT', budget_new=True).annotate(
             proposed=F('budget_total') +
             Sum('budgetdetail__budget_remaining') - F('budget_balance'),
+            draft_proposed=F(
+                'budget_amount') + Sum('budgetdetail__budget_remaining') - F('budget_balance'),
             remaining=Sum('budgetdetail__budget_remaining'),
         ).prefetch_related(Prefetch('budgetdetail_set', BudgetDetail.objects.all().annotate(
             transfer=F('budget_transfer_plus') -
@@ -10094,8 +10124,8 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
             F('budget_transfer_minus') + F('budget_total'),
         ), to_attr='details'))
 
-        total = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
+        total = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED', 'DRAFT'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                      budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).exclude(budget_status='DRAFT', budget_new=True).aggregate(
             begin_bal=Sum('budgetdetail__budget_amount'),
             upping=Sum('budgetdetail__budget_upping'),
             begin_mo=Sum('budgetdetail__budget_total'),
@@ -10134,8 +10164,8 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
 @role_required(allowed_roles='REPORT')
 def report_monthly_budget_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     if _distributor == 'all':
-        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+        budgets = Budget.objects.filter(budget_status__in=['OPEN', 'CLOSED', 'DRAFT'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).exclude(budget_status='DRAFT', budget_new=True).annotate(
             proposed=F('budget_total') +
             Sum('budgetdetail__budget_remaining') - F('budget_balance'),
             remaining=Sum('budgetdetail__budget_remaining'),
@@ -10146,8 +10176,8 @@ def report_monthly_budget_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
             F('budget_transfer_minus') + F('budget_total'),
         ), to_attr='details'))
     else:
-        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).annotate(
+        budgets = Budget.objects.filter(budget_distributor=_distributor, budget_status__in=['OPEN', 'CLOSED', 'DRAFT'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+                                        budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).exclude(budget_status='DRAFT', budget_new=True).annotate(
             proposed=F('budget_total') +
             Sum('budgetdetail__budget_remaining') - F('budget_balance'),
             remaining=Sum('budgetdetail__budget_remaining'),
@@ -10367,7 +10397,7 @@ def report_monthly_budget_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 @role_required(allowed_roles='REPORT')
 def report_budget_summary(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     years = [str(year) for year in Budget.objects.filter(budget_status__in=[
-        'OPEN', 'CLOSED']).values_list('budget_year', flat=True).distinct()]
+        'OPEN', 'CLOSED', 'DRAFT']).exclude(budget_status='DRAFT', budget_new=True).values_list('budget_year', flat=True).distinct()]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
@@ -10431,7 +10461,7 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id 
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
-                WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+                WHERE budget_status IN ('OPEN', 'CLOSED', 'DRAFT') AND NOT (budget_status = 'DRAFT' AND budget_new = True) AND budget_area_id IN (
                     SELECT area_id FROM apps_areauser WHERE user_id = %s
                 ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s
                 """, [request.user.user_id, from_date, to_date]
@@ -10466,7 +10496,7 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
-                WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+                WHERE budget_status IN ('OPEN', 'CLOSED', 'DRAFT') AND NOT (budget_status = 'DRAFT' AND budget_new = True) AND budget_area_id IN (
                     SELECT area_id FROM apps_areauser WHERE user_id = %s
                 ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s AND budget_distributor_id = %s
                 """, [request.user.user_id, from_date, to_date, _distributor]
@@ -10605,7 +10635,7 @@ def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 @role_required(allowed_roles='REPORT')
 def report_budget_detail(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     years = [str(year) for year in Budget.objects.filter(budget_status__in=[
-        'OPEN', 'CLOSED']).values_list('budget_year', flat=True).distinct()]
+        'OPEN', 'CLOSED', 'DRAFT']).exclude(budget_status='DRAFT', budget_new=True).values_list('budget_year', flat=True).distinct()]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
@@ -10669,7 +10699,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
-                WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+                WHERE budget_status IN ('OPEN', 'CLOSED', 'DRAFT') AND NOT (budget_status = 'DRAFT' AND budget_new = True) AND budget_area_id IN (
                     SELECT area_id FROM apps_areauser WHERE user_id = %s
                 ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s
                 """, [request.user.user_id, from_date, to_date]
@@ -10704,7 +10734,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
                 INNER JOIN apps_distributor ON budget_distributor_id = distributor_id
                 INNER JOIN apps_regiondetail ON budget_area_id = area_id
                 INNER JOIN apps_region ON apps_region.region_id = apps_regiondetail.region_id
-                WHERE budget_status IN ('OPEN', 'CLOSED') AND budget_area_id IN (
+                WHERE budget_status IN ('OPEN', 'CLOSED', 'DRAFT') AND NOT (budget_status = 'DRAFT' AND budget_new = True) AND budget_area_id IN (
                     SELECT area_id FROM apps_areauser WHERE user_id = %s
                 ) AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) >= %s AND DATE(CONCAT(budget_year, '-', budget_month, '-01')) < %s AND budget_distributor_id = %s
                 """, [request.user.user_id, from_date, to_date, _distributor]
