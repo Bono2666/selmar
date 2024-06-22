@@ -1537,15 +1537,18 @@ def budget_update(request, _tab, _id):
             update = form.save(commit=False)
             update.budget_year = budgets.budget_year
             update.budget_month = budgets.budget_month
-            update.budget_balance = int(request.POST.get('budget_amount')) + \
-                int(request.POST.get('budget_upping'))
             update.save()
+
             for i in budget_detail:
                 i.budget_amount = (i.budget_percent/100) * \
                     budgets.budget_amount if budgets.budget_new else i.budget_amount
                 i.budget_upping = (i.budget_percent/100) * \
                     budgets.budget_upping
                 i.save()
+
+            update.budget_balance = BudgetDetail.objects.filter(
+                budget_id=_id).aggregate(Sum('budget_balance'))['budget_balance__sum']
+            update.save()
 
             if budgets.budget_status == 'DRAFT':
                 email = User.objects.filter(
@@ -2701,6 +2704,8 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
     proposal = Proposal.objects.get(proposal_id=_id)
     budget = BudgetDetail.objects.get(
         budget=proposal.budget, budget_channel=proposal.channel)
+    available = budget.budget_amount + budget.budget_transfer_plus - \
+        budget.budget_transfer_minus - budget.budget_proposed + budget.budget_remaining
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
     refs = Proposal.objects.filter(status='OPEN', area=proposal.area, budget__budget_distributor_id=proposal.budget.budget_distributor_id,
@@ -2731,6 +2736,7 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
 
     context = {
         'form': form,
+        'available': available,
         'divs': divs,
         'refs': refs,
         'formAttachment': form_attachment,
@@ -2777,6 +2783,22 @@ def budget_release_update(request, _id):
     amount_before = budgets.budget_amount
     upping_before = budgets.budget_upping
     notes_before = budgets.budget_notes
+    total_beginning = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_amount'))['total']
+    total_upping = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_upping'))['total']
+    total_total = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_total'))['total']
+    total_transfer_minus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_transfer_minus'))['total']
+    total_transfer_plus = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_transfer_plus'))['total']
+    total_proposed = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_proposed'))['total']
+    total_remaining = BudgetDetail.objects.filter(budget_id=_id).aggregate(
+        total=Sum('budget_remaining'))['total']
+    total_balance = BudgetDetail.objects.filter(
+        budget_id=_id).aggregate(total=Sum('budget_balance'))['total']
 
     if request.POST:
         form = FormNewBudgetUpdate(
@@ -2785,15 +2807,18 @@ def budget_release_update(request, _id):
             update = form.save(commit=False)
             update.budget_year = budgets.budget_year
             update.budget_month = budgets.budget_month
-            update.budget_balance = int(request.POST.get('budget_amount')) + \
-                int(request.POST.get('budget_upping'))
             update.save()
+
             for i in budget_detail:
                 i.budget_amount = (i.budget_percent/100) * \
                     budgets.budget_amount if budgets.budget_new else i.budget_amount
                 i.budget_upping = (i.budget_percent/100) * \
                     budgets.budget_upping
                 i.save()
+
+            update.budget_balance = BudgetDetail.objects.filter(
+                budget_id=_id).aggregate(Sum('budget_balance'))['budget_balance__sum']
+            update.save()
 
             recipients = []
 
@@ -2867,6 +2892,14 @@ def budget_release_update(request, _id):
     context = {
         'form': form,
         'data': budgets,
+        'total_beginning': total_beginning,
+        'total_upping': total_upping,
+        'total_total': total_total,
+        'total_balance': total_balance,
+        'total_transfer_minus': total_transfer_minus,
+        'total_transfer_plus': total_transfer_plus,
+        'total_proposed': total_proposed,
+        'total_remaining': total_remaining,
         'year': YEAR_CHOICES,
         'month': MONTH_CHOICES,
         'budget_detail': budget_detail,
@@ -3269,6 +3302,9 @@ def proposal_release_cost_add(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     budget_detail = BudgetDetail.objects.get(
         budget=proposal.budget, budget_channel=proposal.channel)
+    available = budget_detail.budget_amount + budget_detail.budget_transfer_plus - \
+        budget_detail.budget_transfer_minus - \
+        budget_detail.budget_proposed + budget_detail.budget_remaining
     message = '0'
     if form.is_valid():
         try:
@@ -3278,7 +3314,8 @@ def proposal_release_cost_add(request, _id):
                 message = 'Activity already exist'
         except ProjectedCost.DoesNotExist:
             cost = form.save(commit=False)
-            if cost.cost > budget_detail.budget_balance:
+            balance = available if budget_detail.budget.budget_status == 'DRAFT' or budget_detail.budget.budget_status == 'IN APPROVAL' else budget_detail.budget_balance
+            if cost.cost > balance:
                 message = 'Total cost must be less than or equal to budget balance'
             else:
                 cost.proposal_id = _id
@@ -3342,12 +3379,16 @@ def proposal_release_cost_update(request, _id, _activities):
     proposal = Proposal.objects.get(proposal_id=_id)
     budget_detail = BudgetDetail.objects.get(
         budget=proposal.budget, budget_channel=proposal.channel)
+    available = budget_detail.budget_amount + budget_detail.budget_transfer_plus - \
+        budget_detail.budget_transfer_minus - \
+        budget_detail.budget_proposed + budget_detail.budget_remaining
     update = ProjectedCost.objects.get(
         proposal_id=_id, id=_activities)
     message = '0'
     if request.POST:
         cost = update.cost
-        if int(request.POST.get('cost')) > budget_detail.budget_balance + cost:
+        balance = available if budget_detail.budget.budget_status == 'DRAFT' or budget_detail.budget.budget_status == 'IN APPROVAL' else budget_detail.budget_balance
+        if int(request.POST.get('cost')) > balance + cost:
             message = 'Total cost must be less than or equal to budget balance'
         else:
             update.activities = request.POST.get('activities')
@@ -5493,7 +5534,7 @@ def proposal_delete(request, _tab, _id):
 def proposal_closing_index(request):
     proposals = Proposal.objects.exclude(proposal_id__in=Program.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list(
         'proposal_id', flat=True)).exclude(proposal_id__in=Claim.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list('proposal_id', flat=True)).exclude(proposal_id__in=Claim.objects.filter(status__in=['DRAFT', 'IN APPROVAL']).values_list(
-            'additional_proposal', flat=True)).filter(area__in=Budget.objects.filter(budget_status='OPEN', budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True)).values_list('budget_area', flat=True), budget__budget_distributor__in=Budget.objects.filter(budget_status='OPEN').values_list('budget_distributor', flat=True),
+            'additional_proposal', flat=True)).filter(area__in=Budget.objects.filter(budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL'], budget_area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True)).values_list('budget_area', flat=True), budget__budget_distributor__in=Budget.objects.filter(budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL']).values_list('budget_distributor', flat=True),
                                                       status='OPEN').order_by('-proposal_id').all()
 
     context = {
@@ -5521,15 +5562,15 @@ def proposal_bulk_close(request):
     for _id in _ids:
         proposal = Proposal.objects.get(proposal_id=_id)
         budget = Budget.objects.get(
-            budget_area=proposal.area, budget_distributor=proposal.budget.budget_distributor, budget_status='OPEN')
+            budget_area=proposal.area, budget_distributor=proposal.budget.budget_distributor, budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL'])
         budget_detail = BudgetDetail.objects.get(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor,
-                                                 budget_channel=proposal.channel, budget__budget_status='OPEN')
+                                                 budget_channel=proposal.channel, budget__budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL'])
 
         budget_detail.budget_remaining += proposal.balance
         budget_detail.save()
 
-        sum_balance = BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status='OPEN').aggregate(Sum('budget_balance'))[
-            'budget_balance__sum'] if BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status='OPEN').exists() else 0
+        sum_balance = BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL']).aggregate(Sum('budget_balance'))[
+            'budget_balance__sum'] if BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL']).exists() else 0
         budget.budget_balance = sum_balance
         budget.save()
 
@@ -5544,15 +5585,15 @@ def proposal_bulk_close(request):
 def proposal_single_close(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     budget = Budget.objects.get(
-        budget_area=proposal.area, budget_distributor=proposal.budget.budget_distributor, budget_status='OPEN')
+        budget_area=proposal.area, budget_distributor=proposal.budget.budget_distributor, budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL'])
     budget_detail = BudgetDetail.objects.get(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor,
-                                             budget_channel=proposal.channel, budget__budget_status='OPEN')
+                                             budget_channel=proposal.channel, budget__budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL'])
 
     budget_detail.budget_remaining += proposal.balance
     budget_detail.save()
 
-    sum_balance = BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status='OPEN').aggregate(Sum('budget_balance'))[
-        'budget_balance__sum'] if BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status='OPEN').exists() else 0
+    sum_balance = BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL']).aggregate(Sum('budget_balance'))[
+        'budget_balance__sum'] if BudgetDetail.objects.filter(budget__budget_area=proposal.area, budget__budget_distributor=proposal.budget.budget_distributor, budget__budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL']).exists() else 0
     budget.budget_balance = sum_balance
     budget.save()
 
