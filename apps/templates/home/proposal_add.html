@@ -280,7 +280,7 @@
                                         <h6 class="mb-0 text-sm text-end">{{ item.budget_percent }}%</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.budget_balance|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.status == 'DRAFT' or item.status == 'IN APPROVAL' %}{{ item.draft_balance|intcomma }}{% else %}{{ item.budget_balance|intcomma }}{% endif %}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}

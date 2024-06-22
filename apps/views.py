@@ -4875,10 +4875,13 @@ def proposal_add(request, _area, _budget, _channel):
     name = AreaSales.objects.get(
         area_id=selected_area) if selected_area != '0' else None
     divs = Division.objects.all()
-    budgets = Budget.objects.filter(budget_balance__gt=0, budget_status__in=['OPEN', 'DRAFT'], budget_area=selected_area).exclude(
+    budgets = Budget.objects.filter(budget_balance__gt=0, budget_status__in=['OPEN', 'DRAFT', 'IN APPROVAL'], budget_area=selected_area).exclude(
         budget_status='DRAFT', budget_new=True) if selected_area != '0' else None
-    budget_detail = BudgetDetail.objects.filter(
-        budget_id=selected_budget) if selected_budget != '0' else None
+    budget_detail = BudgetDetail.objects.filter(budget_id=selected_budget).annotate(
+        draft_balance=F('budget_amount') + F('budget_transfer_plus') -
+        F('budget_transfer_minus') -
+        F('budget_proposed') + F('budget_remaining'),
+        status=F('budget__budget_status')) if selected_budget != '0' else None
     distributor = Budget.objects.get(
         budget_id=selected_budget).budget_distributor_id if selected_budget != '0' else None
     refs = Proposal.objects.filter(status='OPEN', area=selected_area, budget__budget_distributor_id=distributor,
@@ -4986,6 +4989,8 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
     proposal = Proposal.objects.get(proposal_id=_id)
     budget = BudgetDetail.objects.get(
         budget=proposal.budget, budget_channel=proposal.channel)
+    available = budget.budget_amount + budget.budget_transfer_plus - \
+        budget.budget_transfer_minus - budget.budget_proposed + budget.budget_remaining
     form = FormProposalView(instance=proposal)
     divs = Division.objects.all()
     refs = Proposal.objects.filter(status='OPEN', area=proposal.area, budget__budget_distributor_id=budget.budget.budget_distributor_id,
@@ -5035,6 +5040,7 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
     context = {
         'data': proposal,
         'budget': budget,
+        'available': available,
         'form': form,
         'divs': divs,
         'refs': refs,
@@ -5141,6 +5147,9 @@ def proposal_cost_add(request, _tab, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     budget_detail = BudgetDetail.objects.get(
         budget=proposal.budget, budget_channel=proposal.channel)
+    available = budget_detail.budget_amount + budget_detail.budget_transfer_plus - \
+        budget_detail.budget_transfer_minus - \
+        budget_detail.budget_proposed + budget_detail.budget_remaining
     message = '0'
     if form.is_valid():
         try:
@@ -5150,7 +5159,8 @@ def proposal_cost_add(request, _tab, _id):
                 message = 'Activity already exist'
         except ProjectedCost.DoesNotExist:
             cost = form.save(commit=False)
-            if cost.cost > budget_detail.budget_balance:
+            balance = available if budget_detail.budget.budget_status == 'DRAFT' or budget_detail.budget.budget_status == 'IN APPROVAL' else budget_detail.budget_balance
+            if cost.cost > balance:
                 message = 'Total cost must be less than or equal to budget balance'
             else:
                 cost.proposal_id = _id
@@ -5345,12 +5355,16 @@ def proposal_cost_update(request, _tab, _id, _activities):
     proposal = Proposal.objects.get(proposal_id=_id)
     budget_detail = BudgetDetail.objects.get(
         budget=proposal.budget, budget_channel=proposal.channel)
+    available = budget_detail.budget_amount + budget_detail.budget_transfer_plus - \
+        budget_detail.budget_transfer_minus - \
+        budget_detail.budget_proposed + budget_detail.budget_remaining
     update = ProjectedCost.objects.get(
         proposal_id=_id, id=_activities)
     message = '0'
     if request.POST:
         cost = update.cost
-        if int(request.POST.get('cost')) > budget_detail.budget_balance + cost:
+        balance = available if budget_detail.budget.budget_status == 'DRAFT' or budget_detail.budget.budget_status == 'IN APPROVAL' else budget_detail.budget_balance
+        if int(request.POST.get('cost')) > balance + cost:
             message = 'Total cost must be less than or equal to budget balance'
         else:
             update.activities = request.POST.get('activities')

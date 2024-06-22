@@ -785,7 +785,7 @@
 <div class="container-fluid pt-0 pb-2">
     <div class="row">
         <div class="{% if request|is_mobile %}col-12{% else %}col-8{% endif %}">
-            <div class="card {% if not request|is_mobile %}mb-4{% endif %} p-4 z-index-0">
+            <div class="card {% if not request|is_mobile %}mb-4{% endif %} p-4 z-index-0" id="projected-cost">
                 <div class="row mb-2">
                     <div class="col-6 d-flex align-items-center">
                         <h5 class="mb-0">Projected Cost</h5>
@@ -803,55 +803,6 @@
                         {% else %}
                         <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.edit and not request.user.is_superuser %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#addCost" {% if not add_cost %}disabled{% endif %} {% if not incremental %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Cost</button>
                         {% endif %}
-                    </div>
-                </div>
-                <div class="modal fade" id="addCost" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
-                    <div class="modal-dialog modal-dialog-centered" role="document">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="ModalLabel">Projected Cost - Add Item</h5>
-                            </div>
-                            <form method="post" action="{% url 'proposal-cost-add' tab data.proposal_id %}" enctype="multipart/form-data">
-                                {% csrf_token %}
-                                <div class="modal-body border-bottom-0">
-                                    <div class="pl-lg-0">
-                                        {% if message != '0' %}
-                                        <div class="alert text-danger text-bg-light" role="alert">
-                                            {{ message|to_space }}
-                                        </div>
-                                        {% endif %}
-                                        <h6>Available balance: {{ budget.budget_balance|intcomma }}</h6>
-                                        <div class="row">
-                                            <div class="col-md-12">
-                                                <div class="shadow-none">
-                                                    {{ formCost.activities.label_tag }}
-                                                    {{ formCost.activities }}
-                                                    <div class="text-sm text-danger">
-                                                        {{ formCost.activities.errors }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-12">
-                                                <div class="shadow-none">
-                                                    {{ formCost.cost.label_tag }}
-                                                    {{ formCost.cost }}
-                                                    <div class="text-sm text-danger">
-                                                        {{ formCost.cost.errors }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-0">
-                                    <a href="{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
-                                    <button type="submit"
-                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Ok</button>
-                                </div>
-                            </form>
-                        </div>
                     </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-1">
@@ -901,7 +852,7 @@
                                         </div>
                                     </div>
                                 </tr>
-                                <div class="modal modal-sm fade" id="upd-cost-{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
+                                <div class="modal modal-md fade" id="upd-cost-{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
                                     <div class="modal-dialog modal-dialog-centered" role="document">
                                         <div class="modal-content">
                                             <div class="modal-header">
@@ -916,7 +867,7 @@
                                                             {{ message|to_space }}
                                                         </div>
                                                         {% endif %}
-                                                        <h6>Available balance: {{ budget.budget_balance|add:item.cost|intcomma }}</h6>          
+                                                        <h6>Available balance: {% if budget.budget.budget_status == 'DRAFT' or budget.budget.budget_status == 'IN APPROVAL' %}{{ available|add:item.cost|intcomma }}{% else %}{{ budget.budget_balance|add:item.cost|intcomma }}{% endif %}</h6>          
                                                         <div class="row">
                                                             <div class="col-md-12">
                                                                 <div class="shadow-none">
@@ -1021,6 +972,57 @@
             </div>
         </div>
         {% endif %}
+    </div>
+</div>
+<div class="container-fluid">
+    <div class="modal fade" id="addCost" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalLabel">Projected Cost - Add Item</h5>
+                </div>
+                <form method="post" action="{% url 'proposal-cost-add' tab data.proposal_id %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="modal-body border-bottom-0">
+                        <div class="pl-lg-0">
+                            {% if message != '0' %}
+                            <div class="alert text-danger text-bg-light" role="alert">
+                                {{ message|to_space }}
+                            </div>
+                            {% endif %}
+                            <h6>Available balance: {% if budget.budget.budget_status == 'DRAFT' or budget.budget.budget_status == 'IN APPROVAL' %}{{ available|intcomma }}{% else %}{{ budget.budget_balance|intcomma }}{% endif %}</h6>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="shadow-none">
+                                        {{ formCost.activities.label_tag }}
+                                        {{ formCost.activities }}
+                                        <div class="text-sm text-danger">
+                                            {{ formCost.activities.errors }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="shadow-none">
+                                        {{ formCost.cost.label_tag }}
+                                        {{ formCost.cost }}
+                                        <div class="text-sm text-danger">
+                                            {{ formCost.cost.errors }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <a href="{% url 'proposal-view' tab data.proposal_id '0' '0' '0' %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
+                        <button type="submit"
+                            class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit and not request.user.is_superuser %}disabled{% endif %}">Ok</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% if request|is_mobile %}
@@ -1179,6 +1181,15 @@
 
     $(document).ready(function() {
         let modal = document.getElementsByClassName('modal');
+        let msg = '{{ message }}';
+
+        if (msg != '0') {
+            // remove all z-index-0 class from card class
+            let card = document.getElementsByClassName('card');
+            for (const item of card) {
+                item.classList.remove('z-index-0');
+            }
+        }
         
         for (const item of modal) {
             item.addEventListener('show.bs.modal', function() {

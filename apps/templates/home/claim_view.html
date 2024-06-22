@@ -322,6 +322,10 @@
 
     if (additionProposal == "1") {
         $('#additional_proposal').modal();
+        let card = document.getElementsByClassName('card');
+        for (const item of card) {
+            item.classList.remove('z-index-0');
+        }
     }
 
     $(document).ready( function () {

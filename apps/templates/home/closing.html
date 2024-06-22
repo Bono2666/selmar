@@ -98,6 +98,11 @@
             backdrop: 'static',
             keyboard: false
         });
+        
+        let card = document.getElementsByClassName('card');
+        for (const item of card) {
+            item.classList.remove('z-index-0');
+        }
     }
 
     $('document').ready(function () {
