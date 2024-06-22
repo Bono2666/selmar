@@ -80,13 +80,13 @@
                                             <h6 class="mb-0 text-sm text-end">{{ item.budget_amount|intcomma }}</h6>
                                         </td>
                                         <td>
-                                            <h6 class="mb-0 text-sm text-end">{{ item.budget_upping|intcomma }}</h6>
+                                            <h6 class="mb-0 text-sm text-end">{% if budget.budget_status == 'DRAFT' or budget.budget_status == 'IN APPROVAL' %}0{% else %}{{ item.budget_upping|intcomma }}{% endif %}</h6>
                                         </td>
                                         <td>
                                             <h6 class="mb-0 text-sm text-end">{{ item.transfer|intcomma }}</h6>
                                         </td>
                                         <td>
-                                            <h6 class="mb-0 text-sm text-end">{{ item.beginning_mo|intcomma }}</h6>
+                                            <h6 class="mb-0 text-sm text-end">{% if budget.budget_status == 'DRAFT' or budget.budget_status == 'IN APPROVAL' %}{{ item.draft_curr_bal|intcomma }}{% else %}{{ item.beginning_mo|intcomma }}{% endif %}</h6>
                                         </td>
                                         <td>
                                             <h6 class="mb-0 text-sm text-end">{{ item.budget_proposed|intcomma }}</h6>
@@ -95,7 +95,7 @@
                                             <h6 class="mb-0 text-sm text-end">{{ item.budget_remaining|intcomma }}</h6>
                                         </td>
                                         <td>
-                                            <h6 class="mb-0 text-sm text-end">{{ item.budget_balance|intcomma }}</h6>
+                                            <h6 class="mb-0 text-sm text-end">{% if budget.budget_status == 'DRAFT' or budget.budget_status == 'IN APPROVAL' %}{{ item.draft_balance|intcomma }}{% else %}{{ item.budget_balance|intcomma }}{% endif %}</h6>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -107,12 +107,12 @@
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">100%</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_amount|intcomma }}</td>
-                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' %}0{% else %}{{ budget.budget_upping|intcomma }}{% endif %}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' or budget.budget_status == 'IN APPROVAL' %}0{% else %}{{ budget.budget_upping|intcomma }}{% endif %}</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">0</td>
-                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' %}{{ budget.budget_amount|intcomma }}{% else %}{{ budget.budget_total|intcomma }}{% endif %}</td>
-                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' %}{{ budget.draft_proposed|intcomma }}{% else %}{{ budget.proposed|intcomma }}{% endif %}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' or budget.budget_status == 'IN APPROVAL' %}{{ budget.budget_amount|intcomma }}{% else %}{{ budget.budget_total|intcomma }}{% endif %}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' or budget.budget_status == 'IN APPROVAL' %}{{ budget.draft_proposed|intcomma }}{% else %}{{ budget.proposed|intcomma }}{% endif %}</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.remaining|intcomma }}</td>
-                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_balance|intcomma }}</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' or budget.budget_status == 'IN APPROVAL' %}{{ budget.draft_tot_bal|intcomma }}{% else %}{{ budget.budget_balance|intcomma }}{% endif %}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -126,12 +126,12 @@
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end"></td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.begin_bal|intcomma }}</td>
-                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.upping|intcomma }}</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ draft_total.upping|intcomma }}</td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">0</td>
-                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.begin_mo|intcomma }}</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ curr_bal|intcomma }}</td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.proposed|intcomma }}</td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.remaining|intcomma }}</td>
-                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.balance|intcomma }}</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total_bal|intcomma }}</td>
                                 </tr>
                             </tfoot>
                             {% endif %}
