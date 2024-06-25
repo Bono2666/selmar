@@ -39,6 +39,23 @@ from apps.notifications import *
 @login_required(login_url='/login/')
 def home(request):
     message = WelcomeMessage.objects.all().first()
+    # with connection.cursor() as cursor:
+    #     cursor.execute(
+    #         "SELECT budget_id, channel FROM apps_proposal GROUP BY budget_id")
+    #     proposals = cursor.fetchall()
+
+    # for proposal in proposals:
+    #     budget_detail = BudgetDetail.objects.get(
+    #         budget=proposal[0], budget_channel=proposal[1])
+    #     sum_cost = Proposal.objects.filter(budget=proposal[0], channel=proposal[1]).exclude(status__in=['REJECTED']).aggregate(Sum('total_cost'))[
+    #         'total_cost__sum'] if Proposal.objects.filter(budget=proposal[0], channel=proposal[1]).exclude(status__in=['REJECTED']).exists() else 0
+    #     budget_detail.budget_proposed = sum_cost
+    #     budget_detail.save()
+    #     sum_balance = BudgetDetail.objects.filter(budget=proposal[0]).aggregate(Sum('budget_balance'))[
+    #         'budget_balance__sum'] if BudgetDetail.objects.filter(budget=proposal[0]).exists() else 0
+    #     budget = Budget.objects.get(budget_id=proposal[0])
+    #     budget.budget_balance = sum_balance
+    #     budget.save()
 
     context = {
         'message': message,
@@ -3330,8 +3347,8 @@ def proposal_release_cost_add(request, _id):
                 proposal.balance = total_cost
                 proposal.status = 'PENDING'
                 proposal.save()
-                sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
-                    'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
+                sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).aggregate(Sum('total_cost'))[
+                    'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).exists() else 0
                 budget_detail.budget_proposed = sum_cost
                 budget_detail.save()
                 sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -3360,8 +3377,8 @@ def proposal_release_cost_delete(request, _id, _activities):
     proposal.total_cost = total_cost
     proposal.balance = total_cost
     proposal.save()
-    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
-        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
+    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).aggregate(Sum('total_cost'))[
+        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).exists() else 0
     budget_detail.budget_proposed = sum_cost
     budget_detail.save()
     sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -3403,8 +3420,8 @@ def proposal_release_cost_update(request, _id, _activities):
             proposal.total_cost = total_cost
             proposal.balance = total_cost
             proposal.save()
-            sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
-                'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
+            sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).aggregate(Sum('total_cost'))[
+                'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).exists() else 0
             budget_detail.budget_proposed = sum_cost
             budget_detail.save()
             sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -4245,8 +4262,8 @@ def proposal_release_reject(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
     proposal.status = 'REJECTED'
     proposal.save()
-    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
-        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
+    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).aggregate(Sum('total_cost'))[
+        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).exists() else 0
     budget_detail = BudgetDetail.objects.get(
         budget=proposal.budget, budget_channel=proposal.channel)
     budget_detail.budget_proposed = sum_cost
@@ -5216,8 +5233,8 @@ def proposal_cost_add(request, _tab, _id):
                 proposal.balance = total_cost
                 proposal.save()
 
-                sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
-                    'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
+                sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).aggregate(Sum('total_cost'))[
+                    'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).exists() else 0
                 budget_detail.budget_proposed = sum_cost
                 budget_detail.save()
                 sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -5299,8 +5316,8 @@ def proposal_cost_delete(request, _tab, _id, _activities):
     proposal.balance = total_cost
     proposal.save()
 
-    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
-        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
+    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).aggregate(Sum('total_cost'))[
+        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).exists() else 0
     budget_detail.budget_proposed = sum_cost
     budget_detail.save()
     sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -5421,8 +5438,8 @@ def proposal_cost_update(request, _tab, _id, _activities):
             proposal.balance = total_cost
             proposal.save()
 
-            sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
-                'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
+            sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).aggregate(Sum('total_cost'))[
+                'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).exists() else 0
             budget_detail.budget_proposed = sum_cost
             budget_detail.save()
             sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -5516,8 +5533,8 @@ def proposal_delete(request, _tab, _id):
     budget_detail = BudgetDetail.objects.get(
         budget=proposal.budget, budget_channel=proposal.channel)
     proposal.delete()
-    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).aggregate(Sum('total_cost'))[
-        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['CLOSED', 'REJECTED']).exists() else 0
+    sum_cost = Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).aggregate(Sum('total_cost'))[
+        'total_cost__sum'] if Proposal.objects.filter(budget=proposal.budget, channel=proposal.channel).exclude(status__in=['REJECTED']).exists() else 0
     budget_detail.budget_proposed = sum_cost
     budget_detail.save()
     sum_balance = BudgetDetail.objects.filter(budget=proposal.budget).aggregate(Sum('budget_balance'))[
@@ -9262,8 +9279,10 @@ def region_detail_delete(request, _id, _area):
 def report_transfer(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
     years = [str(year) for year in BudgetTransfer.objects.dates(
         'date', 'year').distinct().values_list('date__year', flat=True)]
     distributors = Distributor.objects.all()
@@ -9305,8 +9324,10 @@ def report_transfer(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 def report_transfer_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
     if _distributor == 'all':
         transfer = BudgetTransfer.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -9376,8 +9397,10 @@ def report_transfer_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
 def report_cl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
     years = [str(year) for year in CL.objects.dates(
         'cl_date', 'year').distinct().values_list('cl_date__year', flat=True)]
     distributors = Distributor.objects.all()
@@ -9419,8 +9442,10 @@ def report_cl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 def report_cl_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
     if _distributor == 'all':
         cl = CLDetail.objects.filter(cl_id__area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -9504,8 +9529,10 @@ def report_cl_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
     years = [str(year) for year in Claim.objects.dates(
         'claim_date', 'year').distinct().values_list('claim_date__year', flat=True)]
     distributors = Distributor.objects.all()
@@ -9565,8 +9592,10 @@ def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
     if _distributor == 'all':
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -9710,8 +9739,10 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
 def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
     years = [str(year) for year in Proposal.objects.dates(
         'proposal_date', 'year').distinct().values_list('proposal_date__year', flat=True)]
     distributors = Distributor.objects.all()
@@ -9777,8 +9808,10 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
 def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
     if _distributor == 'all':
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -9893,14 +9926,39 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
     years = [str(year) for year in Proposal.objects.dates(
         'proposal_date', 'year').distinct().values_list('proposal_date__year', flat=True)]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
     if _distributor == 'all':
+        # proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+        #                                    proposal_date__gte=from_date, proposal_date__lt=to_date).annotate(
+        #     sum_swop_carton=Sum('incrementalsales__swop_carton'),
+        #     sum_swop_nom=Sum('incrementalsales__swop_nom'),
+        #     sum_swp_carton=Sum('incrementalsales__swp_carton'),
+        #     sum_swp_nom=Sum('incrementalsales__swp_nom'),
+        #     sum_incrp_carton=Sum('incrementalsales__incrp_carton'),
+        #     sum_incrp_nom=Sum('incrementalsales__incrp_nom'),
+        #     incpct_carton=Sum('incrementalsales__incrp_carton') /
+        #     Sum('incrementalsales__swop_carton') * 100,
+        #     incpct_nom=Sum('incrementalsales__incrp_nom') /
+        #     Sum('incrementalsales__swop_nom') * 100
+        # ).values_list(
+        #     'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'program__program_id', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'sum_swop_carton', 'sum_swop_nom', 'sum_swp_carton', 'sum_swp_nom', 'sum_incrp_carton', 'sum_incrp_nom', 'incpct_carton', 'incpct_nom', 'status',
+        #     ProposalRelease.objects.filter(proposal_id=OuterRef('proposal_id'), proposal_approval_status='N').order_by(
+        #         'sequence').values('proposal_approval_name')[:1],
+        #     ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+        #     ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+        #     ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1]
+        # )
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
                                            proposal_date__gte=from_date, proposal_date__lt=to_date).annotate(
             sum_swop_carton=Sum('incrementalsales__swop_carton'),
@@ -9978,8 +10036,10 @@ def report_proposal(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
 def report_proposal_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
     if _distributor == 'all':
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -10206,7 +10266,7 @@ def report_monthly_budget(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
                                             budget_year=_from_yr, budget_month='{:02d}'.format(int(_from_mo))).aggregate(
             upping=Sum('budgetdetail__budget_upping'))
 
-    if _from_yr != '0' and _from_mo != '0':
+    if _from_yr != '0' and _from_mo != '0' and budgets:
         curr_bal = total.get('begin_bal') + draft_total.get(
             'upping') if draft_total.get('upping') else total.get('begin_bal')
         total_bal = curr_bal - total.get('proposed') + total.get('remaining')
@@ -10533,8 +10593,10 @@ def report_budget_summary(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
 def report_budget_summary_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
     if _distributor == 'all':
         with connection.cursor() as cursor:
@@ -10772,8 +10834,10 @@ def report_budget_detail(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribut
 def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     from_date = datetime.date(int(_from_yr), int(
         _from_mo), 1) if _from_yr != '0' and _from_mo != '0' else datetime.date.today().replace(day=1)
-    to_date = datetime.date(int(_to_yr), int(
-        _to_mo) + 1, 1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
+    _to_date = datetime.date(int(_to_yr), int(
+        _to_mo), 15) + datetime.timedelta(days=30)
+    to_date = datetime.date(_to_date.year, _to_date.month,
+                            1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
     if _distributor == 'all':
         with connection.cursor() as cursor:
