@@ -41,7 +41,7 @@ def home(request):
     message = WelcomeMessage.objects.all().first()
     # with connection.cursor() as cursor:
     #     cursor.execute(
-    #         "SELECT budget_id, channel FROM apps_proposal GROUP BY budget_id")
+    #         "SELECT budget_id, channel FROM apps_proposal GROUP BY budget_id, channel")
     #     proposals = cursor.fetchall()
 
     # for proposal in proposals:
