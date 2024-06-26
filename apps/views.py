@@ -57,6 +57,52 @@ def home(request):
     #     budget.budget_balance = sum_balance
     #     budget.save()
 
+    # UPDATE 'EBU' BALANCE
+    # detail = BudgetDetail.objects.filter(
+    #     budget__budget_distributor_id='EBU', budget_channel_id='OP')
+    # for i in detail:
+    #     if int(i.budget.budget_month) > 1:
+    #         i.budget_amount = balance
+    #         i.budget_total = i.budget_amount + i.budget_upping + \
+    #             i.budget_transfer_plus - i.budget_transfer_minus
+    #         i.budget_balance = i.budget_total - i.budget_proposed + i.budget_remaining
+    #         i.save()
+    #         print(i.budget_balance, i.budget)
+
+    #         budget = Budget.objects.get(budget_id=i.budget_id)
+    #         budget.budget_amount = BudgetDetail.objects.filter(
+    #             budget=i.budget_id).aggregate(Sum('budget_amount'))['budget_amount__sum']
+    #         budget.budget_total = BudgetDetail.objects.filter(
+    #             budget=i.budget_id).aggregate(Sum('budget_total'))['budget_total__sum']
+    #         budget.budget_balance = BudgetDetail.objects.filter(
+    #             budget=i.budget_id).aggregate(Sum('budget_balance'))['budget_balance__sum']
+    #         budget.save()
+
+    #     balance = i.budget_balance
+
+    # UPDATE 'EBE' BALANCE
+    # detail = BudgetDetail.objects.filter(
+    #     budget__budget_distributor_id='EBE', budget_channel_id='GT')
+    # for i in detail:
+    #     if int(i.budget.budget_month) > 2:
+    #         i.budget_amount = balance
+    #         i.budget_total = i.budget_amount + i.budget_upping + \
+    #             i.budget_transfer_plus - i.budget_transfer_minus
+    #         i.budget_balance = i.budget_total - i.budget_proposed + i.budget_remaining
+    #         i.save()
+    #         print(i.budget_balance, i.budget)
+
+    #         budget = Budget.objects.get(budget_id=i.budget_id)
+    #         budget.budget_amount = BudgetDetail.objects.filter(
+    #             budget=i.budget_id).aggregate(Sum('budget_amount'))['budget_amount__sum']
+    #         budget.budget_total = BudgetDetail.objects.filter(
+    #             budget=i.budget_id).aggregate(Sum('budget_total'))['budget_total__sum']
+    #         budget.budget_balance = BudgetDetail.objects.filter(
+    #             budget=i.budget_id).aggregate(Sum('budget_balance'))['budget_balance__sum']
+    #         budget.save()
+
+    #     balance = i.budget_balance
+
     context = {
         'message': message,
         'budget_notif': budget_notification(request),
