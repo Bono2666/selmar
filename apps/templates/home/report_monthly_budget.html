@@ -105,7 +105,7 @@
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7">Total</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7">{{ budget.budget_distributor.distributor_name }}</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
-                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">100%</td>
+                                        <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' or budget.budget_status == 'IN APPROVAL' %}0%{% else %}100%{% endif %}</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ budget.budget_amount|intcomma }}</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if budget.budget_status == 'DRAFT' or budget.budget_status == 'IN APPROVAL' %}0{% else %}{{ budget.budget_upping|intcomma }}{% endif %}</td>
                                         <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">0</td>
@@ -126,7 +126,7 @@
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7"></td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end"></td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.begin_bal|intcomma }}</td>
-                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ draft_total.upping|intcomma }}</td>
+                                    <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{% if draft_total.upping %}{{ draft_total.upping|intcomma }}{% else %}0{% endif %}</td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">0</td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ curr_bal|intcomma }}</td>
                                     <td class="text-uppercase text-secondary text-sm font-weight-bolder opacity-7 text-end">{{ total.proposed|intcomma }}</td>
@@ -241,7 +241,7 @@
                 "info": false,
                 "sort": false,
                 "lengthChange": false,
-                "pageLength": 100,
+                "pageLength": -1,
                 "scrollCollapse": true,
                 "scrollY": "50vh",
             });
@@ -250,9 +250,8 @@
                 "scrollX": true,
                 "info": false,
                 "sort": false,
-                "lengthChange": true,
-                "lengthMenu": [25, 50, 100, 250, 500],
-                "pageLength": 100,
+                "lengthChange": false,
+                "pageLength": -1,
                 "scrollCollapse": true,
                 "scrollY": "50vh",
             });

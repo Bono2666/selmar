@@ -113,7 +113,15 @@ def home(request):
         'segment': 'index',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
     }
+
+    # if request.user.user_id == 'abdullah':
     return render(request, 'home/index.html', context)
+    # else:
+    #     return render(request, 'home/under_maintain.html')
+
+
+def under_maintain(request):
+    return render(request, 'home/under_maintain.html')
 
 
 @login_required(login_url='/login/')
@@ -4669,11 +4677,11 @@ def closing(request):
     except Closing.DoesNotExist:
         message = 'Document Budget not found, add document Budget Closing Period first.'
     budgets = Budget.objects.filter(budget_status='OPEN')
-    proposals = Proposal.objects.filter(status__in=['PENDING', 'IN APPROVAL'])
+    proposals = Proposal.objects.filter(status__in=['DRAFT', 'IN APPROVAL'])
 
     if request.POST:
         if proposals:
-            message = 'There are still proposals in approval process. Please approve or reject them first.'
+            message = 'There are still proposals in draft or approval process. Please approve, reject or cancel them first.'
         else:
             if request.user.is_superuser:
                 period.year_closed = request.POST.get('year_closed')
@@ -9805,9 +9813,10 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
             return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
                 'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
             reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1]
+                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1],
+            budget_period=F('budget__budget_year')
         ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
+            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note', 'budget_period'
         )
     else:
         proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
