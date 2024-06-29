@@ -35,7 +35,7 @@
                                         <li><a class="dropdown-item border-radius-md" href="{% if is_revise == 0 %}{% url 'proposal-release-view' data.proposal_id '0' '0' '0' 1 %}{% else %}{% url 'proposal-release-update' data.proposal_id %}{% endif %}" {% if not btn_release.revise %}hidden{% endif %} {% if approved == 'Y' %}hidden{% endif %} {% if crud == 'update' %}hidden{% endif %}>{% if is_revise == 0 %}Revise{% else %}Edit{% endif %}</a></li>
                                         <li><a class="dropdown-item border-radius-md" {% if crud == 'view' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#revise-note">Save</a></li>
                                         <li><a class="dropdown-item border-radius-md" {% if not btn_release.returned %}hidden{% else %}{% if crud == 'update' or is_revise == 1 %}hidden{% endif %}{% endif %} {% if approved == 'Y' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-return">Return</a></li>
-                                        <li><a class="dropdown-item border-radius-md" {% if not btn_release.reject %}hidden{% else %}{% if crud == 'update' or is_revise == 1 %}hidden{% endif %}{% endif %} {% if approved == 'Y' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-reject">Reject</a></li>
+                                        <li><a class="dropdown-item border-radius-md" {% if not btn_release.reject %}hidden{% else %}{% if crud == 'update' or is_revise == 1 %}hidden{% endif %}{% endif %} {% if approved == 'Y' %}hidden{% endif %} {% if diff_period %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-reject">Reject</a></li>
                                     </ul>
                                 </div>
                                 {% else %}
@@ -44,7 +44,7 @@
                                 <a href="{% if is_revise == 0 %}{% url 'proposal-release-view' data.proposal_id '0' '0' '0' 1 %}{% else %}{% url 'proposal-release-update' data.proposal_id %}{% endif %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if not btn_release.revise %}disabled{% endif %} {% if approved == 'Y' %}disabled{% endif %}" {% if crud == 'update' %}hidden{% endif %}><i class="fas fa-edit"></i>&nbsp;&nbsp;{% if is_revise == 0 %}Revise{% else %}Edit{% endif %}</a>
                                 <button type="button" class="btn btn-sm px-4 bg-gradient-dark mb-0" {% if crud == 'view' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#revise-note"><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm px-4 bg-gradient-dark mb-0 {% if not btn_release.returned %}disabled{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-return"><i class="fas fa-reply-all"></i>&nbsp;&nbsp;Return</button>
-                                <button type="button" class="btn btn-sm px-4 bg-gradient-danger mb-0 {% if not btn_release.reject %}disabled{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-reject"><i class="fas fa-times"></i>&nbsp;&nbsp;Reject</button>
+                                <button type="button" class="btn btn-sm px-4 bg-gradient-danger mb-0 {% if not btn_release.reject %}disabled{% else %}{% if crud == 'update' or is_revise == 1 %}disabled{% endif %}{% endif %} {% if approved == 'Y' %}disabled{% endif %} {% if diff_period %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-reject"><i class="fas fa-times"></i>&nbsp;&nbsp;Reject</button>
                                 {% endif %}
                             </div>
                         </div>
@@ -778,7 +778,7 @@
                     </div>
                     <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                         {% if request|is_mobile %}
-                        <div class="dropdown float-lg-end pe-2 {% if crud == 'update' or is_revise == 0 %}d-none{% endif %} {% if not add_cost %}d-none{% endif %}">
+                        <div class="dropdown float-lg-end pe-2 {% if crud == 'update' or is_revise == 0 %}d-none{% endif %} {% if not add_cost %}d-none{% endif %} {% if diff_period %}d-none{% endif %}">
                             <a class="cursor-pointer text-body" id="dropdownInc" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-ellipsis-v"></i>
                             </a>
@@ -787,7 +787,7 @@
                             </ul>
                         </div>
                         {% else %}
-                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' or is_revise == 0 %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#addCost" {% if not add_cost %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Cost</button>
+                        <button type="button" class="btn btn-sm bg-gradient-dark mb-0 {% if crud == 'update' or is_revise == 0 %}disabled{% endif %} {% if diff_period %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#addCost" {% if not add_cost %}disabled{% endif %}><i class="fas fa-plus"></i>&nbsp;&nbsp;Add Cost</button>
                         {% endif %}
                     </div>
                 </div>
@@ -866,7 +866,7 @@
                                         <h6 class="mb-0 text-xs text-end">{{ item.cost|floatformat:0|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit and is_revise == 1 or request.user.is_superuser %}data-bs-target="#del-cost-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
+                                        <button class="btn-icon-only text-dark bg-transparent border-0 p-0 m-0" data-bs-toggle="modal" {% if btn.edit and is_revise == 1 or request.user.is_superuser %}data-bs-target="#del-cost-{{ item.id }}"{% else %}disabled{% endif %} {% if crud == 'update' %}disabled{% endif %} {% if diff_period %}disabled{% endif %}><i class="fas fa-times-circle"></i></button>
                                     </td>
                                     <div class="modal fade" id="del-cost-{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                                         aria-hidden="true">
@@ -930,7 +930,7 @@
                                                 <div class="modal-footer border-0">
                                                     <a href="{% if is_revise == 0 %}{% url 'proposal-release-view' item.proposal_id '0' '0' '0' 0 %}{% else %}{% url 'proposal-release-view' item.proposal_id '0' '0' '0' 1 %}{% endif %}" type="button" class="btn btn-sm bg-gradient-dark">Cancel</a>
                                                     <button type="submit"
-                                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit or is_revise == 0 and not request.user.is_superuser %}disabled{% endif %}">Save</button>
+                                                        class="btn btn-sm bg-gradient-danger text-white {% if not btn.edit or is_revise == 0 and not request.user.is_superuser %}disabled{% endif %} {% if diff_period %}disabled{% endif %}">Ok</button>
                                                 </div>
                                             </form>
                                         </div>

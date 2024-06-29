@@ -4677,7 +4677,7 @@ def closing(request):
     except Closing.DoesNotExist:
         message = 'Document Budget not found, add document Budget Closing Period first.'
     budgets = Budget.objects.filter(budget_status='OPEN')
-    proposals = Proposal.objects.filter(status__in=['DRAFT', 'IN APPROVAL'])
+    proposals = Proposal.objects.filter(status__in=['NONE'])
 
     if request.POST:
         if proposals:
@@ -5128,6 +5128,11 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
     total_cost = ProjectedCost.objects.filter(
         proposal_id=_id).aggregate(Sum('cost'))
     add_cost = True if budget.budget_balance > 0 else False
+    period = Closing.objects.get(document='BUDGET')
+    diff_period = False
+
+    if proposal.budget.budget_month != '{:02d}'.format(period.month_open) or proposal.budget.budget_year != period.year_open:
+        diff_period = True
 
     highest_approval = ProposalRelease.objects.filter(
         proposal_id=_id, limit__gt=proposal.total_cost).aggregate(Min('sequence')) if ProposalRelease.objects.filter(proposal_id=_id, limit__gt=proposal.total_cost).exists() else ProposalRelease.objects.filter(proposal_id=_id).aggregate(Max('sequence'))
@@ -5167,6 +5172,7 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         'incpst_nom': incpst_nom,
         'total_inc': total['incrp_nom__sum'] if total['incrp_nom__sum'] else 0,
         'total_cost': total_cost['cost__sum'] if total_cost['cost__sum'] else 0,
+        'diff_period': diff_period,
         'tab': _tab,
         'sub_id': _sub_id,
         'action': _act,
