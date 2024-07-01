@@ -24,6 +24,7 @@ django-pivot
 pandas
 # pip install pyyaml ua-parser user-agents <-- install these packages first for django-user-agents
 django-user-agents
+tablib[xlsx]
 # djangorestframework
 
 # psycopg2-binary

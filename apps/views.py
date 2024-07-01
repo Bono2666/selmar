@@ -1617,9 +1617,9 @@ def budget_update(request, _tab, _id):
                     budgets.budget_upping
                 i.save()
 
-            update.budget_balance = BudgetDetail.objects.filter(
+            budgets.budget_balance = BudgetDetail.objects.filter(
                 budget_id=_id).aggregate(Sum('budget_balance'))['budget_balance__sum']
-            update.save()
+            budgets.save()
 
             if budgets.budget_status == 'DRAFT':
                 email = User.objects.filter(
@@ -1804,6 +1804,10 @@ def budget_detail_update(request, _tab, _id):
                 i.budget_upping = Decimal(
                     int(i.budget_percent)/100) * budget.budget_upping
                 i.save()
+
+            budget.budget_balance = BudgetDetail.objects.filter(
+                budget_id=_id).aggregate(Sum('budget_balance'))['budget_balance__sum']
+            budget.save()
         else:
             msg = 'Total budget percentage you entered is not 100%'
 
@@ -1891,6 +1895,10 @@ def budget_upload(request):
                             except BudgetDetail.DoesNotExist:
                                 pass
                             col += 1
+
+                            budget.budget_balance = BudgetDetail.objects.filter(
+                                budget_id=data[4]).aggregate(Sum('budget_balance'))['budget_balance__sum']
+                            budget.save()
                     else:
                         failed += 1
                         errors.append(
@@ -2804,6 +2812,11 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
     add_cost = True if budget.budget_balance > 0 else False
     approved = ProposalRelease.objects.get(
         proposal_id=_id, proposal_approval_id=request.user.user_id).proposal_approval_status
+    period = Closing.objects.get(document='BUDGET')
+    diff_period = False
+
+    if proposal.budget.budget_month != '{:02d}'.format(int(period.month_open)) or proposal.budget.budget_year != period.year_open:
+        diff_period = True
 
     context = {
         'form': form,
@@ -2823,6 +2836,7 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
         'incpst_nom': incpst_nom,
         'total_inc': total['incrp_nom__sum'] if total['incrp_nom__sum'] else 0,
         'total_cost': total_cost['cost__sum'] if total_cost['cost__sum'] else 0,
+        'diff_period': diff_period,
         'sub_id': _sub_id,
         'action': _act,
         'message': _msg,
@@ -2887,9 +2901,9 @@ def budget_release_update(request, _id):
                     budgets.budget_upping
                 i.save()
 
-            update.budget_balance = BudgetDetail.objects.filter(
+            budgets.budget_balance = BudgetDetail.objects.filter(
                 budget_id=_id).aggregate(Sum('budget_balance'))['budget_balance__sum']
-            update.save()
+            budgets.save()
 
             recipients = []
 
@@ -3219,6 +3233,10 @@ def budget_detail_release_update(request, _id):
                 i.budget_upping = Decimal(
                     int(i.budget_percent)/100) * budget.budget_upping
                 i.save()
+
+            budget.budget_balance = BudgetDetail.objects.filter(
+                budget_id=_id).aggregate(Sum('budget_balance'))['budget_balance__sum']
+            budget.save()
 
             recipients = []
 
@@ -4677,84 +4695,89 @@ def closing(request):
     except Closing.DoesNotExist:
         message = 'Document Budget not found, add document Budget Closing Period first.'
     budgets = Budget.objects.filter(budget_status='OPEN')
+    not_approved_budget = Budget.objects.filter(
+        budget_status__in=['IN APPROVAL', 'DRAFT'])
     proposals = Proposal.objects.filter(status__in=['NONE'])
 
     if request.POST:
-        if proposals:
-            message = 'There are still proposals in draft or approval process. Please approve, reject or cancel them first.'
+        if not_approved_budget:
+            message = 'There are still budgets in draft or approval process. Please approve, reject or cancel them first.'
         else:
-            if request.user.is_superuser:
-                period.year_closed = request.POST.get('year_closed')
-                period.month_closed = request.POST.get('month_closed')
+            if proposals:
+                message = 'There are still proposals in draft or approval process. Please approve, reject or cancel them first.'
             else:
-                period.year_closed = period.year_open
-                period.month_closed = period.month_open
-            next_month = (datetime.datetime(int(period.year_closed),
-                                            int(period.month_closed), 1) + datetime.timedelta(days=32)).month
-            next_year = (datetime.datetime(int(period.year_closed),
-                                           int(period.month_closed), 1) + datetime.timedelta(days=32)).year
-            period.year_open = next_year
-            period.month_open = next_month
-            period.save()
-            for budget in budgets:
-                detail = BudgetDetail.objects.filter(
-                    budget_id=budget.budget_id)
-                total_amount = 0
-                for i in detail:
-                    total_amount += i.budget_balance
+                if request.user.is_superuser:
+                    period.year_closed = request.POST.get('year_closed')
+                    period.month_closed = request.POST.get('month_closed')
+                else:
+                    period.year_closed = period.year_open
+                    period.month_closed = period.month_open
+                next_month = (datetime.datetime(int(period.year_closed),
+                                                int(period.month_closed), 1) + datetime.timedelta(days=32)).month
+                next_year = (datetime.datetime(int(period.year_closed),
+                                               int(period.month_closed), 1) + datetime.timedelta(days=32)).year
+                period.year_open = next_year
+                period.month_open = next_month
+                period.save()
+                for budget in budgets:
+                    detail = BudgetDetail.objects.filter(
+                        budget_id=budget.budget_id)
+                    total_amount = 0
+                    for i in detail:
+                        total_amount += i.budget_balance
 
-                new_budget = Budget(
-                    budget_year=str(next_year),
-                    budget_month='{:02d}'.format(next_month),
-                    budget_area=budget.budget_area,
-                    budget_distributor=budget.budget_distributor,
-                    budget_amount=total_amount,
-                    budget_upping=0,
-                    budget_balance=total_amount,
-                    budget_status='DRAFT')
-                new_budget.save()
+                    new_budget = Budget(
+                        budget_year=str(next_year),
+                        budget_month='{:02d}'.format(next_month),
+                        budget_area=budget.budget_area,
+                        budget_distributor=budget.budget_distributor,
+                        budget_amount=total_amount,
+                        budget_upping=0,
+                        budget_balance=total_amount,
+                        budget_status='DRAFT')
+                    new_budget.save()
 
-                for i in detail:
-                    new_detail = BudgetDetail(
-                        budget_id=new_budget.budget_id,
-                        budget_channel=i.budget_channel,
-                        budget_amount=i.budget_balance)
-                    new_detail.save()
+                    for i in detail:
+                        new_detail = BudgetDetail(
+                            budget_id=new_budget.budget_id,
+                            budget_channel=i.budget_channel,
+                            budget_amount=i.budget_balance)
+                        new_detail.save()
 
-                approvers = BudgetApproval.objects.filter(
-                    area_id=new_budget.budget_area).order_by('sequence')
-                for approver in approvers:
-                    new_release = BudgetRelease(
-                        budget_id=new_budget.budget_id,
-                        budget_approval_id=approver.approver_id,
-                        budget_approval_name=approver.approver.username,
-                        budget_approval_email=approver.approver.email,
-                        budget_approval_position=approver.approver.position.position_name,
-                        sequence=approver.sequence)
-                    new_release.save()
+                    approvers = BudgetApproval.objects.filter(
+                        area_id=new_budget.budget_area).order_by('sequence')
+                    for approver in approvers:
+                        new_release = BudgetRelease(
+                            budget_id=new_budget.budget_id,
+                            budget_approval_id=approver.approver_id,
+                            budget_approval_name=approver.approver.username,
+                            budget_approval_email=approver.approver.email,
+                            budget_approval_position=approver.approver.position.position_name,
+                            sequence=approver.sequence)
+                        new_release.save()
 
-                budget.budget_status = 'CLOSED'
-                budget.save()
+                    budget.budget_status = 'CLOSED'
+                    budget.save()
 
-            context = {
-                'data': period,
-                'month': period.month_closed,
-                'year': period.year_closed,
-                'next_month': next_month,
-                'next_year': next_year,
-                'total': budgets.count(),
-                'budget_notif': budget_notification(request),
-                'proposal_notif': proposal_notification(request),
-                'program_notif': program_notification(request),
-                'claim_notif': claim_notification(request),
-                'cl_notif': cl_notification(request),
-                'segment': 'budget_closing',
-                'group_segment': 'budget',
-                'crud': 'index',
-                'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
-                'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-CLOSING') if not request.user.is_superuser else Auth.objects.all(),
-            }
-            return render(request, 'home/budget_closingreport.html', context)
+                context = {
+                    'data': period,
+                    'month': period.month_closed,
+                    'year': period.year_closed,
+                    'next_month': next_month,
+                    'next_year': next_year,
+                    'total': budgets.count(),
+                    'budget_notif': budget_notification(request),
+                    'proposal_notif': proposal_notification(request),
+                    'program_notif': program_notification(request),
+                    'claim_notif': claim_notification(request),
+                    'cl_notif': cl_notification(request),
+                    'segment': 'budget_closing',
+                    'group_segment': 'budget',
+                    'crud': 'index',
+                    'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
+                    'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='BUDGET-CLOSING') if not request.user.is_superuser else Auth.objects.all(),
+                }
+                return render(request, 'home/budget_closingreport.html', context)
 
     YEAR_CHOICES = []
     for r in range((datetime.datetime.now().year-1), (datetime.datetime.now().year+2)):
@@ -5131,7 +5154,7 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
     period = Closing.objects.get(document='BUDGET')
     diff_period = False
 
-    if proposal.budget.budget_month != '{:02d}'.format(period.month_open) or proposal.budget.budget_year != period.year_open:
+    if proposal.budget.budget_month != '{:02d}'.format(int(period.month_open)) or proposal.budget.budget_year != period.year_open:
         diff_period = True
 
     highest_approval = ProposalRelease.objects.filter(

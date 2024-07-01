@@ -84,9 +84,12 @@
                 'lengthChange': false,
                 'pageLength': 25,
                 'scrollX': true,
+                'order': [0, 'desc'],
             });
         } else {
-            $('#myTable').DataTable();
+            $('#myTable').DataTable({
+                'order': [0, 'desc'],
+            });
         }
 
         $(document).on('click', 'tbody tr', function() {
