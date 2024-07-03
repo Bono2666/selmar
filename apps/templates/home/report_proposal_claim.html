@@ -62,63 +62,63 @@
                                 {% for item in data %}
                                 <tr>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.0 }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.area }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.1 }}</h6> 
+                                        <h6 class="mb-0 text-sm">{{ item.distributor_name }}</h6> 
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.2 }}</h6>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex pe-2 py-0">
-                                            <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.3 }}</h6>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <h6 class="mb-0 text-sm">{{ item.4|truncatechars:30 }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.channel }}</h6>
                                     </td>
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.5 }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.proposal_id }}</h6>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.18|date:"M Y" }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.program_name|truncatechars:30 }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.6|date:"d M Y" }}</h6>
+                                        <div class="d-flex pe-2 py-0">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ item.division_name }}</h6>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.7|date:"d M Y" }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.budget_period|date:"M Y"}}
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.8|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.period_start|date:"d M Y" }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.9|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.period_end|date:"d M Y" }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.10|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.total_cost|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.11|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.difference|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.12|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.parked_claim|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.13 == 'OPEN' %}COMPLETED{% else %}{{ item.13 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.proposal_claim|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.13 == 'IN APPROVAL' or item.13 == 'REJECTED' %}{{ item.14 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.balance|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.13 == 'IN APPROVAL' and item.15 %}{{ item.15|truncatechars:30 }}{% else %}{% if item.13 == 'IN APPROVAL' and item.16 %}{{ item.16|truncatechars:30 }}{% else %}{% if item.13 == 'REJECTED' and item.17 %}{{ item.17|truncatechars:30 }}{% endif %}{% endif %}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.status == 'OPEN' %}COMPLETED{% else %}{{ item.status }}{% endif %}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.status == 'IN APPROVAL' or item.status == 'REJECTED' %}{{ item.approver }}{% endif %}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.status == 'IN APPROVAL' and item.revise_note %}{{ item.revise_note|truncatechars:30 }}{% else %}{% if item.status == 'IN APPROVAL' and item.return_note %}{{ item.return_note|truncatechars:30 }}{% else %}{% if item.status == 'REJECTED' and item.reject_note %}{{ item.reject_note|truncatechars:30 }}{% endif %}{% endif %}{% endif %}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -284,6 +284,7 @@
                 "scrollX": true,
                 "scrollCollapse": true,
                 "scrollY": "50vh",
+                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
             });
         }
         
