@@ -9918,20 +9918,91 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
 
         proposal = Proposal.objects.raw(proposal_query, params=proposal_params)
     else:
-        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, budget__budget_distributor=_distributor).annotate(
-            difference=F('proposal_claim') - F('parked_claim'),
-            approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
-            revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
-            return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
-            reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1]
-        ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
-        )
+        # proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+        #                                    proposal_date__gte=from_date, proposal_date__lt=to_date, budget__budget_distributor=_distributor).annotate(
+        #     difference=F('proposal_claim') - F('parked_claim'),
+        #     approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
+        #     revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+        #     return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+        #     reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1]
+        # ).values_list(
+        #     'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
+        # )
+
+        proposal_query = """
+        SELECT 
+            area, 
+            distributor_name, 
+            channel, 
+            proposal_id, 
+            program_name, 
+            apps_division.division_name, 
+            DATE(CONCAT(budget_year, budget_month, '01')) AS budget_period, 
+            period_start, 
+            period_end, 
+            total_cost, 
+            proposal_claim - parked_claim AS difference, 
+            parked_claim, 
+            proposal_claim, 
+            balance, 
+            status, 
+            (
+                SELECT proposal_approval_name 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS approver, 
+            (
+                SELECT revise_note 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS revise_note, 
+            (
+                SELECT return_note 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS return_note, 
+            (
+                SELECT reject_note 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS reject_note
+        FROM 
+            apps_proposal 
+            INNER JOIN apps_areauser ON apps_proposal.area = apps_areauser.area_id 
+            INNER JOIN apps_budget ON apps_proposal.budget_id = apps_budget.budget_id 
+            INNER JOIN apps_distributor ON apps_budget.budget_distributor_id = apps_distributor.distributor_id 
+            INNER JOIN apps_division ON apps_proposal.division_id = apps_division.division_id 
+        WHERE 
+            apps_areauser.user_id = %(user_id)s 
+            AND proposal_date >= %(from_date)s 
+            AND proposal_date < %(to_date)s
+            AND apps_budget.budget_distributor_id = %(distributor_id)s
+        """
+
+        proposal_params = {
+            'user_id': request.user.user_id,
+            'from_date': from_date,
+            'to_date': to_date,
+            'distributor_id': _distributor
+        }
+
+        proposal = Proposal.objects.raw(proposal_query, params=proposal_params)
 
     context = {
         'data': proposal,
