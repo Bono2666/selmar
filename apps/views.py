@@ -9830,8 +9830,6 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
         'proposal_date', 'year').distinct().values_list('proposal_date__year', flat=True)]
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
-    cmonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May',
-               'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
     if _distributor == 'all':
         # proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
@@ -10039,35 +10037,179 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
                             1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
     if _distributor == 'all':
-        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date).annotate(
-            difference=F('proposal_claim') - F('parked_claim'),
-            approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
-            revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
-            return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
-            reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1],
-        ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
-        )
+        # proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+        #                                    proposal_date__gte=from_date, proposal_date__lt=to_date).annotate(
+        #     difference=F('proposal_claim') - F('parked_claim'),
+        #     approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
+        #     revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+        #     return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+        #     reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1],
+        # ).values_list(
+        #     'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
+        # )
+
+        proposal_query = """
+        SELECT 
+            area, 
+            distributor_name, 
+            channel, 
+            proposal_id, 
+            program_name, 
+            apps_division.division_name, 
+            DATE(CONCAT(budget_year, budget_month, '01')) AS budget_period, 
+            period_start, 
+            period_end, 
+            total_cost, 
+            (proposal_claim - parked_claim) AS difference, 
+            parked_claim, 
+            proposal_claim, 
+            balance, 
+            status, 
+            (
+                SELECT proposal_approval_name 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS approver, 
+            (
+                SELECT revise_note 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS revise_note, 
+            (
+                SELECT return_note 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS return_note, 
+            (
+                SELECT reject_note 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS reject_note
+        FROM 
+            apps_proposal 
+            INNER JOIN apps_areauser ON apps_proposal.area = apps_areauser.area_id 
+            INNER JOIN apps_budget ON apps_proposal.budget_id = apps_budget.budget_id 
+            INNER JOIN apps_distributor ON apps_budget.budget_distributor_id = apps_distributor.distributor_id 
+            INNER JOIN apps_division ON apps_proposal.division_id = apps_division.division_id 
+        WHERE 
+            apps_areauser.user_id = %(user_id)s 
+            AND proposal_date >= %(from_date)s 
+            AND proposal_date < %(to_date)s
+        """
+
+        proposal_params = {
+            'user_id': request.user.user_id,
+            'from_date': from_date,
+            'to_date': to_date
+        }
+
+        with connection.cursor() as cursor:
+            cursor.execute(proposal_query, proposal_params)
+            proposal = cursor.fetchall()
     else:
-        proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
-                                           proposal_date__gte=from_date, proposal_date__lt=to_date, budget__budget_distributor=_distributor).annotate(
-            difference=F('proposal_claim') - F('parked_claim'),
-            approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
-            revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
-            return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
-            reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
-                'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1],
-        ).values_list(
-            'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
-        )
+        # proposal = Proposal.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
+        #                                    proposal_date__gte=from_date, proposal_date__lt=to_date, budget__budget_distributor=_distributor).annotate(
+        #     difference=F('proposal_claim') - F('parked_claim'),
+        #     approver=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('proposal_approval_name')[:1],
+        #     revise_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('revise_note')[:1],
+        #     return_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('return_note')[:1],
+        #     reject_note=ProposalRelease.objects.filter(proposal_id=OuterRef(
+        #         'proposal_id'), proposal_approval_status='N').order_by('sequence').values('reject_note')[:1],
+        # ).values_list(
+        #     'area', 'budget__budget_distributor__distributor_name', 'channel', 'proposal_id', 'program_name', 'division__division_name', 'period_start', 'period_end', 'total_cost', 'difference', 'parked_claim', 'proposal_claim', 'balance', 'status', 'approver', 'revise_note', 'return_note', 'reject_note'
+        # )
+
+        proposal_query = """
+        SELECT 
+            area, 
+            distributor_name, 
+            channel, 
+            proposal_id, 
+            program_name, 
+            apps_division.division_name, 
+            DATE(CONCAT(budget_year, budget_month, '01')) AS budget_period, 
+            period_start, 
+            period_end, 
+            total_cost, 
+            (proposal_claim - parked_claim) AS difference, 
+            parked_claim, 
+            proposal_claim, 
+            balance, 
+            status, 
+            (
+                SELECT proposal_approval_name 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS approver, 
+            (
+                SELECT revise_note 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS revise_note, 
+            (
+                SELECT return_note 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS return_note, 
+            (
+                SELECT reject_note 
+                FROM apps_proposalrelease 
+                WHERE proposal_id = apps_proposal.proposal_id 
+                AND proposal_approval_status = 'N' 
+                ORDER BY sequence 
+                LIMIT 1
+            ) AS reject_note
+        FROM 
+            apps_proposal 
+            INNER JOIN apps_areauser ON apps_proposal.area = apps_areauser.area_id 
+            INNER JOIN apps_budget ON apps_proposal.budget_id = apps_budget.budget_id 
+            INNER JOIN apps_distributor ON apps_budget.budget_distributor_id = apps_distributor.distributor_id 
+            INNER JOIN apps_division ON apps_proposal.division_id = apps_division.division_id 
+        WHERE 
+            apps_areauser.user_id = %(user_id)s 
+            AND proposal_date >= %(from_date)s 
+            AND proposal_date < %(to_date)s
+            AND apps_budget.budget_distributor_id = %(distributor_id)s
+        """
+
+        proposal_params = {
+            'user_id': request.user.user_id,
+            'from_date': from_date,
+            'to_date': to_date,
+            'distributor_id': _distributor
+        }
+
+        with connection.cursor() as cursor:
+            cursor.execute(proposal_query, proposal_params)
+            proposal = cursor.fetchall()
 
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
@@ -10083,7 +10225,7 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 
     # Define column headers
     headers = ['Area', 'Distributor', 'Channel', 'Proposal No.', 'Program Name',
-               'Division', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Available', 'Status', 'By', 'Note']
+               'Division', 'Budget Period', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Available', 'Status', 'By', 'Note']
 
     # Define cell formats
     header_format = workbook.add_format({
@@ -10095,7 +10237,9 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     })
     cell_format = workbook.add_format({'border': 1})
     date_format = workbook.add_format(
-        {'border': 1, 'num_format': 'dd/mm/yyyy'})
+        {'border': 1, 'num_format': 'dd/mm/yyyy', 'align': 'left'})
+    period_format = workbook.add_format(
+        {'border': 1, 'num_format': 'mmm yyyy', 'align': 'left'})
     num_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
 
     # Set column width
@@ -10105,38 +10249,41 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     worksheet.set_column('D:D', 29)
     worksheet.set_column('E:E', 80)
     worksheet.set_column('F:F', 16)
-    worksheet.set_column('G:H', 11)
-    worksheet.set_column('I:M', 14)
-    worksheet.set_column('N:N', 10)
-    worksheet.set_column('O:O', 30)
-    worksheet.set_column('P:P', 50)
+    worksheet.set_column('G:G', 12)
+    worksheet.set_column('H:I', 11)
+    worksheet.set_column('J:N', 14)
+    worksheet.set_column('O:O', 10)
+    worksheet.set_column('P:P', 30)
+    worksheet.set_column('Q:Q', 50)
 
     # Write data to XlsxWriter Object
     for idx, record in enumerate(proposal):
         for col_idx, col_value in enumerate(record):
-            if idx == 0 and col_idx < 16:
+            if idx == 0 and col_idx < 17:
                 # Write the column headers on the first row
                 worksheet.write(idx, col_idx, headers[col_idx], header_format)
             # Write the data rows
-            if col_idx == 6 or col_idx == 7:
+            if col_idx == 6:
+                worksheet.write(idx + 1, col_idx, col_value, period_format)
+            elif col_idx == 7 or col_idx == 8:
                 worksheet.write(idx + 1, col_idx, col_value, date_format)
-            elif col_idx == 8 or col_idx == 9 or col_idx == 10 or col_idx == 11 or col_idx == 12:
+            elif col_idx == 9 or col_idx == 10 or col_idx == 11 or col_idx == 12 or col_idx == 13:
                 worksheet.write(idx + 1, col_idx, col_value, num_format)
-            elif col_idx == 13:
+            elif col_idx == 14:
                 worksheet.write(
                     idx + 1, col_idx, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format)
-            elif col_idx == 14:
-                worksheet.write(idx + 1, col_idx, col_value, cell_format) if record[13] == 'IN APPROVAL' or record[13] == 'REJECTED' else worksheet.write(
-                    idx + 1, col_idx, '', cell_format)
             elif col_idx == 15:
-                worksheet.write(
-                    idx + 1, 15, col_value, cell_format) if record[13] == 'IN APPROVAL' and record[15] else worksheet.write(idx + 1, 15, '', cell_format)
+                worksheet.write(idx + 1, col_idx, col_value, cell_format) if record[14] == 'IN APPROVAL' or record[14] == 'REJECTED' else worksheet.write(
+                    idx + 1, col_idx, '', cell_format)
             elif col_idx == 16:
                 worksheet.write(
-                    idx + 1, 15, col_value, cell_format) if record[13] == 'IN APPROVAL' and record[16] else worksheet.write(idx + 1, 15, '', cell_format)
+                    idx + 1, 16, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[16] else worksheet.write(idx + 1, 16, '', cell_format)
             elif col_idx == 17:
                 worksheet.write(
-                    idx + 1, 15, col_value, cell_format) if record[13] == 'REJECTED' and record[17] else worksheet.write(idx + 1, 15, '', cell_format)
+                    idx + 1, 16, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[17] else worksheet.write(idx + 1, 16, '', cell_format)
+            elif col_idx == 18:
+                worksheet.write(
+                    idx + 1, 16, col_value, cell_format) if record[14] == 'REJECTED' and record[18] else worksheet.write(idx + 1, 16, '', cell_format)
             else:
                 worksheet.write(idx + 1, col_idx, col_value, cell_format)
 
