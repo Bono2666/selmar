@@ -2127,13 +2127,13 @@ def budget_transfer_add(request, _area, _distributor, _channel, _message):
     area = AreaUser.objects.filter(
         user_id=request.user.user_id).values_list('area_id', 'area__area_name')
     distributor = Budget.objects.filter(
-        budget_status='OPEN', budget_area=selected_area).values_list('budget_distributor_id', 'budget_distributor__distributor_name', 'budget_id') if selected_area != '0' else None
-    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor, budget_area=selected_area, budget_status='OPEN').budget_id,
+        budget_status__in=['OPEN', 'DRAFT'], budget_area=selected_area).values_list('budget_distributor_id', 'budget_distributor__distributor_name', 'budget_id') if selected_area != '0' else None
+    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor, budget_area=selected_area, budget_status__in=['OPEN', 'DRAFT']).budget_id,
                                           budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance') if selected_distributor != '0' else None
-    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor, budget_area=selected_area, budget_status='OPEN').budget_id).exclude(
+    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor, budget_area=selected_area, budget_status__in=['OPEN', 'DRAFT']).budget_id).exclude(
         budget_channel_id=selected_channel).values_list('budget_channel_id', 'budget_channel__channel_name') if selected_channel != '0' else None
     budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_distributor_id=selected_distributor, budget_area=selected_area,
-                                              budget_status='OPEN').budget_id, budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
+                                              budget_status__in=['OPEN', 'DRAFT']).budget_id, budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
     period = Closing.objects.get(document='BUDGET')
     no_save = False
 
@@ -2157,44 +2157,51 @@ def budget_transfer_add(request, _area, _distributor, _channel, _message):
     if request.POST:
         form = FormBudgetTransfer(request.POST, request.FILES)
         if form.is_valid():
-            if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
-                message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'.replace(
+            if date.fromisoformat(request.POST.get('date')).month != int(period.month_open) or date.fromisoformat(request.POST.get('date')).year != int(period.year_open):
+                message = 'Transfer date is not in the current period.'.replace(
                     '25', '')
                 no_save = True
 
                 return HttpResponseRedirect(reverse('budget-transfer-add', args=[selected_area, selected_distributor, selected_channel, message]))
             else:
-                _id = 'TRF-6' + format_no + '/' + selected_area + '/' + \
-                    selected_distributor + '/' + \
-                    '{:02d}'.format(int(period.month_open)) + \
-                    '/' + period.year_open
-                draft = form.save(commit=False)
-                draft.transfer_id = _id
-                draft.date = date.fromisoformat(request.POST.get('date'))
-                draft.seq_number = _no.seq_number + 1 if _no else 1
-                draft.area_id = selected_area
-                draft.distributor_id = selected_distributor
-                draft.channel_from_id = selected_channel
-                draft.channel_to_id = request.POST.get('channel_to')
-                draft.save()
+                if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
+                    message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'.replace(
+                        '25', '')
+                    no_save = True
 
-                period = Closing.objects.get(document='BUDGET')
+                    return HttpResponseRedirect(reverse('budget-transfer-add', args=[selected_area, selected_distributor, selected_channel, message]))
+                else:
+                    _id = 'TRF-6' + format_no + '/' + selected_area + '/' + \
+                        selected_distributor + '/' + \
+                        '{:02d}'.format(int(period.month_open)) + \
+                        '/' + period.year_open
+                    draft = form.save(commit=False)
+                    draft.transfer_id = _id
+                    draft.date = date.fromisoformat(request.POST.get('date'))
+                    draft.seq_number = _no.seq_number + 1 if _no else 1
+                    draft.area_id = selected_area
+                    draft.distributor_id = selected_distributor
+                    draft.channel_from_id = selected_channel
+                    draft.channel_to_id = request.POST.get('channel_to')
+                    draft.save()
 
-                transfer_from = BudgetTransfer.objects.filter(
-                    area_id=selected_area, distributor_id=selected_distributor, channel_from_id=selected_channel, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
-                budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
-                                                                                      budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=selected_channel)
-                budget_detail.budget_transfer_minus = transfer_from if transfer_from else 0
-                budget_detail.save()
+                    period = Closing.objects.get(document='BUDGET')
 
-                transfer_to = BudgetTransfer.objects.filter(
-                    area_id=selected_area, distributor_id=selected_distributor, channel_to_id=draft.channel_to_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
-                channel_to = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
-                                                                                   budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=draft.channel_to_id)
-                channel_to.budget_transfer_plus = transfer_to if transfer_to else 0
-                channel_to.save()
+                    transfer_from = BudgetTransfer.objects.filter(
+                        area_id=selected_area, distributor_id=selected_distributor, channel_from_id=selected_channel, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
+                    budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                                          budget_distributor_id=selected_distributor, budget_status__in=['OPEN', 'DRAFT']).budget_id, budget_channel_id=selected_channel)
+                    budget_detail.budget_transfer_minus = transfer_from if transfer_from else 0
+                    budget_detail.save()
 
-                return HttpResponseRedirect(reverse('budget-transfer-index', args=['draft', ]))
+                    transfer_to = BudgetTransfer.objects.filter(
+                        area_id=selected_area, distributor_id=selected_distributor, channel_to_id=draft.channel_to_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
+                    channel_to = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                                       budget_distributor_id=selected_distributor, budget_status__in=['OPEN', 'DRAFT']).budget_id, budget_channel_id=draft.channel_to_id)
+                    channel_to.budget_transfer_plus = transfer_to if transfer_to else 0
+                    channel_to.save()
+
+                    return HttpResponseRedirect(reverse('budget-transfer-index', args=['draft', ]))
     else:
         form = FormBudgetTransfer(
             initial={'date': datetime.datetime.now().date()})
@@ -2236,12 +2243,12 @@ def budget_transfer_view(request, _tab, _id):
     form = FormBudgetTransferView(instance=transfer)
     approval = BudgetTransferRelease.objects.filter(
         transfer_id=_id).order_by('sequence')
-    channel = BudgetDetail.objects.filter(budget__budget_distributor_id=transfer.distributor, budget__budget_area=transfer.area, budget__budget_status='OPEN',
+    channel = BudgetDetail.objects.filter(budget__budget_distributor_id=transfer.distributor, budget__budget_area=transfer.area, budget__budget_status__in=['OPEN', 'DRAFT'],
                                           budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance')
-    channel_to = BudgetDetail.objects.filter(budget__budget_distributor_id=transfer.distributor_id, budget__budget_area=transfer.area_id, budget__budget_status='OPEN').exclude(
+    channel_to = BudgetDetail.objects.filter(budget__budget_distributor_id=transfer.distributor_id, budget__budget_area=transfer.area_id, budget__budget_status__in=['OPEN', 'DRAFT']).exclude(
         budget_channel_id=transfer.channel_from).values_list('budget_channel_id', 'budget_channel__channel_name')
     budget_balance = BudgetDetail.objects.get(budget__budget_distributor_id=transfer.distributor, budget__budget_area=transfer.area,
-                                              budget__budget_status='OPEN', budget_channel_id=transfer.channel_from).budget_balance if channel else 0
+                                              budget__budget_status__in=['OPEN', 'DRAFT'], budget_channel_id=transfer.channel_from).budget_balance if channel else 0
     selected_channel = transfer.channel_from_id
     message = '0'
 
@@ -2278,51 +2285,59 @@ def budget_transfer_update(request, _id, _area, _distributor, _channel, _message
     selected_distributor = _distributor
     selected_channel = _channel
     transfer = BudgetTransfer.objects.get(transfer_id=_id)
-    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor, budget_area=transfer.area, budget_status='OPEN').budget_id,
+    channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor, budget_area=transfer.area, budget_status__in=['OPEN', 'DRAFT']).budget_id,
                                           budget_balance__gt=0).values_list('budget_channel_id', 'budget_channel__channel_name', 'budget_balance')
-    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor_id, budget_area=transfer.area_id, budget_status='OPEN').budget_id).exclude(
+    channel_to = BudgetDetail.objects.filter(budget_id=Budget.objects.get(budget_distributor_id=transfer.distributor_id, budget_area=transfer.area_id, budget_status__in=['OPEN', 'DRAFT']).budget_id).exclude(
         budget_channel_id=_channel).values_list('budget_channel_id', 'budget_channel__channel_name')
     budget_balance = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
-                                                                           budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
+                                                                           budget_distributor_id=selected_distributor, budget_status__in=['OPEN', 'DRAFT']).budget_id, budget_channel_id=selected_channel).budget_balance if selected_channel != '0' else None
     amount = transfer.amount if _channel == transfer.channel_from_id else 0
+    period = Closing.objects.get(document='BUDGET')
     no_save = False
 
     if request.POST:
         form = FormBudgetTransferUpdate(
             request.POST, request.FILES, instance=transfer)
         if form.is_valid():
-            if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
-                message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'.replace(
+            if date.fromisoformat(request.POST.get('date')).month != int(period.month_open) or date.fromisoformat(request.POST.get('date')).year != int(period.year_open):
+                message = 'Transfer date is not in the current period.'.replace(
                     '25', '')
                 no_save = True
 
                 return HttpResponseRedirect(reverse('budget-transfer-update', args=[_id, selected_area, selected_distributor, selected_channel, message]))
             else:
-                period = Closing.objects.get(document='BUDGET')
+                if form.cleaned_data['amount'] <= 0 or form.cleaned_data['amount'] > budget_balance:
+                    message = 'Transfer amount is greater than the budget balance or less than or equal to 0.'.replace(
+                        '25', '')
+                    no_save = True
 
-                update = form.save(commit=False)
-                update.channel_from_id = selected_channel
-                update.channel_to_id = request.POST.get('channel_to')
-                update.save()
+                    return HttpResponseRedirect(reverse('budget-transfer-update', args=[_id, selected_area, selected_distributor, selected_channel, message]))
+                else:
+                    period = Closing.objects.get(document='BUDGET')
 
-                all_channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(
-                    budget_distributor_id=transfer.distributor, budget_area=transfer.area, budget_status='OPEN').budget_id)
-                for i in all_channel:
-                    transfer_from = BudgetTransfer.objects.filter(
-                        area_id=selected_area, distributor_id=selected_distributor, channel_from_id=i.budget_channel_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
-                    budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
-                                                                                          budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=i.budget_channel_id)
-                    budget_detail.budget_transfer_minus = transfer_from if transfer_from else 0
-                    budget_detail.save()
+                    update = form.save(commit=False)
+                    update.channel_from_id = selected_channel
+                    update.channel_to_id = request.POST.get('channel_to')
+                    update.save()
 
-                    transfer_to = BudgetTransfer.objects.filter(
-                        area_id=selected_area, distributor_id=selected_distributor, channel_to_id=i.budget_channel_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
-                    channel_to = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
-                                                                                       budget_distributor_id=selected_distributor, budget_status='OPEN').budget_id, budget_channel_id=i.budget_channel_id)
-                    channel_to.budget_transfer_plus = transfer_to if transfer_to else 0
-                    channel_to.save()
+                    all_channel = BudgetDetail.objects.filter(budget_id=Budget.objects.get(
+                        budget_distributor_id=transfer.distributor, budget_area=transfer.area, budget_status__in=['OPEN', 'DRAFT']).budget_id)
+                    for i in all_channel:
+                        transfer_from = BudgetTransfer.objects.filter(
+                            area_id=selected_area, distributor_id=selected_distributor, channel_from_id=i.budget_channel_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
+                        budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                                              budget_distributor_id=selected_distributor, budget_status__in=['OPEN', 'DRAFT']).budget_id, budget_channel_id=i.budget_channel_id)
+                        budget_detail.budget_transfer_minus = transfer_from if transfer_from else 0
+                        budget_detail.save()
 
-                return HttpResponseRedirect(reverse('budget-transfer-view', args=['draft', _id]))
+                        transfer_to = BudgetTransfer.objects.filter(
+                            area_id=selected_area, distributor_id=selected_distributor, channel_to_id=i.budget_channel_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
+                        channel_to = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=selected_area,
+                                                                                           budget_distributor_id=selected_distributor, budget_status__in=['OPEN', 'DRAFT']).budget_id, budget_channel_id=i.budget_channel_id)
+                        channel_to.budget_transfer_plus = transfer_to if transfer_to else 0
+                        channel_to.save()
+
+                    return HttpResponseRedirect(reverse('budget-transfer-view', args=['draft', _id]))
     else:
         form = FormBudgetTransferUpdate(instance=transfer)
 
@@ -2364,14 +2379,14 @@ def budget_transfer_delete(request, _id):
     transfer_from = BudgetTransfer.objects.filter(
         area_id=transfer.area, distributor_id=transfer.distributor, channel_from_id=transfer.channel_from, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
     budget_detail = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=transfer.area,
-                                                                          budget_distributor_id=transfer.distributor, budget_status='OPEN').budget_id, budget_channel_id=transfer.channel_from)
+                                                                          budget_distributor_id=transfer.distributor, budget_status__in=['OPEN', 'DRAFT']).budget_id, budget_channel_id=transfer.channel_from)
     budget_detail.budget_transfer_minus = transfer_from if transfer_from else 0
     budget_detail.save()
 
     transfer_to = BudgetTransfer.objects.filter(
         area_id=transfer.area, distributor_id=transfer.distributor, channel_to_id=transfer.channel_to_id, date__year=period.year_open, date__month=period.month_open).aggregate(Sum('amount'))['amount__sum']
     channel_to = BudgetDetail.objects.get(budget_id=Budget.objects.get(budget_area_id=transfer.area,
-                                                                       budget_distributor_id=transfer.distributor, budget_status='OPEN').budget_id, budget_channel_id=transfer.channel_to_id)
+                                                                       budget_distributor_id=transfer.distributor, budget_status__in=['OPEN', 'DRAFT']).budget_id, budget_channel_id=transfer.channel_to_id)
     channel_to.budget_transfer_plus = transfer_to if transfer_to else 0
     channel_to.save()
 
@@ -9895,7 +9910,8 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
                 AND proposal_approval_status = 'N' 
                 ORDER BY sequence 
                 LIMIT 1
-            ) AS reject_note
+            ) AS reject_note, 
+            apps_proposal.update_date AS closed_date
         FROM 
             apps_proposal 
             INNER JOIN apps_areauser ON apps_proposal.area = apps_areauser.area_id 
@@ -9979,7 +9995,8 @@ def report_proposal_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
                 AND proposal_approval_status = 'N' 
                 ORDER BY sequence 
                 LIMIT 1
-            ) AS reject_note
+            ) AS reject_note, 
+            apps_proposal.update_date AS closed_date
         FROM 
             apps_proposal 
             INNER JOIN apps_areauser ON apps_proposal.area = apps_areauser.area_id 
@@ -10100,7 +10117,8 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
                 AND proposal_approval_status = 'N' 
                 ORDER BY sequence 
                 LIMIT 1
-            ) AS reject_note
+            ) AS reject_note, 
+            apps_proposal.update_date AS closed_date
         FROM 
             apps_proposal 
             INNER JOIN apps_areauser ON apps_proposal.area = apps_areauser.area_id 
@@ -10186,7 +10204,8 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
                 AND proposal_approval_status = 'N' 
                 ORDER BY sequence 
                 LIMIT 1
-            ) AS reject_note
+            ) AS reject_note, 
+            apps_proposal.update_date AS closed_date
         FROM 
             apps_proposal 
             INNER JOIN apps_areauser ON apps_proposal.area = apps_areauser.area_id 
@@ -10225,7 +10244,7 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
 
     # Define column headers
     headers = ['Area', 'Distributor', 'Channel', 'Proposal No.', 'Program Name',
-               'Division', 'Budget Period', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Available', 'Status', 'By', 'Note']
+               'Division', 'Budget Period', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Return', 'Available', 'Status', 'By', 'Note', 'Closed Period']
 
     # Define cell formats
     header_format = workbook.add_format({
@@ -10251,15 +10270,16 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     worksheet.set_column('F:F', 16)
     worksheet.set_column('G:G', 12)
     worksheet.set_column('H:I', 11)
-    worksheet.set_column('J:N', 14)
-    worksheet.set_column('O:O', 10)
-    worksheet.set_column('P:P', 30)
-    worksheet.set_column('Q:Q', 50)
+    worksheet.set_column('J:O', 14)
+    worksheet.set_column('P:P', 10)
+    worksheet.set_column('Q:Q', 30)
+    worksheet.set_column('R:R', 50)
+    worksheet.set_column('S:S', 16)
 
     # Write data to XlsxWriter Object
     for idx, record in enumerate(proposal):
         for col_idx, col_value in enumerate(record):
-            if idx == 0 and col_idx < 17:
+            if idx == 0 and col_idx < 19:
                 # Write the column headers on the first row
                 worksheet.write(idx, col_idx, headers[col_idx], header_format)
             # Write the data rows
@@ -10267,23 +10287,31 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
                 worksheet.write(idx + 1, col_idx, col_value, period_format)
             elif col_idx == 7 or col_idx == 8:
                 worksheet.write(idx + 1, col_idx, col_value, date_format)
-            elif col_idx == 9 or col_idx == 10 or col_idx == 11 or col_idx == 12 or col_idx == 13:
+            elif col_idx == 9 or col_idx == 10 or col_idx == 11 or col_idx == 12:
                 worksheet.write(idx + 1, col_idx, col_value, num_format)
+            elif col_idx == 13:
+                worksheet.write(idx + 1, col_idx, col_value,
+                                num_format) if record[14] == 'CLOSED' else worksheet.write(idx + 1, col_idx, 0, num_format)
+                worksheet.write(idx + 1, 14, 0, num_format) if record[14] == 'CLOSED' else worksheet.write(
+                    idx + 1, 14, col_value, num_format)
             elif col_idx == 14:
                 worksheet.write(
-                    idx + 1, col_idx, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format)
+                    idx + 1, col_idx + 1, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format)
             elif col_idx == 15:
-                worksheet.write(idx + 1, col_idx, col_value, cell_format) if record[14] == 'IN APPROVAL' or record[14] == 'REJECTED' else worksheet.write(
-                    idx + 1, col_idx, '', cell_format)
+                worksheet.write(idx + 1, col_idx + 1, col_value, cell_format) if record[14] == 'IN APPROVAL' or record[14] == 'REJECTED' else worksheet.write(
+                    idx + 1, col_idx + 1, '', cell_format)
             elif col_idx == 16:
                 worksheet.write(
-                    idx + 1, 16, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[16] else worksheet.write(idx + 1, 16, '', cell_format)
+                    idx + 1, 17, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[16] else worksheet.write(idx + 1, 17, '', cell_format)
             elif col_idx == 17:
                 worksheet.write(
-                    idx + 1, 16, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[17] else worksheet.write(idx + 1, 16, '', cell_format)
+                    idx + 1, 17, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[17] else worksheet.write(idx + 1, 17, '', cell_format)
             elif col_idx == 18:
                 worksheet.write(
-                    idx + 1, 16, col_value, cell_format) if record[14] == 'REJECTED' and record[18] else worksheet.write(idx + 1, 16, '', cell_format)
+                    idx + 1, 17, col_value, cell_format) if record[14] == 'REJECTED' and record[18] else worksheet.write(idx + 1, 17, '', cell_format)
+            elif col_idx == 19:
+                worksheet.write(
+                    idx + 1, 18, col_value, period_format) if record[14] == 'CLOSED' else worksheet.write(idx + 1, 18, '', period_format)
             else:
                 worksheet.write(idx + 1, col_idx, col_value, cell_format)
 

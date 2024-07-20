@@ -102,7 +102,7 @@
                                 <div class="{% if request|is_mobile %}col-12{% else %}col-4{% endif %}">
                                     <div class="shadow-none">
                                         {{ form.channel_to.label_tag }}
-                                        <select name="channel_to" id="channel_to" class="form-control form-select-sm">
+                                        <select name="channel_to" id="channel_to" class="form-control form-select-sm" required>
                                             <option value="">-- Select Channel To --</option>
                                             {% for item in channel_to %}
                                             <option value="{{ item.0 }}">{{ item.0 }} - {{ item.1 }}</option>

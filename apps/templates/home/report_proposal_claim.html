@@ -52,10 +52,12 @@
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Actual</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Parked</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Assigned</th>
+                                    <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Return</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Available</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">By</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Note</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Closed Period</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -109,7 +111,10 @@
                                         <h6 class="mb-0 text-sm text-end">{{ item.proposal_claim|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.balance|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.status == 'CLOSED' %}{{ item.balance|intcomma }}{% else %}0{% endif %}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm text-end">{% if item.status == 'CLOSED' %}0{% else %}{{ item.balance|intcomma }}{% endif %}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">{% if item.status == 'OPEN' %}COMPLETED{% else %}{{ item.status }}{% endif %}</h6>
@@ -119,6 +124,9 @@
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">{% if item.status == 'IN APPROVAL' and item.revise_note %}{{ item.revise_note|truncatechars:30 }}{% else %}{% if item.status == 'IN APPROVAL' and item.return_note %}{{ item.return_note|truncatechars:30 }}{% else %}{% if item.status == 'REJECTED' and item.reject_note %}{{ item.reject_note|truncatechars:30 }}{% endif %}{% endif %}{% endif %}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.status == 'CLOSED' %}{{ item.closed_date|date:"M Y" }}{% endif %}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -234,25 +242,25 @@
     let exportBtn = document.getElementById('export');
 
     from_yr.addEventListener('change', function() {
-        if(from_yr.value != '0' && from_yr.value > to_yr.value) {
+        if(from_yr.value != '0' && parseInt(from_yr.value) > parseInt(to_yr.value)) {
             to_yr.value = from_yr.value;
         }
     });
 
     to_yr.addEventListener('change', function() {
-        if(to_yr.value != '0' && to_yr.value < from_yr.value) {
+        if(to_yr.value != '0' && parseInt(to_yr.value) < parseInt(from_yr.value)) {
             from_yr.value = to_yr.value;
         }
     });
 
     from_mo.addEventListener('change', function() {
-        if(from_mo.value != '0' && from_mo.value > to_mo.value && from_yr.value == to_yr.value) {
+        if(from_mo.value != '0' && parseInt(from_mo.value) > parseInt(to_mo.value) && from_yr.value == to_yr.value) {
             to_mo.value = from_mo.value;
         }
     });
 
     to_mo.addEventListener('change', function() {
-        if(to_mo.value != '0' && to_mo.value < from_mo.value && from_yr.value == to_yr.value) {
+        if(to_mo.value != '0' && parseInt(to_mo.value) < parseInt(from_mo.value) && from_yr.value == to_yr.value) {
             from_mo.value = to_mo.value;
         }
     });
@@ -276,14 +284,10 @@
             $('#propClaimTable').DataTable({
                 "scrollX": true,
                 "lengthChange": false,
-                "scrollCollapse": true,
-                "scrollY": "50vh",
             });
         } else {
             $('#propClaimTable').DataTable({
                 "scrollX": true,
-                "scrollCollapse": true,
-                "scrollY": "50vh",
                 "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
             });
         }

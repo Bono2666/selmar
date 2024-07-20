@@ -132,29 +132,29 @@
     }
 
     from_yr.addEventListener('change', function() {
-        if(from_yr.value != '0' && from_yr.value > to_yr.value) {
+        if(from_yr.value != '0' && parseInt(from_yr.value) > parseInt(to_yr.value)) {
             to_yr.value = from_yr.value;
         }
     });
 
     to_yr.addEventListener('change', function() {
-        if(to_yr.value != '0' && to_yr.value < from_yr.value) {
+        if(to_yr.value != '0' && parseInt(to_yr.value) < parseInt(from_yr.value)) {
             from_yr.value = to_yr.value;
         }
     });
 
     from_mo.addEventListener('change', function() {
-        if(from_mo.value != '0' && from_mo.value > to_mo.value && from_yr.value == to_yr.value) {
+        if(from_mo.value != '0' && parseInt(from_mo.value) > parseInt(to_mo.value) && from_yr.value == to_yr.value) {
             to_mo.value = from_mo.value;
         }
     });
 
     to_mo.addEventListener('change', function() {
-        if(to_mo.value != '0' && to_mo.value < from_mo.value && from_yr.value == to_yr.value) {
+        if(to_mo.value != '0' && parseInt(to_mo.value) < parseInt(from_mo.value) && from_yr.value == to_yr.value) {
             from_mo.value = to_mo.value;
         }
     });
-
+    
     filter.addEventListener('click', function() {
         let url = `/report/budget_detail/export/${from_yr.value}/${from_mo.value}/${to_yr.value}/${to_mo.value}/${distributor.value}`;
         window.location.href = url;
