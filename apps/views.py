@@ -9018,6 +9018,8 @@ def cl_print(request, _id):
     approver = CLRelease.objects.filter(
         cl_id=_id, cl_approval_status='Y', printed=True).order_by('sequence')
     cl_id = _id.replace('/', '-')
+    bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+             'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
     # Create a new PDF file with landscape orientation
     filename = 'CL-' + cl_id + '.pdf'
@@ -9037,8 +9039,8 @@ def cl_print(request, _id):
 
     # Add header
     y = 500
-    pdf_file.drawString(25, y, area.base_city + ', ' +
-                        cl.cl_date.strftime('%d %B %Y'))
+    pdf_file.drawString(25, y, area.base_city.capitalize() + ', ' +
+                        cl.cl_date.strftime('%-d') + ' ' + bulan[cl.cl_date.month - 1] + ' ' + cl.cl_date.strftime('%Y'))
     pdf_file.drawRightString(815, y, 'No. ' + cl.cl_id)
 
     y -= 25
@@ -9111,7 +9113,9 @@ def cl_print(request, _id):
         title_x = 25 + (25 - title_width) / 2
         pdf_file.drawString(title_x, y, title)
         pdf_file.rect(50, y - 5, 50, 15, stroke=True)
-        pdf_file.drawString(55, y, i.claim.depo if i.claim.depo else '')
+        depo = Truncator(i.claim.depo.capitalize()).chars(
+            9) if i.claim.depo else ''
+        pdf_file.drawString(55, y, depo if i.claim.depo else '')
         pdf_file.rect(100, y - 5, 120, 15, stroke=True)
         pdf_file.drawString(105, y, i.claim.invoice)
         pdf_file.rect(220, y - 5, 245, 15, stroke=True)
@@ -9123,6 +9127,13 @@ def cl_print(request, _id):
         pdf_file.drawString(530, y, i.claim.program_id)
         pdf_file.rect(670, y - 5, 145, 15, stroke=True)
         pdf_file.drawString(675, y, i.claim.proposal_id)
+        if n % 20 == 0:
+            footer(pdf_file)
+            pdf_file.showPage()
+            pdf_file.drawImage(logo_path, logo_x, 515,
+                               width=logo_width, height=logo_height)
+            pdf_file.setFont("Helvetica", 8)
+            y = 500
 
     y -= 15
     pdf_file.setFont("Helvetica-Bold", 8)
@@ -9136,6 +9147,14 @@ def cl_print(request, _id):
         25, y, 'Demikian surat konfirmasi ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkann terima kasih.')
 
     y -= 25
+    if y == 155:
+        footer(pdf_file)
+        pdf_file.showPage()
+        pdf_file.drawImage(logo_path, logo_x, 515,
+                           width=logo_width, height=logo_height)
+        pdf_file.setFont("Helvetica", 8)
+        y = 500
+
     col_width = (page_width[0] - 50) / 11
     pdf_file.drawString(25, y, 'Hormat Kami,')
     pdf_file.drawString(25 + (col_width * 2), y, 'Mengetahui,')
@@ -9163,6 +9182,14 @@ def cl_print(request, _id):
     pdf_file.setFont("Helvetica-Bold", 8)
     pdf_file.drawString(25, y, 'Cc : Finance Department')
 
+    footer(pdf_file)
+
+    pdf_file.save()
+
+    return FileResponse(open(filename, 'rb'), content_type='application/pdf')
+
+
+def footer(pdf_file):
     y = 50
     pdf_file.setFont("Helvetica-Bold", 7)
     pdf_file.drawString(
@@ -9212,10 +9239,6 @@ def cl_print(request, _id):
     factory_fax = '+62 267 431 421'
     pdf_file.drawString(25 + factory_x + factory_address_x +
                         factory_tel_x + factory_ph_x + factory_fax_x, y - 20, factory_fax)
-
-    pdf_file.save()
-
-    return FileResponse(open(filename, 'rb'), content_type='application/pdf')
 
 
 @login_required(login_url='/login/')
