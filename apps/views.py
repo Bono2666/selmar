@@ -2499,6 +2499,8 @@ def budget_transfer_release_approve(request, _id):
     else:
         transfer.status = 'IN APPROVAL'
 
+    transfer.save()
+
     email = BudgetTransferRelease.objects.filter(transfer_id=_id, transfer_approval_status='N').order_by(
         'sequence').values_list('transfer_approval_email', flat=True)
     with connection.cursor() as cursor:
@@ -2511,8 +2513,6 @@ def budget_transfer_release_approve(request, _id):
         'Click this link to approve, revise or return this budget transfer.\n' + host.url + 'budget_transfer_release/view/' + str(_id) + '/0/' + \
         '\n\nThank you.'
     send_email(subject, message, [email[0]])
-
-    transfer.save()
 
     return HttpResponseRedirect(reverse('budget-transfer-release-index'))
 
@@ -4122,6 +4122,7 @@ def proposal_release_approve(request, _id):
 
     if release.sequence == approval.sequence:
         proposal.status = 'OPEN'
+        proposal.save()
 
         recipients = []
 
@@ -4141,6 +4142,7 @@ def proposal_release_approve(request, _id):
         send_email(subject, msg, recipient_list)
     else:
         proposal.status = 'IN APPROVAL'
+        proposal.save()
 
         email = ProposalRelease.objects.filter(proposal_id=_id, proposal_approval_status='N').order_by(
             'sequence').values_list('proposal_approval_email', flat=True)
@@ -4154,8 +4156,6 @@ def proposal_release_approve(request, _id):
             'Click this link to approve, revise, return or reject this proposal.\n' + host.url + 'proposal_release/view/' + str(_id) + '/0/0/0/0/' + \
             '\n\nThank you.'
         send_email(subject, msg, [email[0]])
-
-    proposal.save()
 
     return HttpResponseRedirect(reverse('proposal-release-index'))
 
@@ -6226,6 +6226,7 @@ def program_release_approve(request, _id):
 
     if release.sequence == approval.sequence:
         program.status = 'OPEN'
+        program.save()
 
         recipients = []
 
@@ -6245,6 +6246,7 @@ def program_release_approve(request, _id):
         send_email(subject, msg, recipient_list)
     else:
         program.status = 'IN APPROVAL'
+        program.save()
 
         email = ProgramRelease.objects.filter(program_id=_id, program_approval_status='N').order_by(
             'sequence').values_list('program_approval_email', flat=True)
@@ -6258,8 +6260,6 @@ def program_release_approve(request, _id):
             'Click this link to approve, revise, return or reject this program.\n' + host.url + 'program_release/view/' + str(_id) + '/0/' + \
             '\n\nThank you.'
         send_email(subject, msg, [email[0]])
-
-    program.save()
 
     return HttpResponseRedirect(reverse('program-release-index'))
 
@@ -7393,7 +7393,7 @@ def claim_release_approve(request, _id):
 
     if release.sequence == approval.sequence:
         claim.status = 'OPEN'
-
+        
         recipients = []
 
         maker = claim.entry_by
@@ -7409,10 +7409,9 @@ def claim_release_approve(request, _id):
         msg = 'Dear All,\n\nClaim No. ' + str(_id) + ' has been approved.\n\nClick the following link to view the claim.\n' + host.url + 'claim/view/open/' + str(_id) + \
             '\n\nThank you.'
         recipient_list = list(dict.fromkeys(recipients))
-        send_email(subject, msg, recipient_list)
     else:
         claim.status = 'IN APPROVAL'
-
+        
         email = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='N').order_by(
             'sequence').values_list('claim_approval_email', flat=True)
         with connection.cursor() as cursor:
@@ -7424,7 +7423,6 @@ def claim_release_approve(request, _id):
         msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
             'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
             '\n\nThank you.'
-        send_email(subject, msg, [email[0]])
 
     claim.save()
 
@@ -7484,6 +7482,11 @@ def claim_release_approve(request, _id):
         proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
         proposal2.save()
 
+    if release.sequence == approval.sequence:
+        send_email(subject, msg, recipient_list)
+    else:
+        send_email(subject, msg, [email[0]])
+
     return HttpResponseRedirect(reverse('claim-release-index'))
 
 
@@ -7513,38 +7516,8 @@ def claim_release_bulk_approve(request):
 
         if release.sequence == approval.sequence:
             claim.status = 'OPEN'
-
-            recipients = []
-
-            maker = claim.entry_by
-            maker_mail = User.objects.get(user_id=maker).email
-            recipients.append(maker_mail)
-
-            approvers = ClaimRelease.objects.filter(
-                claim_id=_id, notif=True, claim_approval_status='Y')
-            for i in approvers:
-                recipients.append(i.claim_approval_email)
-
-            subject = 'Claim Approved'
-            msg = 'Dear All,\n\nClaim No. ' + str(_id) + ' has been approved.\n\nClick the following link to view the claim.\n' + host.url + 'claim/view/open/' + str(_id) + \
-                '\n\nThank you.'
-            recipient_list = list(dict.fromkeys(recipients))
-            send_email(subject, msg, recipient_list)
         else:
             claim.status = 'IN APPROVAL'
-
-            email = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='N').order_by(
-                'sequence').values_list('claim_approval_email', flat=True)
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT claim_approval_name FROM apps_claimrelease WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'N' ORDER BY sequence LIMIT 1")
-                approver = cursor.fetchone()
-
-            subject = 'Claim Approval'
-            msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
-                'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
-                '\n\nThank you.'
-            send_email(subject, msg, [email[0]])
 
         claim.save()
 
@@ -7603,6 +7576,37 @@ def claim_release_bulk_approve(request):
             proposal2.parked_claim = parked_amount2 + additional_parked_amount2
             proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
             proposal2.save()
+
+        if release.sequence == approval.sequence:
+            recipients = []
+
+            maker = claim.entry_by
+            maker_mail = User.objects.get(user_id=maker).email
+            recipients.append(maker_mail)
+
+            approvers = ClaimRelease.objects.filter(
+                claim_id=_id, notif=True, claim_approval_status='Y')
+            for i in approvers:
+                recipients.append(i.claim_approval_email)
+
+            subject = 'Claim Approved'
+            msg = 'Dear All,\n\nClaim No. ' + str(_id) + ' has been approved.\n\nClick the following link to view the claim.\n' + host.url + 'claim/view/open/' + str(_id) + \
+                '\n\nThank you.'
+            recipient_list = list(dict.fromkeys(recipients))
+            send_email(subject, msg, recipient_list)
+        else:
+            email = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='N').order_by(
+                'sequence').values_list('claim_approval_email', flat=True)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT claim_approval_name FROM apps_claimrelease WHERE claim_id = '" + str(_id) + "' AND claim_approval_status = 'N' ORDER BY sequence LIMIT 1")
+                approver = cursor.fetchone()
+
+            subject = 'Claim Approval'
+            msg = 'Dear ' + approver[0] + ',\n\nYou have a new claim to approve. Please check your claim release list.\n\n' + \
+                'Click this link to approve, revise, return or reject this claim.\n' + host.url + 'claim_release/view/' + str(_id) + '/0/' + \
+                '\n\nThank you.'
+            send_email(subject, msg, [email[0]])
 
     return HttpResponseRedirect(reverse('claim-release-index'))
 
@@ -7671,8 +7675,6 @@ def claim_release_return(request, _id):
     else:
         msg += host.url + 'claim_release/view/' + \
             str(_id) + '/0/\n\nThank you.'
-    recipient_list = list(dict.fromkeys(recipients))
-    send_email(subject, msg, recipient_list)
 
     sum_amount = Claim.objects.filter(
         proposal_id=claim.proposal_id).exclude(status__in=['DRAFT', 'REJECTED']).aggregate(Sum('amount'))
@@ -7727,6 +7729,9 @@ def claim_release_return(request, _id):
         proposal2.parked_claim = parked_amount2 + additional_parked_amount2
         proposal2.balance = proposal2.total_cost - proposal2.proposal_claim
         proposal2.save()
+
+    recipient_list = list(dict.fromkeys(recipients))
+    send_email(subject, msg, recipient_list)
 
     return HttpResponseRedirect(reverse('claim-release-index'))
 
