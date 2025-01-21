@@ -80,7 +80,7 @@
                                             <td>
                                                 <h6 class="mb-0 text-sm">{% if item.1 %}{{ item.1 }}{% endif %}</h6>
                                             </td>
-                                            <td>
+                                            <td data-sort="{{ item.2|date:'U' }}">
                                                 <h6 class="mb-0 text-sm">{{ item.2|date:"d M Y" }}</h6>
                                             </td>
                                             <td>
@@ -130,7 +130,7 @@
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td data-sort="{{ item.claim_date|date:'U' }}">
                                                 <h6 class="mb-0 text-sm">{{ item.claim_date|date:"d M Y" }}</h6>
                                             </td>
                                             <td>
@@ -180,7 +180,7 @@
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td data-sort="{{ item.1|date:'U' }}">
                                                 <h6 class="mb-0 text-sm">{{ item.1|date:"d M Y" }}</h6>
                                             </td>
                                             <td>

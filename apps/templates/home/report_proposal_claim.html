@@ -89,13 +89,13 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
+                                    <td data-sort="{{ item.budget_period|date:"Ymd" }}">
                                         <h6 class="mb-0 text-sm">{{ item.budget_period|date:"M Y"}}
                                     </td>
-                                    <td>
+                                    <td data-sort="{{ item.period_start|date:"Ymd" }}">
                                         <h6 class="mb-0 text-sm">{{ item.period_start|date:"d M Y" }}</h6>
                                     </td>
-                                    <td>
+                                    <td data-sort="{{ item.period_end|date:"Ymd" }}">
                                         <h6 class="mb-0 text-sm">{{ item.period_end|date:"d M Y" }}</h6>
                                     </td>
                                     <td>
@@ -125,7 +125,7 @@
                                     <td>
                                         <h6 class="mb-0 text-sm">{% if item.status == 'IN APPROVAL' and item.revise_note %}{{ item.revise_note|truncatechars:30 }}{% else %}{% if item.status == 'IN APPROVAL' and item.return_note %}{{ item.return_note|truncatechars:30 }}{% else %}{% if item.status == 'REJECTED' and item.reject_note %}{{ item.reject_note|truncatechars:30 }}{% endif %}{% endif %}{% endif %}</h6>
                                     </td>
-                                    <td>
+                                    <td data-sort="{% if item.status == 'CLOSED' %}{{ item.closed_date|date:"Ymd" }}{% else %}99991231{% endif %}">
                                         <h6 class="mb-0 text-sm">{% if item.status == 'CLOSED' %}{{ item.closed_date|date:"M Y" }}{% endif %}</h6>
                                     </td>
                                 </tr>

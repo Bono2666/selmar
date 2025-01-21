@@ -50,7 +50,7 @@
                                     <td>
                                         <h6 class="mb-0 text-sm">{% if item.6 %}{{ item.6 }}{% endif %}</h6>
                                     </td>
-                                    <td>
+                                    <td data-sort="{{ item.1|date:"Ymd" }}">
                                         <h6 class="mb-0 text-sm">{{ item.1|date:"d M Y" }}</h6>
                                     </td>
                                     <td>
