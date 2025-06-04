@@ -27,7 +27,7 @@
                                 <button type="submit" class="btn btn-sm bg-gradient-dark mb-0 px-4" {% if crud == 'view' %}hidden{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
                                 <button type="button" class="btn btn-sm bg-gradient-danger mb-0 px-4 {% if status != 'DRAFT' and status != 'PENDING' and not request.user.is_superuser %}disabled{% else %}{% if not btn.delete and not request.user.is_superuser %}disabled{% else %}{% if crud == 'update' %}disabled{% endif %}{% endif %}{% endif %}" data-bs-toggle="modal" data-bs-target="#confirm-{{ data.claim_id }}"><i class="fas fa-trash"></i>&nbsp;&nbsp;Delete</button>
                                 <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %}" data-bs-toggle="modal" data-bs-target="#approval"><i class="fas fa-check"></i>&nbsp;&nbsp;Status</button>
-                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" {% if data.status != 'DRAFT' %}hidden{% endif %} data-bs-toggle="modal" data-bs-target="#confirm-submit"><i class="fas fa-file-export"></i>&nbsp;&nbsp;Submit</button>
+                                <button type="button" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if not btn.submit %}disabled{% endif %}" id="claim-submit" {% if data.status != 'DRAFT' %}hidden{% endif %}><i class="fas fa-paper-plane"></i>&nbsp;&nbsp;Submit</button>
                                 <a href="{% url 'claim-print' data.claim_id %}" class="btn btn-sm bg-gradient-dark mb-0 px-4 {% if crud == 'update' %}disabled{% endif %} {% if data.status != 'OPEN' %}disabled{% endif %}" {% if data.status == 'DRAFT' %}hidden{% endif %} target="_blank"><i class="fas fa-print"></i>&nbsp;&nbsp;Print</a>
                             </div>
                         </div>
@@ -319,6 +319,20 @@
     let additionProposal = "{{ add_prop }}";
     let addPropCancel = document.getElementById('addprop_cancel');
     let selectAddProp = document.getElementById('select_addprop');
+    let submitBtn = document.getElementById('claim-submit');
+    let totalClaim = parseInt("{{ data.total_claim }}");
+    let proposalBalance = parseInt("{{ proposal.balance }}");
+    let addProposal = "{{ data.additional_proposal }}";
+
+    submitBtn.addEventListener('click', function() {
+        if (totalClaim > proposalBalance && addProposal == "") {
+            alert("Claim amount exceeds proposal balance. Please select an additional proposal.");
+        } 
+        else {
+            // open data-bs-target modal confirm-submit
+            $('#confirm-submit').modal('show');
+        }
+    });
 
     if (additionProposal == "1") {
         $('#additional_proposal').modal();
@@ -327,7 +341,7 @@
             item.classList.remove('z-index-0');
         }
     }
-
+    
     $(document).ready( function () {
         $('#releaseTable').DataTable({
             'searching': false,
@@ -346,5 +360,6 @@
     $(document).on('click', addPropCancel, function() {
         selectAddProp.removeAttribute('required');
     });
+
 </script>
 {% endblock javascripts %}

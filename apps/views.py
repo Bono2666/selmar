@@ -6797,6 +6797,7 @@ def claim_view(request, _tab, _id, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
     claim = Claim.objects.get(claim_id=_id)
     form = FormClaimView(instance=claim)
     program = Program.objects.get(program_id=claim.program_id)
+    proposal = Proposal.objects.get(proposal_id=program.proposal.proposal_id)
 
     highest_approval = ClaimRelease.objects.filter(
         claim_id=_id, limit__gt=claim.total_claim).aggregate(Min('sequence')) if ClaimRelease.objects.filter(claim_id=_id, limit__gt=claim.total_claim).count() > 0 else ClaimRelease.objects.filter(claim_id=_id).aggregate(Max('sequence'))
@@ -6816,6 +6817,7 @@ def claim_view(request, _tab, _id, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
         'form': form,
         'tab': _tab,
         'program': program,
+        'proposal': proposal,
         'approval': approval,
         'rejector': rejector,
         'status': claim.status,
@@ -6862,7 +6864,7 @@ def claim_update(request, _tab, _id):
         form = FormClaimUpdate(request.POST, request.FILES, instance=claim)
         difference = int(request.POST.get('amount')) - \
             (int(proposal.balance) + int(claim.amount))
-        if int(request.POST.get('amount')) > (int(program.proposal.balance) + int(claim.amount)) and request.POST.get('add_proposals') == '':
+        if int(request.POST.get('amount')) > (int(program.proposal.balance)) and request.POST.get('add_proposals') == '':
             add_prop = '1'
             message = 'Claim amount is greater than proposal balance.'
             add_proposals = Proposal.objects.filter(
@@ -7393,7 +7395,7 @@ def claim_release_approve(request, _id):
 
     if release.sequence == approval.sequence:
         claim.status = 'OPEN'
-        
+
         recipients = []
 
         maker = claim.entry_by
@@ -7411,7 +7413,7 @@ def claim_release_approve(request, _id):
         recipient_list = list(dict.fromkeys(recipients))
     else:
         claim.status = 'IN APPROVAL'
-        
+
         email = ClaimRelease.objects.filter(claim_id=_id, claim_approval_status='N').order_by(
             'sequence').values_list('claim_approval_email', flat=True)
         with connection.cursor() as cursor:
