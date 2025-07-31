@@ -15,7 +15,7 @@
                     <div class="card-header">
                         <div class="row">
                             <div class="col-sm-8 d-flex align-items-center">
-                                <h5 class="mb-2">Add New Claim {% if selected_program != '0' %}- Program No. {{ selected_program }}{% endif %}</h5>
+                                <h5 class="mb-0">Add New Claim {% if selected_program != '0' %}- Program No. {{ selected_program }}{% endif %}</h5>
                             </div>
                             <div class="col-sm-4 text-end">
                                 <button type="submit" class="btn btn-sm bg-gradient-danger mb-0" {% if no_save %}disabled{% endif %}><i class="fas fa-save"></i>&nbsp;&nbsp;Save</button>
@@ -74,6 +74,20 @@
                                 {{ msg }}
                             </div>
                             {% endif %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="shadow-none">
+                                        <label for="id_distributor">Distributor</label>
+                                        <input type="text" name="distributor" id="id_distributor" class="form-control form-control-sm" value="{{ proposal.budget.budget_distributor.distributor_name }}" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="shadow-none">
+                                        <label for="id_area">Area</label>
+                                        <input type="text" name="area" id="id_area" class="form-control form-control-sm" value="{{ proposal.budget.budget_area.area_name }}" readonly>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="row">
                                 {{ form.area }}
                                 {{ form.claim_id }}

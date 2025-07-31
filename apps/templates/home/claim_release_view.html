@@ -21,7 +21,7 @@
                     <div class="card-header">
                         <div class="row">
                             <div class="{% if request|is_mobile %}col-11{% else %}col-6{% endif %} d-flex align-items-center">
-                                <h5 class="mb-2">Claim No. {{ data.claim_id }}</h5>
+                                <h5 class="mb-0">Claim No. {{ data.claim_id }}</h5>
                             </div>
                             <div class="{% if request|is_mobile %}col-1{% else %}col-6{% endif %} text-end">
                                 {% if request|is_mobile %}
@@ -197,6 +197,20 @@
                                 {{ msg }}
                             </div>
                             {% endif %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="shadow-none">
+                                        <label for="id_distributor">Distributor</label>
+                                        <input type="text" name="distributor" id="id_distributor" class="form-control form-control-sm" value="{{ program.proposal.budget.budget_distributor.distributor_name }}" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="shadow-none">
+                                        <label for="id_area">Area</label>
+                                        <input type="text" name="area" id="id_area" class="form-control form-control-sm" value="{{ program.proposal.budget.budget_area.area_name }}" readonly>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="row">
                                 {{ form.area }}
                                 <div class="col-md-2">

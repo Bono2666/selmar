@@ -177,6 +177,20 @@
                             </div>
                             {% endif %} -->
                             <div class="row">
+                                <div class="col-md-6">
+                                    <div class="shadow-none">
+                                        <label class="form-label">Distributor</label>
+                                        <input type="text" class="form-control form-control-sm" value="{{ data.budget.budget_distributor.distributor_name }}" disabled>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="shadow-none">
+                                        <label class="form-label">Area</label>
+                                        <input type="text" class="form-control form-control-sm" value="{{ data.budget.budget_area.area_name }}" disabled>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
                                 {{ form.area }}
                                 <div class="{% if crud == 'view' %}col-md-10{% else %}col-md-12{% endif %}">
                                     <div class="shadow-none">

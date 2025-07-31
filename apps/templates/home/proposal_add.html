@@ -36,6 +36,20 @@
                             </div>
                             {% endif %} -->
                             <div class="row">
+                                <div class="col-md-6">
+                                    <div class="shadow-none">
+                                        <label for="distributor" class="form-label">Distributor</label>
+                                        <input disabled name="distributor" value="{{ distributor.budget_distributor.distributor_name }}" class="form-control form-select-sm" type="text">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="shadow-none">
+                                        <label for="area" class="form-label">Area</label>
+                                        <input disabled name="area" value="{{ distributor.budget_area.area_name }}" class="form-control form-select-sm" type="text">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
                                 {{ form.proposal_id }}
                                 {{ form.area }}
                                 <div class="col-md-12">

@@ -5033,9 +5033,9 @@ def proposal_add(request, _area, _budget, _channel):
         F('budget_proposed') + F('budget_remaining'),
         status=F('budget__budget_status')) if selected_budget != '0' else None
     distributor = Budget.objects.get(
-        budget_id=selected_budget).budget_distributor_id if selected_budget != '0' else None
-    refs = Proposal.objects.filter(status='OPEN', area=selected_area, budget__budget_distributor_id=distributor,
-                                   channel=selected_channel).order_by('-proposal_date')
+        budget_id=selected_budget) if selected_budget != '0' else None
+    refs = Proposal.objects.filter(status='OPEN', area=selected_area, budget__budget_distributor_id=distributor.budget_distributor_id,
+                                   channel=selected_channel).order_by('-proposal_date') if distributor else None
 
     message = ''
     no_save = False
@@ -5057,9 +5057,9 @@ def proposal_add(request, _area, _budget, _channel):
         format_no = '{:04d}'.format(_no.seq_number + 1)
 
     _id = 'PBS-2' + format_no + '/' + selected_channel + '/' + selected_area + '/' + \
-        str(distributor) + '/' + \
+        str(distributor.budget_distributor_id) + '/' + \
         str(datetime.datetime.now().strftime('%m')) + \
-        '/' + str(datetime.datetime.now().year)
+        '/' + str(datetime.datetime.now().year) if distributor else ''
 
     if request.method == 'POST':
         form = FormProposal(request.POST, request.FILES)
@@ -5107,6 +5107,7 @@ def proposal_add(request, _area, _budget, _channel):
         'form': form,
         'area': area,
         'name': name,
+        'distributor': distributor,
         'divs': divs,
         'budgets': budgets,
         'budget_detail': budget_detail,
@@ -6676,6 +6677,7 @@ def claim_add(request, _area, _distributor, _program):
         'distributors': distributors,
         'program': program,
         'programs': programs,
+        'proposal': proposal,
         'proposals': proposals,
         'add_proposals': add_proposals,
         'selected_area': selected_area,
