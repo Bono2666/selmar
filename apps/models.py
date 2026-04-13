@@ -529,12 +529,6 @@ class ProposalRelease(models.Model):
     update_date = models.DateTimeField(null=True)
     update_by = models.CharField(max_length=50, null=True)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['proposal', 'proposal_approval_id'], name='unique_proposal_approval')
-        ]
-
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
@@ -881,12 +875,6 @@ class ProgramRelease(models.Model):
     update_date = models.DateTimeField(null=True)
     update_by = models.CharField(max_length=50, null=True)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['program', 'program_approval_id'], name='unique_program_approval')
-        ]
-
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
@@ -1002,12 +990,6 @@ class ClaimRelease(models.Model):
     entry_by = models.CharField(max_length=50, null=True)
     update_date = models.DateTimeField(null=True, blank=True)
     update_by = models.CharField(max_length=50, null=True, blank=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['claim', 'claim_approval_id'], name='unique_claim_approval')
-        ]
 
     def save(self, *args, **kwargs):
         if not self.entry_date:
@@ -1129,12 +1111,6 @@ class CLRelease(models.Model):
     update_date = models.DateTimeField(
         null=True, blank=True, auto_now=True)
     update_by = models.CharField(max_length=50, null=True, blank=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['cl_id', 'cl_approval_id'], name='unique_cl_approval')
-        ]
 
     def save(self, *args, **kwargs):
         if not self.entry_date:

@@ -70,7 +70,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="modal fade" id="approval" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                    <!-- Update Issue Web Selmar Begin -->
+                    <div class="modal modal-lg fade" id="approval" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                         aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered" role="document">
                             <div class="modal-content">
@@ -79,14 +80,6 @@
                                 </div>
                                 <div class="modal-body border-bottom-0">
                                     <table class="table border cell-border align-items-center mb-0" id="releaseTable">
-                                        <thead>
-                                            <tr>
-                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
-                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
-                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
-                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"></th>
-                                            </tr>
-                                        </thead>
                                         <tbody>
                                         {% for item in approval %}
                                         <tr>
@@ -107,14 +100,21 @@
                                             <td>
                                                 <div class="d-flex pe-2 py-0">
                                                     <div class="d-flex flex-column justify-content-center">
-                                                        <h6 class="mb-0 cursor-default text-sm">{% if item.proposal_approval_id == rejector.proposal_approval_id %}Rejected by Approver{% else %}{% if item.proposal_approval_date == NONE %}{% if data.status == 'REJECTED' %}-{% else %}Waiting for approval ... {% endif %}{% else %}{{ item.proposal_approval_date }}{% endif %}{% endif %}</h6>
+                                                        <h6 class="mb-0 cursor-default text-sm">{% if item.reject_note %}Rejected On {{ item.update_date }}{% else %}{% if item.proposal_approval_date == NONE %}{% if data.status == 'REJECTED' %}-{% else %}{% if item.return_note %}Returned on {{ item.update_date }}{% else %}{% if item.revise_note %}Revised on {{ item.update_date }}{% else %}Waiting for approval ... {% endif %}{% endif %}{% endif %}{% else %}{{ item.proposal_approval_date }}{% endif %}{% endif %}</h6>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
                                                 <div class="d-flex py-0">
                                                     <div class="d-flex flex-column justify-content-center">
-                                                        <i class="mb-0 cursor-default text-sm fas {% if item.proposal_approval_id == rejector.proposal_approval_id %}fa-ban text-danger{% else %}{% if item.proposal_approval_status == 'Y' %}fa-check text-danger{% else %}{% if data.status == 'REJECTED' %}fa-minus-circle{% else %}fa-clock{% endif %}{% endif %}{% endif %}"></i>
+                                                        <i class="mb-0 cursor-default text-sm fas {% if item.reject_note %}fa-ban text-danger{% else %}{% if item.return_note %}fa-undo{% else %}{% if item.proposal_approval_status == 'Y' %}fa-check text-danger{% else %}{% if data.status == 'REJECTED' %}fa-minus-circle{% else %}fa-clock{% endif %}{% endif %}{% endif %}{% endif %}"></i>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex pe-2 py-0">
+                                                    <div class="d-flex flex-column justify-content-start">
+                                                        <h6 class="mb-0 cursor-default text-sm" data-toggle="tooltip" data-original-title="{% if item.reject_note %}{{ item.reject_note }}{% else %}{% if item.return_note %}{{ item.return_note }}{% else %}{% if item.revise_note %}{{ item.revise_note }}{% else %}{% endif %}{% endif %}{% endif %}">{% if item.reject_note %}Rejected: {{ item.reject_note|truncatechars:30 }}{% else %}{% if item.return_note %}Returned: {{ item.return_note|truncatechars:30 }}{% else %}{% if item.revise_note %}Revised: {{ item.revise_note|truncatechars:30 }}{% else %}{% endif %}{% endif %}{% endif %}</h6>
                                                     </div>
                                                 </div>
                                             </td>
@@ -129,6 +129,7 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Update Issue Web Selmar End -->
                     <div class="modal fade" id="confirm-{{ data.proposal_id }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
                         aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered" role="document">
@@ -1125,14 +1126,6 @@
             'lengthChange': false,
             'paging': false,
             'info': false,
-        });
-
-        $('#releaseTable').DataTable({
-            'searching': false,
-            'lengthChange': false,
-            'paging': false,
-            'info': false,
-            'cell-border': true,
         });
         
         let btn = document.getElementsByClassName('paginate_button');

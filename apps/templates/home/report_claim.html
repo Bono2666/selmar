@@ -37,9 +37,11 @@
                 <div class="card-body px-0 pt-0 pb-2">
                     <div class="table-responsive p-0">
                         <table class="table hover align-items-center mb-0" id="claimTable">
+                            <!-- update Issue Web Selmar begin -->
                             <thead>
                                 <tr>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Claim No.</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">CL No.</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Invoice No.</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Claim Date</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Invoice Date</th>
@@ -65,36 +67,36 @@
                                         <h6 class="mb-0 text-sm">{{ item.0 }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.1 }}</h6> 
+                                        <h6 class="mb-0 text-sm">{% if item.1 %}{{ item.1 }}{% endif %}</h6>
                                     </td>
-                                    <td data-sort="{{ item.2|date:"U" }}">
-                                        <h6 class="mb-0 text-sm">{{ item.2|date:"d M Y" }}</h6>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{{ item.2 }}</h6> 
                                     </td>
                                     <td data-sort="{{ item.3|date:"U" }}">
                                         <h6 class="mb-0 text-sm">{{ item.3|date:"d M Y" }}</h6>
                                     </td>
+                                    <td data-sort="{{ item.4|date:"U" }}">
+                                        <h6 class="mb-0 text-sm">{{ item.4|date:"d M Y" }}</h6>
+                                    </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{{ item.4 }}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.5 }}</h6>
                                     </td>
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.5 }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.6 }}</h6>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.6 %}{{ item.6 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.7 %}{{ item.7 }}{% endif %}</h6>
                                     </td>
                                     <td>
                                         <div class="d-flex pe-2 py-0">
                                             <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ item.7 }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ item.8 }}</h6>
                                             </div>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <h6 class="mb-0 text-sm">{{ item.8 }}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">{{ item.9 }}</h6>
@@ -103,26 +105,30 @@
                                         <h6 class="mb-0 text-sm">{{ item.10 }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.14 %}{{ item.14 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{{ item.11 }}</h6>
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.15 %}{{ item.15 }}{% endif %}</h6>
                                     </td>
                                     <td>
                                         <h6 class="mb-0 text-sm">IDR</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm text-end">{{ item.11|intcomma }}</h6>
+                                        <h6 class="mb-0 text-sm text-end">{{ item.12|intcomma }}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.12 == 'OPEN' %}COMPLETED{% else %}{{ item.12 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.13 == 'OPEN' %}COMPLETED{% else %}{{ item.13 }}{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.12 == 'IN APPROVAL' or item.12 == 'REJECTED' %}{{ item.13 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.13 == 'IN APPROVAL' or item.13 == 'REJECTED' %}{{ item.14 }}{% endif %}</h6>
                                     </td>
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.12 == 'IN APPROVAL' and item.15 %}{{ item.15|truncatechars:30 }}{% elif item.12 == 'IN APPROVAL' and item.16 %}{{ item.16|truncatechars:30 }}{% elif item.12 == 'REJECTED' and item.17 %}{{ item.17|truncatechars:30 }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.13 == 'IN APPROVAL' and item.16 %}{{ item.16|truncatechars:30 }}{% elif item.13 == 'IN APPROVAL' and item.17 %}{{ item.17|truncatechars:30 }}{% elif item.13 == 'REJECTED' and item.18 %}{{ item.18|truncatechars:30 }}{% endif %}</h6>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
+                            <!-- update Issue Web Selmar end -->
                         </table>
                     </div>
                 </div>

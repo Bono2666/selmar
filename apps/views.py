@@ -2825,13 +2825,27 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
     total_cost = ProjectedCost.objects.filter(
         proposal_id=_id).aggregate(Sum('cost'))
     add_cost = True if budget.budget_balance > 0 else False
-    approved = ProposalRelease.objects.get(
-        proposal_id=_id, proposal_approval_id=request.user.user_id).proposal_approval_status
+    approved = ProposalRelease.objects.filter(
+        proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first()
     period = Closing.objects.get(document='BUDGET')
     diff_period = False
 
     if proposal.budget.budget_month != '{:02d}'.format(int(period.month_open)) or proposal.budget.budget_year != period.year_open:
         diff_period = True
+
+    # Update Issue Web Selmar Begin
+    highest_approval = ProposalRelease.objects.filter(
+        proposal_id=_id, limit__gt=proposal.total_cost).aggregate(Min('sequence')) if ProposalRelease.objects.filter(proposal_id=_id, limit__gt=proposal.total_cost).exists() else ProposalRelease.objects.filter(proposal_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = ProposalRelease.objects.filter(
+            proposal_id=_id, sequence__lt=highest_sequence).order_by('-proposal_approval_status', 'sequence')
+    else:
+        approval = ProposalRelease.objects.filter(
+            proposal_id=_id).order_by('-proposal_approval_status', 'sequence')
+    rejector = ProposalRelease.objects.filter(
+        proposal_id=_id, proposal_approval_status='N').order_by('sequence').first() if proposal.status == 'REJECTED' else None
 
     context = {
         'form': form,
@@ -2854,8 +2868,11 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
         'diff_period': diff_period,
         'sub_id': _sub_id,
         'action': _act,
+        'approval': approval,
+        'rejector': rejector,
         'message': _msg,
-        'approved': approved,
+        'approved': approved.proposal_approval_status,
+        'returned': approved.return_note,
         'is_revise': _is_revise,
         'status': proposal.status,
         'add_cost': add_cost,
@@ -2869,8 +2886,9 @@ def proposal_release_view(request, _id, _sub_id, _act, _msg, _is_revise):
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='PROPOSAL-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
-        'btn_release': ProposalRelease.objects.get(proposal_id=_id, proposal_approval_id=request.user.user_id),
+        'btn_release': ProposalRelease.objects.filter(proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first(),
     }
+    # Update Issue Web Selmar End
     return render(request, 'home/proposal_release_view.html', context)
 
 
@@ -3087,8 +3105,8 @@ def proposal_release_update(request, _id):
 
                 recipients = []
 
-                release = ProposalRelease.objects.get(
-                    proposal_id=_id, proposal_approval_id=request.user.user_id)
+                release = ProposalRelease.objects.filter(
+                    proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first()
                 release.revise_note = request.POST.get('revise_note')
                 release.save()
 
@@ -4104,8 +4122,8 @@ def budget_release_approve(request, _id):
 @role_required(allowed_roles='PROPOSAL-RELEASE')
 def proposal_release_approve(request, _id):
     proposal = Proposal.objects.get(proposal_id=_id)
-    release = ProposalRelease.objects.get(
-        proposal_id=_id, proposal_approval_id=request.user.user_id)
+    release = ProposalRelease.objects.filter(
+        proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first()
     release.proposal_approval_status = 'Y'
     release.proposal_approval_date = timezone.now()
     release.save()
@@ -4224,28 +4242,73 @@ def budget_release_return(request, _id):
 def proposal_release_return(request, _id):
     recipients = []
     draft = False
+    area = Proposal.objects.get(proposal_id=_id).area
+    channel = Proposal.objects.get(proposal_id=_id).channel
+
+    release = ProposalRelease.objects.filter(
+        proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first()
+    release.return_note = request.POST.get('return_note')
+    release.proposal_approval_status = 'Y'
+    release.proposal_approval_date = timezone.now()
+    release.save()
+
+    current_user_sequence = 0
 
     try:
-        return_to = ProposalRelease.objects.get(
-            proposal_id=_id, return_to=True, sequence__lt=ProposalRelease.objects.get(proposal_id=_id, proposal_approval_id=request.user.user_id).sequence)
+        return_to = ProposalMatrix.objects.filter(
+            area=area, channel=channel, return_to=True, sequence__lt=ProposalMatrix.objects.get(area=area, channel=channel, approver_id=request.user.user_id).sequence).order_by('-sequence').first()
 
         if return_to:
-            approvers = ProposalRelease.objects.filter(
-                proposal_id=_id, sequence__gte=ProposalRelease.objects.get(proposal_id=_id, return_to=True).sequence, sequence__lt=ProposalRelease.objects.get(proposal_id=_id, proposal_approval_id=request.user.user_id).sequence)
-    except ProposalRelease.DoesNotExist:
-        approvers = ProposalRelease.objects.filter(
-            proposal_id=_id, sequence__lte=ProposalRelease.objects.get(proposal_id=_id, proposal_approval_id=request.user.user_id).sequence)
+            approvers = ProposalMatrix.objects.filter(
+                area=area, channel=channel, sequence__gte=return_to.sequence)
+        else:
+            approvers = ProposalMatrix.objects.filter(
+                area=area, channel=channel).order_by('sequence')
+            draft = True
+    except ProposalMatrix.DoesNotExist:
+        approvers = ProposalMatrix.objects.filter(
+            area=area, channel=channel).order_by('sequence')
         draft = True
 
-    for i in approvers:
+    try:
+        mail_recipients = ProposalRelease.objects.filter(
+            proposal_id=_id,
+            sequence__gte=ProposalRelease.objects.filter(proposal_id=_id, return_to=True, sequence__lt=ProposalRelease.objects.filter(proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first().sequence).order_by('-sequence').first().sequence if ProposalRelease.objects.filter(proposal_id=_id, return_to=True, sequence__lt=ProposalRelease.objects.filter(proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first().sequence).order_by('-sequence').first() else 0, sequence__lt=ProposalRelease.objects.filter(proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
+    except ProposalRelease.DoesNotExist:
+        mail_recipients = ProposalRelease.objects.filter(proposal_id=_id, sequence__lt=ProposalRelease.objects.filter(
+            proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
+
+    for i in mail_recipients:
         recipients.append(i.proposal_approval_email)
-        i.proposal_approval_status = 'N'
-        i.proposal_approval_date = None
-        i.revise_note = ''
-        i.return_note = ''
-        i.reject_note = ''
-        i.mail_sent = False
-        i.save()
+
+    # delete approver from proposal release with sequence greater than existing user sequence
+    try:
+        current_user_sequence = ProposalRelease.objects.filter(
+            proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first().sequence
+        ProposalRelease.objects.filter(
+            proposal_id=_id, sequence__gt=current_user_sequence).delete()
+    except ProposalRelease.DoesNotExist:
+        pass
+
+    for i in approvers:
+        new_release = ProposalRelease(
+            proposal_id=_id,
+            proposal_approval_id=i.approver_id,
+            proposal_approval_name=i.approver.username,
+            proposal_approval_email=i.approver.email,
+            proposal_approval_position=i.approver.position.position_id,
+            sequence=i.sequence + 20,
+            limit=i.limit,
+            return_to=i.return_to,
+            approve=i.approve,
+            revise=i.revise,
+            returned=i.returned,
+            reject=i.reject,
+            notif=i.notif,
+            printed=i.printed,
+            as_approved=i.as_approved
+        )
+        new_release.save()
 
     with connection.cursor() as cursor:
         cursor.execute(
@@ -4272,14 +4335,9 @@ def proposal_release_return(request, _id):
         if cost_mail:
             recipients.append(cost_mail[1])
 
-    note = ProposalRelease.objects.get(
-        proposal_id=_id, proposal_approval_id=request.user.user_id)
-    note.return_note = request.POST.get('return_note')
-    note.save()
-
     subject = 'Proposal Returned'
     msg = 'Dear All,\n\nProposal No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
-        str(note.return_note) + \
+        str(release.return_note) + \
         '\n\nClick the following link to revise the proposal.\n'
 
     if draft:
@@ -4304,7 +4362,7 @@ def proposal_release_reject(request, _id):
 
     try:
         approvers = ProposalRelease.objects.filter(
-            proposal_id=_id, sequence__lt=ProposalRelease.objects.get(proposal_id=_id, proposal_approval_id=request.user.user_id).sequence)
+            proposal_id=_id, sequence__lt=ProposalRelease.objects.filter(proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
     except ProposalRelease.DoesNotExist:
         pass
 
@@ -4336,8 +4394,8 @@ def proposal_release_reject(request, _id):
         if cost_mail:
             recipients.append(cost_mail[1])
 
-    note = ProposalRelease.objects.get(
-        proposal_id=_id, proposal_approval_id=request.user.user_id)
+    note = ProposalRelease.objects.filter(
+        proposal_id=_id, proposal_approval_id=request.user.user_id).order_by('-sequence').first()
     note.reject_note = request.POST.get('reject_note')
     note.save()
 
@@ -5179,10 +5237,10 @@ def proposal_view(request, _tab, _id, _sub_id, _act, _msg):
         'sequence__min') else highest_approval.get('sequence__max') + 1
     if highest_sequence:
         approval = ProposalRelease.objects.filter(
-            proposal_id=_id, sequence__lt=highest_sequence).order_by('sequence')
+            proposal_id=_id, sequence__lt=highest_sequence).order_by('-proposal_approval_status', 'sequence')
     else:
         approval = ProposalRelease.objects.filter(
-            proposal_id=_id).order_by('sequence')
+            proposal_id=_id).order_by('-proposal_approval_status', 'sequence')
     rejector = ProposalRelease.objects.filter(
         proposal_id=_id, proposal_approval_status='N').order_by('sequence').first() if proposal.status == 'REJECTED' else None
 
@@ -5980,10 +6038,10 @@ def program_view(request, _tab, _id):
         'sequence__min') else highest_approval.get('sequence__max') + 1
     if highest_sequence:
         approval = ProgramRelease.objects.filter(
-            program_id=_id, sequence__lt=highest_sequence).order_by('sequence')
+            program_id=_id, sequence__lt=highest_sequence).order_by('-program_approval_status', 'sequence')
     else:
         approval = ProgramRelease.objects.filter(
-            program_id=_id).order_by('sequence')
+            program_id=_id).order_by('-program_approval_status', 'sequence')
     rejector = ProgramRelease.objects.filter(
         program_id=_id, program_approval_status='N').order_by('sequence').first() if program.status == 'REJECTED' else None
 
@@ -6091,14 +6149,30 @@ def program_release_index(request):
 def program_release_view(request, _id, _is_revise):
     program = Program.objects.get(program_id=_id)
     form = FormProgramView(instance=program)
-    approved = ProgramRelease.objects.get(
-        program_id=_id, program_approval_id=request.user.user_id).program_approval_status
+    approved = ProgramRelease.objects.filter(
+        program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first()
+
+    highest_approval = ProgramRelease.objects.filter(
+        program_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = ProgramRelease.objects.filter(
+            program_id=_id, sequence__lt=highest_sequence).order_by('-program_approval_status', 'sequence')
+    else:
+        approval = ProgramRelease.objects.filter(
+            program_id=_id).order_by('-program_approval_status', 'sequence')
+    rejector = ProgramRelease.objects.filter(
+        program_id=_id, program_approval_status='N').order_by('sequence').first() if program.status == 'REJECTED' else None
 
     context = {
         'form': form,
         'data': program,
-        'approved': approved,
+        'approved': approved.program_approval_status,
+        'returned': approved.return_note,
         'is_revise': _is_revise,
+        'approval': approval,
+        'rejector': rejector,
         'status': program.status,
         'budget_notif': budget_notification(request),
         'proposal_notif': proposal_notification(request),
@@ -6110,7 +6184,7 @@ def program_release_view(request, _id, _is_revise):
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='PROGRAM-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
-        'btn_release': ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id),
+        'btn_release': ProgramRelease.objects.filter(program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first(),
     }
     return render(request, 'home/program_release_view.html', context)
 
@@ -6134,8 +6208,8 @@ def program_release_update(request, _id):
 
             recipients = []
 
-            release = ProgramRelease.objects.get(
-                program_id=_id, program_approval_id=request.user.user_id)
+            release = ProgramRelease.objects.filter(
+                program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first()
             release.revise_note = request.POST.get('revise_note')
             release.save()
 
@@ -6209,8 +6283,8 @@ def program_release_update(request, _id):
 @role_required(allowed_roles='PROGRAM-RELEASE')
 def program_release_approve(request, _id):
     program = Program.objects.get(program_id=_id)
-    release = ProgramRelease.objects.get(
-        program_id=_id, program_approval_id=request.user.user_id)
+    release = ProgramRelease.objects.filter(
+        program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first()
     release.program_approval_status = 'Y'
     release.program_approval_date = timezone.now()
     release.save()
@@ -6270,28 +6344,72 @@ def program_release_approve(request, _id):
 def program_release_return(request, _id):
     recipients = []
     draft = False
+    area = Program.objects.get(program_id=_id).area
+    channel = Program.objects.get(program_id=_id).proposal.channel
+
+    release = ProgramRelease.objects.filter(
+        program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first()
+    release.return_note = request.POST.get('return_note')
+    release.program_approval_status = 'Y'
+    release.program_approval_date = timezone.now()
+    release.save()
+
+    current_user_sequence = 0
 
     try:
-        return_to = ProgramRelease.objects.get(
-            program_id=_id, return_to=True, sequence__lt=ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id).sequence)
+        return_to = ProgramMatrix.objects.filter(
+            area=area, channel=channel, return_to=True, sequence__lt=ProgramMatrix.objects.get(area=area, channel=channel, approver_id=request.user.user_id).sequence).order_by('-sequence').first()
 
         if return_to:
-            approvers = ProgramRelease.objects.filter(
-                program_id=_id, sequence__gte=ProgramRelease.objects.get(program_id=_id, return_to=True).sequence, sequence__lt=ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id).sequence)
-    except ProgramRelease.DoesNotExist:
-        approvers = ProgramRelease.objects.filter(
-            program_id=_id, sequence__lte=ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id).sequence)
+            approvers = ProgramMatrix.objects.filter(
+                area=area, channel=channel, sequence__gte=return_to.sequence)
+        else:
+            approvers = ProgramMatrix.objects.filter(
+                area=area, channel=channel).order_by('sequence')
+            draft = True
+    except ProgramMatrix.DoesNotExist:
+        approvers = ProgramMatrix.objects.filter(
+            area=area, channel=channel).order_by('sequence')
         draft = True
 
-    for i in approvers:
+    try:
+        mail_recipients = ProgramRelease.objects.filter(
+            program_id=_id, sequence__gte=ProgramRelease.objects.filter(program_id=_id, return_to=True, sequence__lt=ProgramRelease.objects.filter(program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first().sequence).order_by('-sequence').first().sequence if ProgramRelease.objects.filter(program_id=_id, return_to=True, sequence__lt=ProgramRelease.objects.filter(program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first().sequence).order_by('-sequence').first() else 0, sequence__lt=ProgramRelease.objects.filter(program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
+    except ProgramRelease.DoesNotExist:
+        mail_recipients = ProgramRelease.objects.filter(program_id=_id, sequence__lt=ProgramRelease.objects.filter(
+            program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
+
+    for i in mail_recipients:
         recipients.append(i.program_approval_email)
-        i.program_approval_status = 'N'
-        i.program_approval_date = None
-        i.revise_note = ''
-        i.return_note = ''
-        i.reject_note = ''
-        i.mail_sent = False
-        i.save()
+
+    # delete approver from program release with sequence greater than existing user sequence
+    try:
+        current_user_sequence = ProgramRelease.objects.filter(
+            program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first().sequence
+        ProgramRelease.objects.filter(
+            program_id=_id, sequence__gt=current_user_sequence).delete()
+    except ProgramRelease.DoesNotExist:
+        pass
+
+    for i in approvers:
+        new_release = ProgramRelease(
+            program_id=_id,
+            program_approval_id=i.approver_id,
+            program_approval_name=i.approver.username,
+            program_approval_email=i.approver.email,
+            program_approval_position=i.approver.position.position_id,
+            sequence=i.sequence + 20,
+            limit=i.limit,
+            return_to=i.return_to,
+            approve=i.approve,
+            revise=i.revise,
+            returned=i.returned,
+            reject=i.reject,
+            notif=i.notif,
+            printed=i.printed,
+            as_approved=i.as_approved
+        )
+        new_release.save()
 
     with connection.cursor() as cursor:
         cursor.execute(
@@ -6306,14 +6424,9 @@ def program_release_return(request, _id):
         if update_mail:
             recipients.append(update_mail[1])
 
-    note = ProgramRelease.objects.get(
-        program_id=_id, program_approval_id=request.user.user_id)
-    note.return_note = request.POST.get('return_note')
-    note.save()
-
     subject = 'Program Returned'
     msg = 'Dear All,\n\nProgram No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
-        str(note.return_note) + \
+        str(release.return_note) + \
         '\n\nClick the following link to revise the program.\n'
 
     if draft:
@@ -6338,7 +6451,7 @@ def program_release_reject(request, _id):
 
     try:
         approvers = ProgramRelease.objects.filter(
-            program_id=_id, sequence__lt=ProgramRelease.objects.get(program_id=_id, program_approval_id=request.user.user_id).sequence)
+            program_id=_id, sequence__lt=ProgramRelease.objects.filter(program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
     except ProgramRelease.DoesNotExist:
         pass
 
@@ -6358,8 +6471,8 @@ def program_release_reject(request, _id):
         if update_mail:
             recipients.append(update_mail[1])
 
-    note = ProgramRelease.objects.get(
-        program_id=_id, program_approval_id=request.user.user_id)
+    note = ProgramRelease.objects.filter(
+        program_id=_id, program_approval_id=request.user.user_id).order_by('-sequence').first()
     note.reject_note = request.POST.get('reject_note')
     note.save()
 
@@ -6807,10 +6920,10 @@ def claim_view(request, _tab, _id, _from_yr, _from_mo, _to_yr, _to_mo, _distribu
         'sequence__min') else highest_approval.get('sequence__max') + 1
     if highest_sequence:
         approval = ClaimRelease.objects.filter(
-            claim_id=_id, sequence__lt=highest_sequence).order_by('sequence')
+            claim_id=_id, sequence__lt=highest_sequence).order_by('-claim_approval_status', 'sequence')
     else:
         approval = ClaimRelease.objects.filter(
-            claim_id=_id).order_by('sequence')
+            claim_id=_id).order_by('-claim_approval_status', 'sequence')
     rejector = ClaimRelease.objects.filter(
         claim_id=_id, claim_approval_status='N').order_by('sequence').first() if claim.status == 'REJECTED' else None
 
@@ -7075,16 +7188,32 @@ def claim_release_index(request):
 def claim_release_view(request, _id, _is_revise):
     claim = Claim.objects.get(claim_id=_id)
     form = FormClaimView(instance=claim)
-    approved = ClaimRelease.objects.get(
-        claim_id=_id, claim_approval_id=request.user.user_id).claim_approval_status
+    approved = ClaimRelease.objects.filter(
+        claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first()
     program = Program.objects.get(program_id=claim.program_id)
+
+    highest_approval = ClaimRelease.objects.filter(
+        claim_id=_id, limit__gt=claim.total_claim).aggregate(Min('sequence')) if ClaimRelease.objects.filter(claim_id=_id, limit__gt=claim.total_claim).count() > 0 else ClaimRelease.objects.filter(claim_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = ClaimRelease.objects.filter(
+            claim_id=_id, sequence__lt=highest_sequence).order_by('-claim_approval_status', 'sequence')
+    else:
+        approval = ClaimRelease.objects.filter(
+            claim_id=_id).order_by('-claim_approval_status', 'sequence')
+    rejector = ClaimRelease.objects.filter(
+        claim_id=_id, claim_approval_status='N').order_by('sequence').first() if claim.status == 'REJECTED' else None
 
     context = {
         'form': form,
         'data': claim,
-        'approved': approved,
+        'approved': approved.claim_approval_status,
+        'returned': approved.return_note,
         'program': program,
         'is_revise': _is_revise,
+        'approval': approval,
+        'rejector': rejector,
         'status': claim.status,
         'budget_notif': budget_notification(request),
         'proposal_notif': proposal_notification(request),
@@ -7096,7 +7225,7 @@ def claim_release_view(request, _id, _is_revise):
         'crud': 'view',
         'role': Auth.objects.filter(user_id=request.user.user_id).values_list('menu_id', flat=True),
         'btn': Auth.objects.get(user_id=request.user.user_id, menu_id='CLAIM-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
-        'btn_release': ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id),
+        'btn_release': ClaimRelease.objects.filter(claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first(),
     }
     return render(request, 'home/claim_release_view.html', context)
 
@@ -7233,8 +7362,8 @@ def claim_release_update(request, _id):
 
                 recipients = []
 
-                release = ClaimRelease.objects.get(
-                    claim_id=_id, claim_approval_id=request.user.user_id)
+                release = ClaimRelease.objects.filter(
+                    claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first()
                 release.revise_note = request.POST.get('id_revise-note')
                 release.save()
 
@@ -7378,8 +7507,8 @@ def claim_release_update(request, _id):
 @role_required(allowed_roles='CLAIM-RELEASE')
 def claim_release_approve(request, _id):
     claim = Claim.objects.get(claim_id=_id)
-    release = ClaimRelease.objects.get(
-        claim_id=_id, claim_approval_id=request.user.user_id)
+    release = ClaimRelease.objects.filter(
+        claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first()
     release.claim_approval_status = 'Y'
     release.claim_approval_date = timezone.now()
     release.save()
@@ -7501,8 +7630,8 @@ def claim_release_bulk_approve(request):
     _ids = claim_nos.split(',')
     for _id in _ids:
         claim = Claim.objects.get(claim_id=_id)
-        release = ClaimRelease.objects.get(
-            claim_id=_id, claim_approval_id=request.user.user_id)
+        release = ClaimRelease.objects.filter(
+            claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first()
         release.claim_approval_status = 'Y'
         release.claim_approval_date = timezone.now()
         release.save()
@@ -7621,31 +7750,75 @@ def claim_release_return(request, _id):
     claim = Claim.objects.get(claim_id=_id)
     program = Program.objects.get(program_id=claim.program_id)
     proposal = Proposal.objects.get(proposal_id=program.proposal.proposal_id)
+    area = program.area
+    channel = program.proposal.channel
 
     recipients = []
     draft = False
 
+    release = ClaimRelease.objects.filter(
+        claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first()
+    release.return_note = request.POST.get('return_note')
+    release.claim_approval_status = 'Y'
+    release.claim_approval_date = timezone.now()
+    release.save()
+
+    current_user_sequence = 0
+
     try:
-        return_to = ClaimRelease.objects.get(
-            claim_id=_id, return_to=True, sequence__lt=ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id).sequence)
+        return_to = ClaimMatrix.objects.filter(
+            area=area, channel=channel, return_to=True, sequence__lt=ClaimMatrix.objects.get(area=area, channel=channel, approver_id=request.user.user_id).sequence).order_by('-sequence').first()
 
         if return_to:
-            approvers = ClaimRelease.objects.filter(
-                claim_id=_id, sequence__gte=ClaimRelease.objects.get(claim_id=_id, return_to=True).sequence, sequence__lt=ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id).sequence)
-    except ClaimRelease.DoesNotExist:
-        approvers = ClaimRelease.objects.filter(
-            claim_id=_id, sequence__lte=ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id).sequence)
+            approvers = ClaimMatrix.objects.filter(
+                area=area, channel=channel, sequence__gte=return_to.sequence)
+        else:
+            approvers = ClaimMatrix.objects.filter(
+                area=area, channel=channel).order_by('sequence')
+            draft = True
+    except ClaimMatrix.DoesNotExist:
+        approvers = ClaimMatrix.objects.filter(
+            area=area, channel=channel).order_by('sequence')
         draft = True
 
-    for i in approvers:
+    try:
+        mail_recipients = ClaimRelease.objects.filter(
+            claim_id=_id, sequence__gte=ClaimRelease.objects.filter(claim_id=_id, return_to=True, sequence__lt=ClaimRelease.objects.filter(claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first().sequence).order_by('-sequence').first().sequence if ClaimRelease.objects.filter(claim_id=_id, return_to=True, sequence__lt=ClaimRelease.objects.filter(claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first().sequence).order_by('-sequence').first() else 0, sequence__lt=ClaimRelease.objects.filter(claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
+    except ClaimRelease.DoesNotExist:
+        mail_recipients = ClaimRelease.objects.filter(claim_id=_id, sequence__lt=ClaimRelease.objects.filter(
+            claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
+
+    for i in mail_recipients:
         recipients.append(i.claim_approval_email)
-        i.claim_approval_status = 'N'
-        i.claim_approval_date = None
-        i.revise_note = ''
-        i.return_note = ''
-        i.reject_note = ''
-        i.mail_sent = False
-        i.save()
+
+    # delete approver from claim release with sequence greater than existing user sequence
+    try:
+        current_user_sequence = ClaimRelease.objects.filter(
+            claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first().sequence
+        ClaimRelease.objects.filter(
+            claim_id=_id, sequence__gt=current_user_sequence).delete()
+    except ClaimRelease.DoesNotExist:
+        pass
+
+    for i in approvers:
+        new_release = ClaimRelease(
+            claim_id=_id,
+            claim_approval_id=i.approver_id,
+            claim_approval_name=i.approver.username,
+            claim_approval_email=i.approver.email,
+            claim_approval_position=i.approver.position.position_id,
+            sequence=i.sequence + 20,
+            limit=i.limit,
+            return_to=i.return_to,
+            approve=i.approve,
+            revise=i.revise,
+            returned=i.returned,
+            reject=i.reject,
+            notif=i.notif,
+            printed=i.printed,
+            as_approved=i.as_approved
+        )
+        new_release.save()
 
     with connection.cursor() as cursor:
         cursor.execute(
@@ -7660,14 +7833,9 @@ def claim_release_return(request, _id):
         if update_mail:
             recipients.append(update_mail[1])
 
-    note = ClaimRelease.objects.get(
-        claim_id=_id, claim_approval_id=request.user.user_id)
-    note.return_note = request.POST.get('return_note')
-    note.save()
-
     subject = 'Claim Returned'
     msg = 'Dear All,\n\nClaim No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
-        str(note.return_note) + \
+        str(release.return_note) + \
         '\n\nClick the following link to revise the claim.\n'
 
     if draft:
@@ -7749,7 +7917,7 @@ def claim_release_reject(request, _id):
 
     try:
         approvers = ClaimRelease.objects.filter(
-            claim_id=_id, sequence__lt=ClaimRelease.objects.get(claim_id=_id, claim_approval_id=request.user.user_id).sequence)
+            claim_id=_id, sequence__lt=ClaimRelease.objects.filter(claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
     except ClaimRelease.DoesNotExist:
         pass
 
@@ -7769,8 +7937,8 @@ def claim_release_reject(request, _id):
         if update_mail:
             recipients.append(update_mail[1])
 
-    note = ClaimRelease.objects.get(
-        claim_id=_id, claim_approval_id=request.user.user_id)
+    note = ClaimRelease.objects.filter(
+        claim_id=_id, claim_approval_id=request.user.user_id).order_by('-sequence').first()
     note.reject_note = request.POST.get('reject_note')
     note.save()
 
@@ -8446,15 +8614,20 @@ def cl_view(request, _tab, _id):
     sum_cl_detail = CLDetail.objects.filter(
         cl_id=_id).aggregate(total_claim=Sum('claim_id__total_claim'))
 
-    highest_approval = CLRelease.objects.filter(
-        cl_id=_id).aggregate(Max('sequence'))
+    if sum_cl_detail['total_claim']:
+        highest_approval = CLRelease.objects.filter(
+            cl_id=_id, limit__gt=sum_cl_detail['total_claim']).aggregate(Min('sequence')) if CLRelease.objects.filter(cl_id=_id, limit__gt=sum_cl_detail['total_claim']).count() > 0 else CLRelease.objects.filter(cl_id=_id).aggregate(Max('sequence'))
+    else:
+        highest_approval = CLRelease.objects.filter(
+            cl_id=_id).aggregate(Max('sequence'))
     highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
         'sequence__min') else highest_approval.get('sequence__max') + 1
     if highest_sequence:
         approval = CLRelease.objects.filter(
-            cl_id=_id, sequence__lt=highest_sequence).order_by('sequence')
+            cl_id=_id, sequence__lt=highest_sequence).order_by('-cl_approval_status', 'sequence')
     else:
-        approval = CLRelease.objects.filter(cl_id=_id).order_by('sequence')
+        approval = CLRelease.objects.filter(cl_id=_id).order_by(
+            '-cl_approval_status', 'sequence')
     rejector = CLRelease.objects.filter(
         cl_id=_id, cl_approval_status='N').order_by('sequence').first() if cl.status == 'REJECTED' else None
 
@@ -8588,13 +8761,32 @@ def cl_release_index(request):
 def cl_release_view(request, _id, _is_revise):
     cl = CL.objects.get(cl_id=_id)
     cl_detail = CLDetail.objects.filter(cl_id=_id)
-    approved = CLRelease.objects.get(
-        cl_id=_id, cl_approval_id=request.user.user_id).cl_approval_status
+    approved = CLRelease.objects.filter(
+        cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first()
     claim = Claim.objects.filter(status='OPEN', area_id=cl.area_id, proposal__budget__budget_distributor=cl.distributor_id).exclude(
         cldetail__claim_id__in=CLDetail.objects.all().values_list('claim_id', flat=True)).values_list('claim_id', 'remarks', 'cldetail__claim_id')
 
     sum_cl_detail = CLDetail.objects.filter(
         cl_id=_id).aggregate(total_claim=Sum('claim_id__total_claim'))
+
+    if sum_cl_detail['total_claim']:
+        highest_approval = CLRelease.objects.filter(
+            cl_id=_id, limit__gt=sum_cl_detail['total_claim']).aggregate(Min('sequence')) if CLRelease.objects.filter(cl_id=_id, limit__gt=sum_cl_detail['total_claim']).count() > 0 else CLRelease.objects.filter(cl_id=_id).aggregate(Max('sequence'))
+    else:
+        highest_approval = CLRelease.objects.filter(
+            cl_id=_id).aggregate(Max('sequence'))
+    highest_approval = CLRelease.objects.filter(
+        cl_id=_id).aggregate(Max('sequence'))
+    highest_sequence = highest_approval.get('sequence__min') if highest_approval.get(
+        'sequence__min') else highest_approval.get('sequence__max') + 1
+    if highest_sequence:
+        approval = CLRelease.objects.filter(
+            cl_id=_id, sequence__lt=highest_sequence).order_by('-cl_approval_status', 'sequence')
+    else:
+        approval = CLRelease.objects.filter(
+            cl_id=_id).order_by('-cl_approval_status', 'sequence')
+    rejector = CLRelease.objects.filter(
+        cl_id=_id, cl_approval_status='N').order_by('sequence').first() if cl.status == 'REJECTED' else None
 
     if request.POST:
         check = request.POST.getlist('checks[]')
@@ -8615,8 +8807,11 @@ def cl_release_view(request, _id, _is_revise):
         'cl_detail': cl_detail,
         'claim': claim,
         'sum_cl_detail': sum_cl_detail,
-        'approved': approved,
+        'approved': approved.cl_approval_status,
+        'returned': approved.return_note,
         'is_revise': _is_revise,
+        'approval': approval,
+        'rejector': rejector,
         'budget_notif': budget_notification(request),
         'proposal_notif': proposal_notification(request),
         'program_notif': program_notification(request),
@@ -8629,7 +8824,7 @@ def cl_release_view(request, _id, _is_revise):
             'menu_id', flat=True),
         'btn': Auth.objects.get(
             user_id=request.user.user_id, menu_id='CL-RELEASE') if not request.user.is_superuser else Auth.objects.all(),
-        'btn_release': CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id) if not request.user.is_superuser else None,
+        'btn_release': CLRelease.objects.filter(cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first() if not request.user.is_superuser else None,
     }
     return render(request, 'home/cl_release_view.html', context)
 
@@ -8661,8 +8856,8 @@ def cl_release_update(request, _id):
 
         recipients = []
 
-        release = CLRelease.objects.get(
-            cl_id=_id, cl_approval_id=request.user.user_id)
+        release = CLRelease.objects.filter(
+            cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first()
         release.revise_note = request.POST.get('revise_note')
         release.save()
 
@@ -8726,8 +8921,8 @@ def cl_release_update(request, _id):
 @role_required(allowed_roles='CL-RELEASE')
 def cl_release_approve(request, _id):
     cl = CL.objects.get(cl_id=_id)
-    release = CLRelease.objects.get(
-        cl_id=_id, cl_approval_id=request.user.user_id)
+    release = CLRelease.objects.filter(
+        cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first()
     release.cl_approval_status = 'Y'
     release.cl_approval_date = timezone.now()
     release.save()
@@ -8788,28 +8983,69 @@ def cl_release_approve(request, _id):
 def cl_release_return(request, _id):
     recipients = []
     draft = False
+    area = CL.objects.get(cl_id=_id).area
+
+    release = CLRelease.objects.filter(
+        cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first()
+    release.return_note = request.POST.get('return_note')
+    release.cl_approval_status = 'Y'
+    release.cl_approval_date = timezone.now()
+    release.save()
+
+    current_user_sequence = 0
 
     try:
-        return_to = CLRelease.objects.get(
-            cl_id=_id, return_to=True, sequence__lt=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
+        return_to = CLMatrix.objects.get(
+            area=area, return_to=True, sequence__lt=CLMatrix.objects.get(area=area, approver_id=request.user.user_id).sequence).order_by('-sequence').first()
 
         if return_to:
-            approvers = CLRelease.objects.filter(
-                cl_id=_id, sequence__gte=CLRelease.objects.get(cl_id=_id, return_to=True).sequence, sequence__lt=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
-    except CLRelease.DoesNotExist:
-        approvers = CLRelease.objects.filter(
-            cl_id=_id, sequence__lte=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
+            approvers = CLMatrix.objects.filter(
+                area=area, sequence__gte=return_to.sequence)
+        else:
+            approvers = CLMatrix.objects.filter(area=area).order_by('sequence')
+            draft = True
+    except CLMatrix.DoesNotExist:
+        approvers = CLMatrix.objects.filter(area=area).order_by('sequence')
         draft = True
 
-    for i in approvers:
+    try:
+        mail_recipients = CLRelease.objects.filter(
+            cl_id=_id, sequence__gte=CLRelease.objects.filter(cl_id=_id, return_to=True, sequence__lt=CLRelease.objects.filter(cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first().sequence).order_by('-sequence').first().sequence if CLRelease.objects.filter(cl_id=_id, return_to=True, sequence__lt=CLRelease.objects.filter(cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first().sequence).order_by('-sequence').first() else 0, sequence__lt=CLRelease.objects.filter(cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
+    except CLRelease.DoesNotExist:
+        mail_recipients = CLRelease.objects.filter(cl_id=_id, sequence__lt=CLRelease.objects.filter(
+            cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
+
+    for i in mail_recipients:
         recipients.append(i.cl_approval_email)
-        i.cl_approval_status = 'N'
-        i.cl_approval_date = None
-        i.revise_note = ''
-        i.return_note = ''
-        i.reject_note = ''
-        i.mail_sent = False
-        i.save()
+
+    # delete approver from program release with sequence greater than existing user sequence
+    try:
+        current_user_sequence = CLRelease.objects.filter(
+            cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first().sequence
+        CLRelease.objects.filter(
+            cl_id=_id, sequence__gt=current_user_sequence).delete()
+    except CLRelease.DoesNotExist:
+        pass
+
+    for i in approvers:
+        new_release = CLRelease(
+            cl_id_id=_id,
+            cl_approval_id=i.approver_id,
+            cl_approval_name=i.approver.username,
+            cl_approval_email=i.approver.email,
+            cl_approval_position=i.approver.position.position_id,
+            sequence=i.sequence + 20,
+            limit=i.limit,
+            return_to=i.return_to,
+            approve=i.approve,
+            revise=i.revise,
+            returned=i.returned,
+            reject=i.reject,
+            notif=i.notif,
+            printed=i.printed,
+            as_approved=i.as_approved
+        )
+        new_release.save()
 
     with connection.cursor() as cursor:
         cursor.execute(
@@ -8824,14 +9060,9 @@ def cl_release_return(request, _id):
         if update_mail:
             recipients.append(update_mail[1])
 
-    note = CLRelease.objects.get(
-        cl_id=_id, cl_approval_id=request.user.user_id)
-    note.return_note = request.POST.get('return_note')
-    note.save()
-
     subject = 'CL Returned'
     msg = 'Dear All,\n\nCL No. ' + str(_id) + ' has been returned.\n\nNote: ' + \
-        str(note.return_note) + \
+        str(release.return_note) + \
         '\n\nClick the following link to revise the CL.\n'
 
     if draft:
@@ -8857,7 +9088,7 @@ def cl_release_reject(request, _id):
 
     try:
         approvers = CLRelease.objects.filter(
-            cl_id=_id, sequence__lt=CLRelease.objects.get(cl_id=_id, cl_approval_id=request.user.user_id).sequence)
+            cl_id=_id, sequence__lt=CLRelease.objects.filter(cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first().sequence)
     except CLRelease.DoesNotExist:
         pass
 
@@ -8877,8 +9108,8 @@ def cl_release_reject(request, _id):
         if update_mail:
             recipients.append(update_mail[1])
 
-    note = CLRelease.objects.get(
-        cl_id=_id, cl_approval_id=request.user.user_id)
+    note = CLRelease.objects.filter(
+        cl_id=_id, cl_approval_id=request.user.user_id).order_by('-sequence').first()
     note.reject_note = request.POST.get('reject_note')
     note.save()
 
@@ -9668,6 +9899,7 @@ def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
     distributors = Distributor.objects.all()
     months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
+    # Update Issue Web Selmar Begin
     if _distributor == 'all':
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
                                      claim_date__gte=from_date, claim_date__lt=to_date).annotate(
@@ -9679,7 +9911,7 @@ def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
                                              'claim_id'), claim_approval_status='N').order_by('sequence').values('return_note')[:1],
                                          reject_note=ClaimRelease.objects.filter(claim_id=OuterRef(
                                              'claim_id'), claim_approval_status='N').order_by('sequence').values('reject_note')[:1]
-        ).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', 'approver', 'claim_period', 'revise_note', 'return_note', 'reject_note')
+        ).values_list('claim_id', 'cldetail__cl_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', 'approver', 'claim_period', 'revise_note', 'return_note', 'reject_note')
     else:
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
                                      claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).annotate(
@@ -9691,7 +9923,8 @@ def report_claim(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor):
                                              'claim_id'), claim_approval_status='N').order_by('sequence').values('return_note')[:1],
                                          reject_note=ClaimRelease.objects.filter(claim_id=OuterRef(
                                              'claim_id'), claim_approval_status='N').order_by('sequence').values('reject_note')[:1]
-        ).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', 'approver', 'claim_period', 'revise_note', 'return_note', 'reject_note')
+        ).values_list('claim_id', 'cldetail__cl_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'total_claim', 'status', 'approver', 'claim_period', 'revise_note', 'return_note', 'reject_note')
+    # Update Issue Web Selmar End
 
     context = {
         'data': claim,
@@ -9727,6 +9960,7 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
     to_date = datetime.date(_to_date.year, _to_date.month,
                             1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
+    # Update Issue Web Selmar Begin
     if _distributor == 'all':
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
                                      claim_date__gte=from_date, claim_date__lt=to_date).annotate(
@@ -9738,7 +9972,7 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
                 'claim_id'), claim_approval_status='N').order_by('sequence').values('return_note')[:1],
             reject_note=ClaimRelease.objects.filter(claim_id=OuterRef(
                 'claim_id'), claim_approval_status='N').order_by('sequence').values('reject_note')[:1]
-        ).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'claim_period', 'total_claim', 'status', 'approver', 'revise_note', 'return_note', 'reject_note')
+        ).values_list('claim_id', 'cldetail__cl_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'claim_period', 'total_claim', 'status', 'approver', 'revise_note', 'return_note', 'reject_note')
     else:
         claim = Claim.objects.filter(area__in=AreaUser.objects.filter(user_id=request.user.user_id).values_list('area_id', flat=True),
                                      claim_date__gte=from_date, claim_date__lt=to_date, proposal__budget__budget_distributor=_distributor).annotate(
@@ -9750,7 +9984,8 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
                 'claim_id'), claim_approval_status='N').order_by('sequence').values('return_note')[:1],
             reject_note=ClaimRelease.objects.filter(claim_id=OuterRef(
                 'claim_id'), claim_approval_status='N').order_by('sequence').values('reject_note')[:1]
-        ).values_list('claim_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'claim_period', 'total_claim', 'status', 'approver', 'revise_note', 'return_note', 'reject_note')
+        ).values_list('claim_id', 'cldetail__cl_id', 'invoice', 'claim_date', 'invoice_date', 'proposal__budget__budget_distributor__distributor_name', 'area_id', 'depo', 'proposal__channel', 'proposal_id', 'proposal__program_name', 'remarks', 'claim_period', 'total_claim', 'status', 'approver', 'revise_note', 'return_note', 'reject_note')
+    # Update Issue Web Selmar End
 
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
@@ -9764,9 +9999,11 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
     workbook = xlsxwriter.Workbook(response, {'in_memory': True})
     worksheet = workbook.add_worksheet()
 
+    # Update Issue Web Selmar Begin
     # Define column headers
-    headers = ['No.', 'Claim No.', 'Invoice No.', 'Claim Date', 'Invoice Date', 'Distributor', 'Area', 'Depo',
+    headers = ['No.', 'Claim No.', 'CL No.', 'Invoice No.', 'Claim Date', 'Invoice Date', 'Distributor', 'Area', 'Depo',
                'Channel', 'Proposal No.', 'Program Name', 'Invoice Description', 'Claim Period', 'Curr', 'Amount', 'Status', 'By', 'Note']
+    # Update Issue Web Selmar End
 
     # Define cell formats
     header_format = workbook.add_format({
@@ -9786,23 +10023,25 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
         {'border': 1, 'num_format': '#,##0', 'bg_color': '#e5eedc'})
     back_format = workbook.add_format({'border': 1, 'bg_color': '#e5eedc'})
 
+    # Update Issue Web Selmar Begin
     # Set column width
     worksheet.set_column('A:A', 5)
-    worksheet.set_column('B:C', 29)
-    worksheet.set_column('D:E', 11)
-    worksheet.set_column('F:F', 28)
-    worksheet.set_column('G:G', 9)
-    worksheet.set_column('H:H', 11)
-    worksheet.set_column('I:I', 9)
-    worksheet.set_column('J:J', 29)
-    worksheet.set_column('K:K', 78)
-    worksheet.set_column('L:L', 50)
-    worksheet.set_column('M:M', 16)
-    worksheet.set_column('N:N', 6)
-    worksheet.set_column('O:O', 14)
-    worksheet.set_column('P:P', 11)
-    worksheet.set_column('Q:Q', 30)
-    worksheet.set_column('R:R', 50)
+    worksheet.set_column('B:D', 29)
+    worksheet.set_column('E:F', 11)
+    worksheet.set_column('G:G', 28)
+    worksheet.set_column('H:H', 9)
+    worksheet.set_column('I:I', 11)
+    worksheet.set_column('J:J', 9)
+    worksheet.set_column('K:K', 29)
+    worksheet.set_column('L:L', 78)
+    worksheet.set_column('M:M', 50)
+    worksheet.set_column('N:N', 16)
+    worksheet.set_column('O:O', 6)
+    worksheet.set_column('P:P', 14)
+    worksheet.set_column('Q:Q', 11)
+    worksheet.set_column('R:R', 30)
+    worksheet.set_column('S:S', 50)
+    # Update Issue Web Selmar End
 
     # Write data to XlsxWriter Object
     for idx, record in enumerate(claim):
@@ -9810,53 +10049,55 @@ def report_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _distributor)
             if idx == 0:
                 # Write the column headers on the first row
                 worksheet.write(idx, col_idx, headers[col_idx], header_format)
+            # Update Issue Web Selmar Begin
             # Write the data rows
             if col_idx == 0:
                 worksheet.write(idx + 1, col_idx, idx + 1, cell_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx, idx + 1, back_format)
-            if col_idx == 2 or col_idx == 3:
+            if col_idx == 3 or col_idx == 4:
                 worksheet.write(idx + 1, col_idx + 1, col_value, date_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx + 1, col_value, date_back_format)
-            elif col_idx == 12:
+            elif col_idx == 13:
                 worksheet.write(idx + 1, col_idx + 2, col_value, num_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx + 2, col_value, num_back_format)
-            elif col_idx == 13:
+            elif col_idx == 14:
                 worksheet.write(idx + 1, col_idx + 2, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx + 2, 'COMPLETED' if col_value == 'OPEN' else col_value, back_format)
-            elif col_idx == 14:
-                if idx % 2 == 0:
-                    worksheet.write(idx + 1, col_idx + 2, col_value, cell_format) if record[13] == 'IN APPROVAL' or record[13] == 'REJECTED' else worksheet.write(
-                        idx + 1, col_idx + 2, '', cell_format)
-                else:
-                    worksheet.write(idx + 1, col_idx + 2, col_value, back_format) if record[13] == 'IN APPROVAL' or record[13] == 'REJECTED' else worksheet.write(
-                        idx + 1, col_idx + 2, '', back_format)
             elif col_idx == 15:
                 if idx % 2 == 0:
-                    worksheet.write(idx + 1, 17, col_value, cell_format) if record[13] == 'IN APPROVAL' and record[15] else worksheet.write(
-                        idx + 1, 17, '', cell_format)
+                    worksheet.write(idx + 1, col_idx + 2, col_value, cell_format) if record[14] == 'IN APPROVAL' or record[14] == 'REJECTED' else worksheet.write(
+                        idx + 1, col_idx + 2, '', cell_format)
                 else:
-                    worksheet.write(idx + 1, 17, col_value, back_format) if record[13] == 'IN APPROVAL' and record[15] else worksheet.write(
-                        idx + 1, 17, '', back_format)
+                    worksheet.write(idx + 1, col_idx + 2, col_value, back_format) if record[14] == 'IN APPROVAL' or record[14] == 'REJECTED' else worksheet.write(
+                        idx + 1, col_idx + 2, '', back_format)
             elif col_idx == 16:
                 if idx % 2 == 0:
-                    worksheet.write(idx + 1, 17, col_value, cell_format) if record[13] == 'IN APPROVAL' and record[16] else worksheet.write(
-                        idx + 1, 17, '', cell_format)
+                    worksheet.write(idx + 1, 18, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[16] else worksheet.write(
+                        idx + 1, 18, '', cell_format)
                 else:
-                    worksheet.write(idx + 1, 17, col_value, back_format) if record[13] == 'IN APPROVAL' and record[16] else worksheet.write(
-                        idx + 1, 17, '', back_format)
+                    worksheet.write(idx + 1, 18, col_value, back_format) if record[14] == 'IN APPROVAL' and record[16] else worksheet.write(
+                        idx + 1, 18, '', back_format)
             elif col_idx == 17:
                 if idx % 2 == 0:
-                    worksheet.write(idx + 1, 17, col_value, cell_format) if record[13] == 'REJECTED' and record[17] else worksheet.write(
-                        idx + 1, 17, '', cell_format)
+                    worksheet.write(idx + 1, 18, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[17] else worksheet.write(
+                        idx + 1, 18, '', cell_format)
                 else:
-                    worksheet.write(idx + 1, 17, col_value, back_format) if record[13] == 'REJECTED' and record[17] else worksheet.write(
-                        idx + 1, 17, '', back_format)
+                    worksheet.write(idx + 1, 18, col_value, back_format) if record[14] == 'IN APPROVAL' and record[17] else worksheet.write(
+                        idx + 1, 18, '', back_format)
+            elif col_idx == 18:
+                if idx % 2 == 0:
+                    worksheet.write(idx + 1, 18, col_value, cell_format) if record[14] == 'REJECTED' and record[18] else worksheet.write(
+                        idx + 1, 18, '', cell_format)
+                else:
+                    worksheet.write(idx + 1, 18, col_value, back_format) if record[14] == 'REJECTED' and record[18] else worksheet.write(
+                        idx + 1, 18, '', back_format)
             else:
                 worksheet.write(idx + 1, col_idx + 1, col_value, cell_format) if idx % 2 == 0 else worksheet.write(
                     idx + 1, col_idx + 1, col_value, back_format)
 
-            worksheet.write(idx + 1, 13, 'IDR', cell_format) if idx % 2 == 0 else worksheet.write(
-                idx + 1, 13, 'IDR', back_format)
+            worksheet.write(idx + 1, 14, 'IDR', cell_format) if idx % 2 == 0 else worksheet.write(
+                idx + 1, 14, 'IDR', back_format)
+            # Update Issue Web Selmar End
 
     # Close the workbook before sending the data.
     workbook.close()
@@ -10274,9 +10515,11 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     workbook = xlsxwriter.Workbook(response, {'in_memory': True})
     worksheet = workbook.add_worksheet()
 
+    # Update Issue Web Selmar Begin
     # Define column headers
     headers = ['Area', 'Distributor', 'Channel', 'Proposal No.', 'Program Name',
-               'Division', 'Budget Period', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Return', 'Available', 'Status', 'By', 'Note', 'Closed Period']
+               'Division', 'Budget Period', 'Start', 'End', 'Budget', 'Actual', 'Parked', 'Assigned', 'Return', 'Available', 'Approval Status', 'Claim Status', 'By', 'Note', 'Closed Period']
+    # Update Issue Web Selmar End
 
     # Define cell formats
     header_format = workbook.add_format({
@@ -10293,6 +10536,7 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
         {'border': 1, 'num_format': 'mmm yyyy', 'align': 'left'})
     num_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
 
+    # Update Issue Web Selmar Begin
     # Set column width
     worksheet.set_column('A:A', 9)
     worksheet.set_column('B:B', 32)
@@ -10303,15 +10547,16 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
     worksheet.set_column('G:G', 12)
     worksheet.set_column('H:I', 11)
     worksheet.set_column('J:O', 14)
-    worksheet.set_column('P:P', 10)
-    worksheet.set_column('Q:Q', 30)
-    worksheet.set_column('R:R', 50)
-    worksheet.set_column('S:S', 16)
+    worksheet.set_column('P:P', 20)
+    worksheet.set_column('Q:Q', 15)
+    worksheet.set_column('R:R', 30)
+    worksheet.set_column('S:S', 50)
+    worksheet.set_column('T:T', 16)
 
     # Write data to XlsxWriter Object
     for idx, record in enumerate(proposal):
         for col_idx, col_value in enumerate(record):
-            if idx == 0 and col_idx < 19:
+            if idx == 0 and col_idx < 20:
                 # Write the column headers on the first row
                 worksheet.write(idx, col_idx, headers[col_idx], header_format)
             # Write the data rows
@@ -10328,24 +10573,27 @@ def report_proposal_claim_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dis
                     idx + 1, 14, col_value, num_format)
             elif col_idx == 14:
                 worksheet.write(
-                    idx + 1, col_idx + 1, 'COMPLETED' if col_value == 'OPEN' else col_value, cell_format)
+                    idx + 1, col_idx + 1, 'FULLY APPROVED' if col_value in ['OPEN', 'CLOSED'] else 'AWAITING FOR APPROVAL' if col_value == 'IN APPROVAL' else col_value, cell_format)
+                worksheet.write(
+                    idx + 1, col_idx + 2, 'OPEN' if col_value == 'OPEN' else 'CLOSED' if col_value == 'CLOSED' else '', cell_format)
             elif col_idx == 15:
-                worksheet.write(idx + 1, col_idx + 1, col_value, cell_format) if record[14] == 'IN APPROVAL' or record[14] == 'REJECTED' else worksheet.write(
-                    idx + 1, col_idx + 1, '', cell_format)
+                worksheet.write(idx + 1, col_idx + 2, col_value, cell_format) if record[14] == 'IN APPROVAL' or record[14] == 'REJECTED' else worksheet.write(
+                    idx + 1, col_idx + 2, '', cell_format)
             elif col_idx == 16:
                 worksheet.write(
-                    idx + 1, 17, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[16] else worksheet.write(idx + 1, 17, '', cell_format)
+                    idx + 1, 18, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[16] else worksheet.write(idx + 1, 18, '', cell_format)
             elif col_idx == 17:
                 worksheet.write(
-                    idx + 1, 17, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[17] else worksheet.write(idx + 1, 17, '', cell_format)
+                    idx + 1, 18, col_value, cell_format) if record[14] == 'IN APPROVAL' and record[17] else worksheet.write(idx + 1, 18, '', cell_format)
             elif col_idx == 18:
                 worksheet.write(
-                    idx + 1, 17, col_value, cell_format) if record[14] == 'REJECTED' and record[18] else worksheet.write(idx + 1, 17, '', cell_format)
+                    idx + 1, 18, col_value, cell_format) if record[14] == 'REJECTED' and record[18] else worksheet.write(idx + 1, 18, '', cell_format)
             elif col_idx == 19:
                 worksheet.write(
-                    idx + 1, 18, col_value, period_format) if record[14] == 'CLOSED' else worksheet.write(idx + 1, 18, '', period_format)
+                    idx + 1, 19, col_value, period_format) if record[14] == 'CLOSED' else worksheet.write(idx + 1, 19, '', period_format)
             else:
                 worksheet.write(idx + 1, col_idx, col_value, cell_format)
+    # Update Issue Web Selmar End
 
     # Close the workbook before sending the data.
     workbook.close()
@@ -11271,13 +11519,14 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
     to_date = datetime.date(_to_date.year, _to_date.month,
                             1) if _to_yr != '0' and _to_mo != '0' else datetime.date.today().replace(day=1)
 
+    # Update Issue Web Selmar Begin
     if _distributor == 'all':
         with connection.cursor() as cursor:
 
             # Spending = Budget Amount + Upping - Claim Amount <- Rumus Spending
             # cursor.execute(
             #     """
-            #     SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 4_balance,
+            #     SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 5_balance,
             #     DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
             #     FROM apps_budget
             #     LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id
@@ -11293,7 +11542,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
             # Spending = Budget Amount + Upping - Proposal <- Rumus Spending
             cursor.execute(
                 """
-                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, IF(budget_status = 'DRAFT' OR budget_status = 'IN APPROVAL', 0, budget_upping) AS 2_upping, IFNULL(detail.proposed_amount, 0) AS 3_proposed, IF(budget_status = 'DRAFT' OR budget_status = 'IN APPROVAL', (budget_amount + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)), (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0))) AS 4_balance, 
+                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, IF(budget_status = 'DRAFT' OR budget_status = 'IN APPROVAL', 0, budget_upping) AS 2_upping, IFNULL(detail.proposed_amount, 0) AS 3_proposed, IFNULL(detail.remaining_amount, 0) AS 4_remaining, IF(budget_status = 'DRAFT' OR budget_status = 'IN APPROVAL', (budget_amount + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)), (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0))) AS 5_balance, 
                 DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
                 FROM apps_budget 
                 LEFT JOIN (SELECT SUM(budget_proposed) as proposed_amount, SUM(budget_remaining) as remaining_amount, budget_id FROM apps_budgetdetail GROUP BY budget_id) as detail ON apps_budget.budget_id = detail.budget_id 
@@ -11312,7 +11561,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
             # Spending = Budget Amount + Upping - Claim Amount <- Rumus Spending
             # cursor.execute(
             #     """
-            #     SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 4_balance,
+            #     SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, budget_upping AS 2_upping, IFNULL(claim.claim_amount, 0) AS 3_claim, (budget_amount + budget_upping - IFNULL(claim.claim_amount, 0)) AS 5_balance,
             #     DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
             #     FROM apps_budget
             #     LEFT JOIN (SELECT SUM(proposal_claim) as claim_amount, budget_id FROM apps_proposal GROUP BY budget_id) as claim ON apps_budget.budget_id = claim.budget_id
@@ -11328,7 +11577,7 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
             # Spending = Budget Amount + Upping - Proposal <- Rumus Spending
             cursor.execute(
                 """
-                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, IF(budget_status = 'DRAFT' OR budget_status = 'IN APPROVAL', 0, budget_upping) AS 2_upping, IFNULL(detail.proposed_amount, 0) AS 3_proposed, IF(budget_status = 'DRAFT' OR budget_status = 'IN APPROVAL', (budget_amount + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)), (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0))) AS 4_balance, 
+                SELECT apps_budget.budget_id, distributor_name, region_name, budget_area_id, budget_amount AS 1_opening, IF(budget_status = 'DRAFT' OR budget_status = 'IN APPROVAL', 0, budget_upping) AS 2_upping, IFNULL(detail.proposed_amount, 0) AS 3_proposed, IFNULL(detail.remaining_amount, 0) AS 4_remaining, IF(budget_status = 'DRAFT' OR budget_status = 'IN APPROVAL', (budget_amount + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0)), (budget_amount + budget_upping + IFNULL(detail.remaining_amount, 0) - IFNULL(detail.proposed_amount, 0))) AS 5_balance, 
                 DATE(CONCAT(budget_year, '-', budget_month, '-01')) as budget_date
                 FROM apps_budget
                 LEFT JOIN (SELECT SUM(budget_proposed) as proposed_amount, SUM(budget_remaining) as remaining_amount, budget_id FROM apps_budgetdetail GROUP BY budget_id) as detail ON apps_budget.budget_id = detail.budget_id
@@ -11347,27 +11596,28 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
 
     # Convert budgets queryset to DataFrame
     df = pd.DataFrame(budget_detail, columns=[
-        'budget_id', 'distributor_name', 'region_name', 'budget_area_id', '1_opening', '2_upping', '3_proposed', '4_balance', 'budget_date'])
+        'budget_id', 'distributor_name', 'region_name', 'budget_area_id', '1_opening', '2_upping', '3_proposed', '4_remaining', '5_balance', 'budget_date'])
 
     # Create a pivot table
     pivot_table = (pd.pivot_table(df,
                                   index=['budget_date'],
                                   columns=['distributor_name', 'region_name'],
                                   values=['1_opening', '2_upping',
-                                          '3_proposed', '4_balance'],
+                                          '3_proposed', '4_remaining', '5_balance'],
                                   aggfunc='sum', fill_value=0)).T.swaplevel(1, 0).swaplevel(2, 1).sort_index(level=0)
 
     pivot_total = (pd.pivot_table(df,
                                   index=['budget_date'],
                                   values=['1_opening', '2_upping',
-                                          '3_proposed', '4_balance'],
+                                          '3_proposed', '4_remaining', '5_balance'],
                                   aggfunc='sum', fill_value=0)).T
 
     pivot_region = pd.pivot_table(df,
                                   index=['region_name'],
                                   columns=['budget_date'],
-                                  values=['4_balance'],
+                                  values=['5_balance'],
                                   aggfunc='sum', fill_value=0)
+    # Update Issue Web Selmar End
 
     # Create a HttpResponse object with the csv data
     response = HttpResponse(
@@ -11428,14 +11678,15 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
     for col_idx, col_value in enumerate(headers):
         worksheet.write(0 + gap, col_idx, col_value, header_format)
 
+    # Update Issue Web Selmar Begin
     # Write dataframes to XlsxWriter Object
     for idx, record in enumerate(pivot_table.iterrows()):
-        if idx % 4 == 0:
+        if idx % 5 == 0:
             back = not back
             worksheet.merge_range(
-                idx + 1 + gap, 0, idx + 4 + gap, 0, record[0][0], cell_format if not back else back_format)
+                idx + 1 + gap, 0, idx + 5 + gap, 0, record[0][0], cell_format if not back else back_format)
             worksheet.merge_range(
-                idx + 1 + gap, 1, idx + 4 + gap, 1, record[0][1], cell_format if not back else back_format)
+                idx + 1 + gap, 1, idx + 5 + gap, 1, record[0][1], cell_format if not back else back_format)
 
         if record[0][2] == '1_opening':
             worksheet.write(idx + 1 + gap, 2, 'Opening Balance',
@@ -11446,12 +11697,15 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
         elif record[0][2] == '3_proposed':
             worksheet.write(idx + 1 + gap, 2, 'Spending',
                             cell_format if not back else back_format)
-        elif record[0][2] == '4_balance':
+        elif record[0][2] == '4_remaining':
+            worksheet.write(idx + 1 + gap, 2, 'Remaining',
+                            cell_format if not back else back_format)
+        elif record[0][2] == '5_balance':
             worksheet.write(idx + 1 + gap, 2, 'Ending Balance',
                             total_format if not back else back_total_format)
 
         for col_idx, col_value in enumerate(record[1]):
-            if record[0][2] == '1_opening' or record[0][2] == '4_balance':
+            if record[0][2] == '1_opening' or record[0][2] == '5_balance':
                 worksheet.write(idx + 1 + gap, col_idx + 3,
                                 col_value, total_num_format if not back else back_total_num_format)
             else:
@@ -11472,15 +11726,18 @@ def report_budget_detail_toxl(request, _from_yr, _from_mo, _to_yr, _to_mo, _dist
             worksheet.write(foot + idx, 2, 'Upping Price', cell_format)
         elif record[0] == '3_proposed':
             worksheet.write(foot + idx, 2, 'Spending', cell_format)
-        elif record[0] == '4_balance':
+        elif record[0] == '4_remaining':
+            worksheet.write(foot + idx, 2, 'Remaining', cell_format)
+        elif record[0] == '5_balance':
             worksheet.write(foot + idx, 2, 'Ending Balance', total_num_format)
         for col_idx, col_value in enumerate(record[1]):
-            if record[0] == '4_balance':
+            if record[0] == '5_balance':
                 worksheet.write(foot + idx, col_idx + 3,
                                 col_value, total_num_format)
             else:
                 worksheet.write(foot + idx, col_idx + 3,
                                 col_value, cell_format)
+    # Update Issue Web Selmar End
 
     foot += len(pivot_total) + 1
     # Write Total by Region

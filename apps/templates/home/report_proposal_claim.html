@@ -54,7 +54,10 @@
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Assigned</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Return</th>
                                     <th class="text-uppercase text-secondary text-xxs text-end font-weight-bolder opacity-7">Available</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
+                                    <!-- Update Issue Web Selmar Begin -->
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Approval Status</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Claim Status</th>
+                                    <!-- Update Issue Web Selmar End -->
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">By</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Note</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Closed Period</th>
@@ -116,9 +119,14 @@
                                     <td>
                                         <h6 class="mb-0 text-sm text-end">{% if item.status == 'CLOSED' %}0{% else %}{{ item.balance|intcomma }}{% endif %}</h6>
                                     </td>
+                                    <!-- Update Issue Web Selmar Begin -->
                                     <td>
-                                        <h6 class="mb-0 text-sm">{% if item.status == 'OPEN' %}COMPLETED{% else %}{{ item.status }}{% endif %}</h6>
+                                        <h6 class="mb-0 text-sm">{% if item.status == 'OPEN' or item.status == 'CLOSED' %}FULLY APPROVED{% else %}{% if item.status == 'IN APPROVAL' %}AWAITING FOR APPROVAL{% else %}{{ item.status }}{% endif %}{% endif %}</h6>
                                     </td>
+                                    <td>
+                                        <h6 class="mb-0 text-sm">{% if item.status == 'CLOSED' %}CLOSED{% else %}{% if item.status == 'OPEN' %}OPEN{% else %}{% endif %}{% endif %}</h6>
+                                    </td>
+                                    <!-- Update Issue Web Selmar End -->
                                     <td>
                                         <h6 class="mb-0 text-sm">{% if item.status == 'IN APPROVAL' or item.status == 'REJECTED' %}{{ item.approver }}{% endif %}</h6>
                                     </td>
