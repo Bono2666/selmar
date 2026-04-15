@@ -4770,7 +4770,7 @@ def closing(request):
     budgets = Budget.objects.filter(budget_status='OPEN')
     not_approved_budget = Budget.objects.filter(
         budget_status__in=['IN APPROVAL', 'DRAFT'])
-    proposals = Proposal.objects.filter(status__in=['NONE'])
+    proposals = Proposal.objects.filter(status__in=['IN APPROVAL', 'DRAFT'])
 
     if request.POST:
         if not_approved_budget:
