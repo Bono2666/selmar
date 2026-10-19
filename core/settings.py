@@ -5,6 +5,13 @@ import dj_database_url
 from datetime import timedelta
 pymysql.install_as_MySQLdb()
 
+# Batasi jumlah thread BLAS/numpy (OpenBLAS/MKL) sebelum pandas ter-import.
+# Di shared hosting, satu worker yang me-spawn puluhan thread bisa membanjiri
+# CPU host dan membuat proses lain (termasuk sshd) gagal fork.
+for _v in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
+           'NUMEXPR_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS'):
+    os.environ.setdefault(_v, '1')
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -86,14 +93,14 @@ DATABASES = {
         'OPTIONS': {
             'sql_mode': 'traditional',
         },
-        'NAME': 'integrated_system',
-        'USER': 'root',
-        'PASSWORD': '',
+        'NAME': os.environ.get('DB_NAME', 'integrated_system'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         # 'NAME': 'ksis8742_abc_is',
         # 'USER': 'ksis8742_abc_is',
         # 'PASSWORD': 'B0n0harry!',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
     }
 }
 if os.environ.get('DATABASE_URL'):
@@ -139,7 +146,7 @@ USE_L10N = True
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'apps/staticfiles/')
 STATICFILES_DIRS = os.path.join(BASE_DIR, 'apps/static/'),
-STATIC_URL = 'apps/static/'
+STATIC_URL = '/apps/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
