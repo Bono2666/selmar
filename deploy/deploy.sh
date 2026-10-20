@@ -45,8 +45,16 @@ ssh "$REMOTE" "set -e
   '$VENV/bin/pip' install -q -r '$APP_DIR/requirements.txt' && echo '    pip OK'"
 
 echo "==> [3/7] Pasang .htaccess produksi"
-ssh "$REMOTE" "cat > '$DOCROOT/.htaccess'" < "$SRC_DIR/deploy/htaccess.production"
-echo "    .htaccess OK"
+# Prioritas: berkas .local (berisi kredensial, ter-gitignore) > templat.
+HTACCESS="$SRC_DIR/deploy/htaccess.production"
+if [ -f "$HTACCESS.local" ]; then HTACCESS="$HTACCESS.local"; fi
+if grep -q '<GANTI_\|<DB_\|<PASSWORD_' "$HTACCESS"; then
+  echo "    ERROR: $HTACCESS masih berisi placeholder." >&2
+  echo "    Isi dulu deploy/htaccess.production.local dari templatnya." >&2
+  exit 1
+fi
+ssh "$REMOTE" "cat > '$DOCROOT/.htaccess'" < "$HTACCESS"
+echo "    .htaccess OK ($(basename "$HTACCESS"))"
 
 echo "==> [4/7] Siapkan symlink static di docroot"
 # heredoc kutip ganda -> SEMUA variabel dieksekusi di server, bukan lokal

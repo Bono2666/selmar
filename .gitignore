@@ -1,0 +1,21 @@
+# KREDENSIAL — jangan pernah masuk git (repo ini pernah publik)
+deploy/*.local
+.env
+.env.*
+!.env.example
+
+# Artefak runtime / virtualenv yang tak perlu di-commit
+__pycache__/
+*.pyc
+venv/
+bin/
+lib/
+pyvenv.cfg
+stderr.log
+.DS_Store
+.idea/
+.vscode/
+
+# Media & hasil collectstatic (permanen di server, bukan di repo)
+apps/media/
+apps/staticfiles/

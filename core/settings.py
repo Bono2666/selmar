@@ -29,6 +29,33 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS', 'localhost,192.168.0.13,127.0.0.1').split(',')
 
+
+def _env_bool(name, default='False'):
+    """Baca boolean dari env: hanya literal 'True' yang dianggap benar."""
+    return os.environ.get(name, default) == 'True'
+
+
+# Keamanan produksi (memenuhi `manage.py check --deploy`).
+# LiteSpeed mengakhiri TLS di depan aplikasi; skema asli dikirim lewat header
+# X-Forwarded-Proto bila ada, dan jika tidak Django fallback ke wsgi.url_scheme.
+# Semua saklar dikendalikan lewat env di .htaccess (SetEnv), jadi aman dimatikan
+# lagi tanpa menyentuh kode.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = _env_bool('SECURE_SSL_REDIRECT')
+SESSION_COOKIE_SECURE = _env_bool('SESSION_COOKIE_SECURE')
+CSRF_COOKIE_SECURE = _env_bool('CSRF_COOKIE_SECURE')
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0'))
+# HSTS hanya masuk akal bila > 0; subdomain/preload mengikuti saklarnya.
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0 and _env_bool(
+    'SECURE_HSTS_INCLUDE_SUBDOMAINS')
+SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0 and _env_bool(
+    'SECURE_HSTS_PRELOAD')
+
+# Catatan: mengaktifkan SECURE_HSTS_PRELOAD hanya menandai situs *layak*
+# preload (directif `; preload` di header). Pendaftaran ke daftar preload
+# browser tetap langkah manual di https://hstspreload.org dan butuh waktu
+# berhari-hari untuk dicabut — jadi hanya lakukan bila yakin HTTPS permanen.
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -96,9 +123,6 @@ DATABASES = {
         'NAME': os.environ.get('DB_NAME', 'integrated_system'),
         'USER': os.environ.get('DB_USER', 'root'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        # 'NAME': 'ksis8742_abc_is',
-        # 'USER': 'ksis8742_abc_is',
-        # 'PASSWORD': 'B0n0harry!',
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '3306'),
     }
@@ -169,7 +193,7 @@ EMAIL_HOST = 'mail.ksisolusi.com'
 EMAIL_PORT = 465
 EMAIL_HOST_USER = 'abc_is@ksisolusi.com'
 EMAIL_HOST_NAME = 'ABC Integrated System'
-EMAIL_HOST_PASSWORD = 'E;$q%YR%c;P='
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = True
 

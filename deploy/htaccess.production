@@ -1,5 +1,11 @@
-# Deploy target: https://selmar.ksisolusi.com  (docroot: ~/public_html/selmar)
-# Berkas ini menggantikan .htaccess pada docroot subdomain.
+# TEMPLATE — jangan diisi kredensial sungguhan.
+# Berkas ini ikut ter-commit ke repo (repo di GitHub bersifat publik), jadi
+# nilainya HARUS placeholder. Nilai produksi yang asli ada di
+# `deploy/htaccess.production.local` (ter-gitignore) — deploy.sh otomatis
+# memakai file .local bila ada, dan hanya file itulah yang dikirim ke server.
+#
+# Isi `deploy/htaccess.production.local` dari templat ini lalu isi nilainya,
+# atau ambil langsung dari server: `grep '^SetEnv' ~/public_html/selmar/.htaccess`
 
 # DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
 PassengerAppRoot "/home/ksis7654/apps/selmar"
@@ -11,17 +17,25 @@ PassengerPython "/home/ksis7654/virtualenv/apps/selmar/3.10/bin/python"
 <IfModule Litespeed>
 SetEnv ALLOWED_HOSTS "selmar.ksisolusi.com,www.selmar.ksisolusi.com,localhost,127.0.0.1"
 SetEnv DEBUG "False"
-SetEnv SECRET_KEY "Cgm-jPx5zaVk_TSBC1WiAZ1sUxXrpXypfpE7H1YiIWfRLowa89_O1tYHIufqmo1-"
-SetEnv DB_NAME "ksis7654_selmar"
-SetEnv DB_USER "ksis7654_bono"
-SetEnv DB_PASSWORD "Tr1-B0n0"
+SetEnv SECRET_KEY "<GANTI_DENGAN_SECRET_KEY_PRODUKSI>"
+SetEnv DB_NAME "<DB_NAME>"
+SetEnv DB_USER "<DB_USER>"
+SetEnv DB_PASSWORD "<DB_PASSWORD>"
 SetEnv DB_HOST "localhost"
 SetEnv DB_PORT "3306"
+SetEnv EMAIL_HOST_PASSWORD "<PASSWORD_EMAIL_SMTP>"
 # OpenBLAS/numpy: paksa 1 thread per worker (48 thread/worker membanjiri host)
 SetEnv OMP_NUM_THREADS "1"
 SetEnv OPENBLAS_NUM_THREADS "1"
 SetEnv MKL_NUM_THREADS "1"
 SetEnv NUMEXPR_NUM_THREADS "1"
+# Keamanan (check --deploy) -- semua lewat env agar mudah dimatikan
+SetEnv SECURE_SSL_REDIRECT "True"
+SetEnv SESSION_COOKIE_SECURE "True"
+SetEnv CSRF_COOKIE_SECURE "True"
+SetEnv SECURE_HSTS_SECONDS "31536000"
+SetEnv SECURE_HSTS_INCLUDE_SUBDOMAINS "True"
+SetEnv SECURE_HSTS_PRELOAD "True"
 </IfModule>
 # DO NOT REMOVE OR MODIFY. CLOUDLINUX ENV VARS CONFIGURATION END
 
