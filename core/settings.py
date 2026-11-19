@@ -235,3 +235,36 @@ TINYMCE_DEFAULT_CONFIG = {
     "statusbar": False,
     "width": "75%",
 }
+
+# Catat error ke stderr. Dengan DEBUG=False, Django bawaan hanya mengirim
+# traceback 500 ke ADMINS lewat email (di sini kosong), sehingga error di
+# produksi tidak terlihat sama sekali. Passenger menyalurkan stderr ke
+# ~/apps/selmar/stderr.log.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'stderr': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['stderr'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['stderr'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

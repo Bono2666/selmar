@@ -9,6 +9,17 @@ from tinymce.models import HTMLField
 from apps.validators import file_size
 
 
+def current_user_id():
+    """user_id pengguna yang sedang login, atau None bila tidak ada.
+
+    get_current_user() (crum) mengembalikan AnonymousUser selama proses login
+    -- mis. saat Django me-rehash password ke iterasi PBKDF2 yang lebih baru dan
+    memanggil User.save() sebelum user ter-login -- serta None di luar request
+    (shell/manage.py). Keduanya tidak punya atribut `user_id`.
+    """
+    return getattr(get_current_user(), 'user_id', None)
+
+
 class User(AbstractUser):
     is_active = models.BooleanField(default=True)
     user_id = models.CharField(max_length=50, primary_key=True)
@@ -24,9 +35,9 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(User, self).save(*args, **kwargs)
 
     USERNAME_FIELD = 'user_id'
@@ -49,9 +60,9 @@ class Distributor(models.Model):
         self.distributor_id = self.distributor_id.upper()
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Distributor, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -70,9 +81,9 @@ class Channel(models.Model):
         self.channel_id = self.channel_id.upper()
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Channel, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -93,9 +104,9 @@ class AreaSales(models.Model):
         self.area_id = self.area_id.upper()
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(AreaSales, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -115,9 +126,9 @@ class AreaChannel(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(AreaChannel, self).save(*args, **kwargs)
 
 
@@ -138,9 +149,9 @@ class AreaSalesDetail(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(AreaSalesDetail, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -165,9 +176,9 @@ class AreaChannelDetail(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(AreaChannelDetail, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -191,9 +202,9 @@ class AreaUser(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(AreaUser, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -213,9 +224,9 @@ class Position(models.Model):
         self.position_id = self.position_id.upper()
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Position, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -235,9 +246,9 @@ class Menu(models.Model):
         self.menu_id = self.menu_id.upper()
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Menu, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -265,9 +276,9 @@ class Auth(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Auth, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -309,9 +320,9 @@ class Budget(models.Model):
         self.budget_total = self.budget_amount + self.budget_upping
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Budget, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -359,9 +370,9 @@ class BudgetDetail(models.Model):
             self.budget_transfer_plus - self.budget_proposed + self.budget_remaining
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(BudgetDetail, self).save(*args, **kwargs)
 
 
@@ -386,9 +397,9 @@ class BudgetTransfer(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(BudgetTransfer, self).save(*args, **kwargs)
 
 
@@ -411,9 +422,9 @@ class BudgetTransferMatrix(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(BudgetTransferMatrix, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -445,9 +456,9 @@ class BudgetTransferRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(BudgetTransferRelease, self).save(*args, **kwargs)
 
 
@@ -463,9 +474,9 @@ class UploadLog(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(UploadLog, self).save(*args, **kwargs)
 
 
@@ -495,9 +506,9 @@ class BudgetRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(BudgetRelease, self).save(*args, **kwargs)
 
 
@@ -532,9 +543,9 @@ class ProposalRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(ProposalRelease, self).save(*args, **kwargs)
 
 
@@ -557,9 +568,9 @@ class BudgetApproval(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(BudgetApproval, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -596,9 +607,9 @@ class ProposalMatrix(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(ProposalMatrix, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -620,9 +631,9 @@ class Closing(models.Model):
         self.document = self.document.upper().replace(' ', '_')
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Closing, self).save(*args, **kwargs)
 
 
@@ -637,9 +648,9 @@ class Division(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Division, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -685,9 +696,9 @@ class Proposal(models.Model):
         self.duration = (self.period_end - self.period_start).days + 1
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Proposal, self).save(*args, **kwargs)
 
 
@@ -703,9 +714,9 @@ class ProposalAttachment(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(ProposalAttachment, self).save(*args, **kwargs)
 
 
@@ -749,9 +760,9 @@ class IncrementalSales(models.Model):
             100 if self.swop_nom > 0 else 0
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(IncrementalSales, self).save(*args, **kwargs)
 
 
@@ -774,9 +785,9 @@ class ProjectedCost(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(ProjectedCost, self).save(*args, **kwargs)
 
 
@@ -802,9 +813,9 @@ class Program(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Program, self).save(*args, **kwargs)
 
 
@@ -838,9 +849,9 @@ class ProgramMatrix(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(ProgramMatrix, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -878,9 +889,9 @@ class ProgramRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(ProgramRelease, self).save(*args, **kwargs)
 
 
@@ -921,9 +932,9 @@ class Claim(models.Model):
         self.total = self.total_claim + self.tax
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Claim, self).save(*args, **kwargs)
 
 
@@ -957,9 +968,9 @@ class ClaimMatrix(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(ClaimMatrix, self).save(*args, **kwargs)
 
 
@@ -994,9 +1005,9 @@ class ClaimRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(ClaimRelease, self).save(*args, **kwargs)
 
 
@@ -1017,9 +1028,9 @@ class CL(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(CL, self).save(*args, **kwargs)
 
 
@@ -1040,9 +1051,9 @@ class CLDetail(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(CLDetail, self).save(*args, **kwargs)
 
 
@@ -1076,9 +1087,9 @@ class CLMatrix(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.update_by = get_current_user().user_id
+            self.update_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(CLMatrix, self).save(*args, **kwargs)
 
 
@@ -1115,9 +1126,9 @@ class CLRelease(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.update_by = get_current_user().user_id
+            self.update_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(CLRelease, self).save(*args, **kwargs)
 
 
@@ -1134,9 +1145,9 @@ class Region(models.Model):
         self.region_id = self.region_id.upper()
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(Region, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -1161,9 +1172,9 @@ class RegionDetail(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.update_by = get_current_user().user_id
+            self.update_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(RegionDetail, self).save(*args, **kwargs)
 
 
@@ -1180,7 +1191,7 @@ class WelcomeMessage(models.Model):
     def save(self, *args, **kwargs):
         if not self.entry_date:
             self.entry_date = timezone.now()
-            self.entry_by = get_current_user().user_id
+            self.entry_by = current_user_id()
         self.update_date = timezone.now()
-        self.update_by = get_current_user().user_id
+        self.update_by = current_user_id()
         super(WelcomeMessage, self).save(*args, **kwargs)

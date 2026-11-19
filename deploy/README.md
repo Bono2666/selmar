@@ -185,6 +185,13 @@ print(created, u.user_id, u.is_superuser, u.check_password('GANTI_PASSWORD_DI_SI
   di dua lapis — `SetEnv OMP_NUM_THREADS/OPENBLAS_NUM_THREADS/...` di
   `.htaccess` *dan* `os.environ.setdefault(...)` di `core/settings.py`.
   Jangan hapus keduanya.
+- **INSIDEN 500 setelah login (Nov 2026):** Django 5.2 menaikkan iterasi
+  PBKDF2 ke 1.000.000, sehingga login sukses memicu rehash password +
+  `User.save()` saat `request.user` masih `AnonymousUser`; `save()` lama
+  memanggil `get_current_user().user_id` → `AttributeError` → 500. Fix:
+  helper `current_user_id()` di `apps/models.py` (aman untuk Anonymous/None),
+  Django dikunci ke `>=5.2.18,<5.3`, dan `LOGGING` mengirim traceback 500 ke
+  `stderr.log` (sebelumnya tak tercatat karena `DEBUG=False`).
 - **Venv harus memuat file bawaan CloudLinux**: `bin/set_env_vars.py`
   (symlink ke `/usr/share/l.v.e-manager/utils/set_env_vars.py`) dan
   `bin/python3.10_bin`. Tanpanya `/usr/local/lsws/fcgi-bin/lswsgi_wrapper`

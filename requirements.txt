@@ -1,4 +1,6 @@
-django
+# Kunci ke seri 5.2 (LTS). Versi mayor/minor baru Django menaikkan iterasi
+# PBKDF2 dan mengubah perilaku lain -- naikkan hanya secara sadar & teruji.
+django>=5.2.18,<5.3
 # gunicorn
 # python-dotenv
 # whitenoise
